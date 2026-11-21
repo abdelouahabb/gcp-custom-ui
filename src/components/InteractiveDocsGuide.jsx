@@ -2238,6 +2238,30 @@ const DOC_SECTIONS = [
     billingImpact:
       'Discovery, $0.00 Dry-Run GQL validation, and Mermaid rendering cost $0.00; starter graph bootstrap (<10 KB) and GQL traversals fall within BigQuery Always-Free storage (10 GiB/mo) and query (1 TiB/mo) tiers (gated by confirmation modals).',
   },
+  {
+    id: 'bigquery-observability-cost-doctor',
+    wave: 'WAVE 31 BIGQUERY OBSERVABILITY & COST-SPIKE DOCTOR · INFORMATION_SCHEMA.JOBS + GEMINI 4 TRIAGE',
+    title:
+      '59. BigQuery Observability & Cost-Spike Doctor (INFORMATION_SCHEMA.JOBS_BY_PROJECT + Gemini 4 FinOps Triage)',
+    badge: 'BigQuery Studio (LIVE_JOBS Tab) · Slot Contention · Queue Wait · Least-Privilege JOBS_BY_USER Fallback',
+    badgeColor:
+      'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
+    icon: Database,
+    targetTab: 'BIGQUERY_STUDIO',
+    problemSolved:
+      'Diagnosing unexpected BigQuery spend spikes, slot contention, queue latency, and failing pipelines normally requires writing region-qualified INFORMATION_SCHEMA queries by hand and debugging 403 permission errors when only user-level job listing is granted.',
+    howItWorks: [
+      'Region-Qualified Partition-Pruned Telemetry (POST /api/project/:id/bigquery/observability-doctor): Queries `region-<loc>.INFORMATION_SCHEMA.JOBS_BY_PROJECT` over 1d / 7d / 30d windows and automatically falls back to least-privilege `JOBS_BY_USER` on HTTP 403.',
+      '5-KPI FinOps & Performance Strip: Computes estimated on-demand spend ($6.25/TB), total billed GB, total slot-seconds, average/max queue wait ms, cache hit %, and failed job count.',
+      'Gemini 4 Root-Cause Triage & 1-Click SQL Inspector: Synthesizes 3 actionable FinOps/performance recommendations from live telemetry and lets engineers click Inspect on any expensive/failing job to jump straight into SQL Pre-Crime X-Ray.',
+    ],
+    apisUsed: [
+      'POST /api/project/:id/bigquery/observability-doctor (bigquery.googleapis.com/bigquery/v2 region-qualified INFORMATION_SCHEMA.JOBS_BY_PROJECT / JOBS_BY_USER)',
+      'aiplatform.googleapis.com/v1 (Gemini 4 FinOps & Slot Contention Triage)',
+    ],
+    billingImpact:
+      'Read-only metadata scan over partition-pruned INFORMATION_SCHEMA views (minimal bytes, covered by 1 TiB/month Always-Free tier); Gemini 4 triage is optional on click.',
+  },
 ];
 
 export default function InteractiveDocsGuide({

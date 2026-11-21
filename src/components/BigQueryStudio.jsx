@@ -80,7 +80,7 @@ const STUDIO_TABS = [
     shortLabel: 'BQ AI, Vectors & Stream',
     badge: 'ScaNN + TimesFM',
     icon: Cpu,
-    tip: 'Run Gemini 2.5 ML.GENERATE_TEXT, ScaNN/IVF VECTOR_SEARCH with text-embedding-005, Zero-Shot TimesFM AI.FORECAST, and Continuous SQL Streaming to Pub/Sub & Bigtable',
+    tip: 'Run Gemini 4 ML.GENERATE_TEXT, ScaNN/IVF VECTOR_SEARCH with text-embedding-005, Zero-Shot TimesFM AI.FORECAST, and Continuous SQL Streaming to Pub/Sub & Bigtable',
   },
   {
     id: 'LINEAGE_BLAST_RADIUS',
@@ -235,6 +235,38 @@ export default function BigQueryStudio({
   // Live BigQuery Jobs & Slot Telemetry state
   const [jobsList, setJobsList] = useState([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
+
+  // Live BigQuery Observability & Cost-Spike Doctor (INFORMATION_SCHEMA.JOBS_BY_PROJECT / JOBS_BY_USER)
+  const [obsLocation, setObsLocation] = useState('US');
+  const [obsLookbackDays, setObsLookbackDays] = useState(7);
+  const [obsScanning, setObsScanning] = useState(false);
+  const [obsReport, setObsReport] = useState(null);
+
+  const runObservabilityDoctor = async (withGemini = false) => {
+    if (!projectId) return;
+    setObsScanning(true);
+    try {
+      const { data } = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/bigquery/observability-doctor`,
+        {
+          location: obsLocation,
+          lookbackDays: obsLookbackDays,
+          diagnoseWithGemini: withGemini,
+          geminiModel: 'gemini-4-neon',
+        }
+      );
+      setObsReport(data);
+      onShowToast?.(
+        `Observability Doctor (${data.summary?.scopeUsed} · ${obsLocation}): ${data.summary?.totalJobsSampled || 0} jobs analyzed · $${data.summary?.estimatedOnDemandUsd || 0} est. spend (${data.durationMs}ms).`
+      );
+    } catch (err) {
+      onShowError?.(
+        err?.response?.data?.error || err.message || 'BigQuery Observability Doctor scan failed.'
+      );
+    } finally {
+      setObsScanning(false);
+    }
+  };
 
   useEffect(() => {
     if (initialSql && initialSql.trim()) {
@@ -2952,6 +2984,160 @@ LIMIT 25;`;
               />
               <span>Refresh Live Jobs ({jobsList.length})</span>
             </button>
+          </div>
+
+          {/* Live INFORMATION_SCHEMA Observability & Cost-Spike Doctor (DAK v1.3.0) */}
+          <div className="p-4 rounded-xl border border-amber-500/35 bg-amber-500/[0.04] dark:bg-[#131314] space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="space-y-0.5">
+                <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+                  <span>
+                    BigQuery Observability &amp; Cost-Spike Doctor (<code>INFORMATION_SCHEMA.JOBS_BY_PROJECT</code>)
+                  </span>
+                </div>
+                <div className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                  Audits billed bytes ($6.25/TB), slot-seconds, queue latency, cache hit rate, and failing queries (auto-falls back to least-privilege <code>JOBS_BY_USER</code> on 403).
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={obsLocation}
+                  onChange={(e) => setObsLocation(e.target.value)}
+                  className="px-2 py-1.5 rounded-md bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 font-mono text-xs text-zinc-900 dark:text-zinc-100"
+                >
+                  <option value="US">Region: US</option>
+                  <option value="EU">Region: EU</option>
+                  <option value="us-central1">Region: us-central1</option>
+                  <option value="europe-west1">Region: europe-west1</option>
+                </select>
+                <select
+                  value={obsLookbackDays}
+                  onChange={(e) => setObsLookbackDays(Number(e.target.value))}
+                  className="px-2 py-1.5 rounded-md bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 font-mono text-xs text-zinc-900 dark:text-zinc-100"
+                >
+                  <option value={1}>Last 24h</option>
+                  <option value={7}>Last 7 days</option>
+                  <option value={30}>Last 30 days</option>
+                </select>
+                <button
+                  type="button"
+                  disabled={obsScanning}
+                  onClick={() => runObservabilityDoctor(false)}
+                  className="px-3 py-1.5 rounded-md bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${obsScanning ? 'animate-spin' : ''}`} />
+                  <span>Scan Telemetry</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={obsScanning}
+                  onClick={() => runObservabilityDoctor(true)}
+                  className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>{obsScanning ? 'Analyzing...' : 'Scan + Gemini 4 Triage'}</span>
+                </button>
+              </div>
+            </div>
+
+            {obsReport?.summary && (
+              <div className="space-y-3 pt-1">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs font-mono">
+                  <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10px] text-zinc-500">Est. Spend ({obsReport.summary.lookbackDays}d)</div>
+                    <div className="text-sm font-extrabold text-amber-600 dark:text-amber-400">
+                      ${obsReport.summary.estimatedOnDemandUsd}
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10px] text-zinc-500">Total Billed</div>
+                    <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+                      {obsReport.summary.totalBilledGb} GB
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10px] text-zinc-500">Total Slot-Sec</div>
+                    <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+                      {obsReport.summary.totalSlotSec}s
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10px] text-zinc-500">Avg / Max Queue</div>
+                    <div className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+                      {obsReport.summary.avgQueueWaitMs} / {obsReport.summary.maxQueueWaitMs}ms
+                    </div>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
+                    <div className="text-[10px] text-zinc-500">Cache Hit / Failed</div>
+                    <div className="text-sm font-extrabold text-emerald-600 dark:text-emerald-400">
+                      {obsReport.summary.cacheHitPct}% · {obsReport.summary.failedJobs} err
+                    </div>
+                  </div>
+                </div>
+
+                {obsReport.geminiDiagnosis?.text && (
+                  <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/35 space-y-1 text-xs">
+                    <div className="text-[10.5px] font-mono font-bold uppercase text-amber-800 dark:text-amber-300">
+                      Gemini 4 FinOps &amp; Slot Contention Triage ({obsReport.geminiDiagnosis.modelUsed})
+                    </div>
+                    <div className="text-zinc-900 dark:text-zinc-100 whitespace-pre-wrap leading-relaxed">
+                      {obsReport.geminiDiagnosis.text}
+                    </div>
+                  </div>
+                )}
+
+                {Array.isArray(obsReport.topJobs) && obsReport.topJobs.length > 0 && (
+                  <div className="overflow-x-auto border border-zinc-200 dark:border-zinc-800 rounded-lg max-h-60">
+                    <table className="w-full text-left text-[11px] font-mono">
+                      <thead className="bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 sticky top-0">
+                        <tr>
+                          <th className="px-2.5 py-1.5">Type</th>
+                          <th className="px-2.5 py-1.5">Billed</th>
+                          <th className="px-2.5 py-1.5">Slot-s</th>
+                          <th className="px-2.5 py-1.5">Queue</th>
+                          <th className="px-2.5 py-1.5">Query / Error</th>
+                          <th className="px-2.5 py-1.5">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                        {obsReport.topJobs.map((j) => (
+                          <tr key={j.jobId} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/60">
+                            <td className="px-2.5 py-1.5 font-bold">{j.statementType}</td>
+                            <td className="px-2.5 py-1.5 whitespace-nowrap">
+                              {j.billedGb} GB (${j.estCostUsd})
+                            </td>
+                            <td className="px-2.5 py-1.5">{j.slotSec}s</td>
+                            <td className="px-2.5 py-1.5">{j.queueWaitMs}ms</td>
+                            <td className="px-2.5 py-1.5 max-w-xs truncate" title={j.errorMessage || j.queryPreview}>
+                              {j.errorMessage ? (
+                                <span className="text-red-500">{j.errorMessage}</span>
+                              ) : (
+                                j.queryPreview
+                              )}
+                            </td>
+                            <td className="px-2.5 py-1.5">
+                              {j.queryPreview && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSqlInput(j.queryPreview);
+                                    setActiveSubTab('TABLES_SQL');
+                                  }}
+                                  className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold cursor-pointer"
+                                >
+                                  Inspect
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {loadingJobs && jobsList.length === 0 ? (

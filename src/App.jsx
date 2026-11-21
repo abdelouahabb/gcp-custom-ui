@@ -2296,6 +2296,7 @@ function classifyDestructiveAxiosConfig(config) {
       (rawUrl.includes('/data-fabric/orchestrate') && (body.action === 'COMPILE' || body.action === 'LIST_WORKFLOWS')) ||
       (rawUrl.includes('/data-fabric/rag-loop') && body.stage === 'QUERY_SCANN_RAG') ||
       (rawUrl.includes('/bigquery/property-graph') && (body.action === 'DISCOVER' || body.action === 'AI_NL2GQL' || (body.action === 'RUN_GQL' && Boolean(body.dryRun)))) ||
+      rawUrl.includes('/bigquery/observability-doctor') ||
       (rawUrl.includes('/alloydb/execute-sql') &&
         String(body.mode || '').toUpperCase() === 'INTROSPECT_ALLOYDB') ||
       (rawUrl.includes('/cloudrun-bridge/action') &&

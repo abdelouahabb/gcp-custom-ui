@@ -13161,6 +13161,209 @@ app.post('/api/project/:projectId/bigquery/grant-connection-sa-roles', async (re
   }
 });
 
+// 9a-bq-observability-doctor. POST /api/project/:projectId/bigquery/observability-doctor
+// Live BigQuery INFORMATION_SCHEMA.JOBS_BY_PROJECT (with least-privilege JOBS_BY_USER fallback) + Gemini 4 Root-Cause Triage
+app.post('/api/project/:projectId/bigquery/observability-doctor', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    location = 'US',
+    lookbackDays = 7,
+    diagnoseWithGemini = false,
+    geminiModel = 'gemini-4-neon',
+  } = req.body || {};
+
+  const startedAt = Date.now();
+  const safeLocation = String(location || 'US').replace(/[^a-zA-Z0-9-]/g, '') || 'US';
+  const locLower = safeLocation.toLowerCase();
+  const days = Math.max(1, Math.min(30, Number(lookbackDays) || 7));
+
+  const parseRows = (bqRes) => {
+    const fields = Array.isArray(bqRes?.schema?.fields) ? bqRes.schema.fields : [];
+    const rows = Array.isArray(bqRes?.rows) ? bqRes.rows : [];
+    return rows.map((r) => {
+      const obj = {};
+      fields.forEach((f, idx) => {
+        obj[f.name] = r?.f?.[idx]?.v ?? null;
+      });
+      return obj;
+    });
+  };
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
+    }
+
+    const buildQuery = (viewName) => `
+SELECT
+  job_id,
+  user_email,
+  statement_type,
+  state,
+  cache_hit,
+  COALESCE(total_bytes_billed, 0) AS total_bytes_billed,
+  COALESCE(total_slot_ms, 0) AS total_slot_ms,
+  TIMESTAMP_DIFF(COALESCE(start_time, creation_time), creation_time, MILLISECOND) AS queue_wait_ms,
+  TIMESTAMP_DIFF(COALESCE(end_time, CURRENT_TIMESTAMP()), COALESCE(start_time, creation_time), MILLISECOND) AS exec_ms,
+  error_result.message AS error_message,
+  SUBSTR(REGEXP_REPLACE(COALESCE(query, ''), r'\\s+', ' '), 1, 220) AS query_preview
+FROM \`${projectId}\`.\`region-${locLower}\`.INFORMATION_SCHEMA.${viewName}
+WHERE creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL ${days} DAY)
+  AND job_type = 'QUERY'
+ORDER BY total_bytes_billed DESC, total_slot_ms DESC
+LIMIT 40`;
+
+    let scopeUsed = 'JOBS_BY_PROJECT';
+    let bqRes = null;
+    try {
+      bqRes = await gcpFetch(
+        `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/queries`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            query: buildQuery('JOBS_BY_PROJECT'),
+            location: safeLocation,
+            useLegacySql: false,
+            timeoutMs: 20000,
+          },
+          timeout: 25000,
+        }
+      );
+    } catch (projErr) {
+      if (projErr?.status === 403 || /Access Denied|permission/i.test(String(projErr?.message || ''))) {
+        scopeUsed = 'JOBS_BY_USER';
+        bqRes = await gcpFetch(
+          `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/queries`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              query: buildQuery('JOBS_BY_USER'),
+              location: safeLocation,
+              useLegacySql: false,
+              timeoutMs: 20000,
+            },
+            timeout: 25000,
+          }
+        );
+      } else {
+        throw projErr;
+      }
+    }
+
+    const rawJobs = parseRows(bqRes);
+    const TB = 1099511627776;
+    const GB = 1073741824;
+
+    let totalBytesBilled = 0;
+    let totalSlotMs = 0;
+    let failedJobs = 0;
+    let cacheHits = 0;
+    let queueWaitSum = 0;
+    let maxQueueWaitMs = 0;
+
+    const topJobs = rawJobs.map((j) => {
+      const billedBytes = Number(j.total_bytes_billed || 0);
+      const slotMs = Number(j.total_slot_ms || 0);
+      const qWait = Math.max(0, Number(j.queue_wait_ms || 0));
+      const execMs = Math.max(0, Number(j.exec_ms || 0));
+      const isErr = Boolean(j.error_message);
+      const isCache = String(j.cache_hit) === 'true';
+
+      totalBytesBilled += billedBytes;
+      totalSlotMs += slotMs;
+      if (isErr) failedJobs++;
+      if (isCache) cacheHits++;
+      queueWaitSum += qWait;
+      if (qWait > maxQueueWaitMs) maxQueueWaitMs = qWait;
+
+      return {
+        jobId: j.job_id || '',
+        userEmail: j.user_email || '',
+        statementType: j.statement_type || 'QUERY',
+        state: j.state || 'DONE',
+        cacheHit: isCache,
+        billedGb: Number((billedBytes / GB).toFixed(4)),
+        estCostUsd: Number(((billedBytes / TB) * 6.25).toFixed(4)),
+        slotSec: Number((slotMs / 1000).toFixed(2)),
+        queueWaitMs: qWait,
+        execSec: Number((execMs / 1000).toFixed(2)),
+        errorMessage: j.error_message || null,
+        queryPreview: j.query_preview || '',
+      };
+    });
+
+    const summary = {
+      scopeUsed,
+      location: safeLocation,
+      lookbackDays: days,
+      totalJobsSampled: topJobs.length,
+      failedJobs,
+      cacheHitPct: topJobs.length ? Math.round((cacheHits / topJobs.length) * 100) : 0,
+      totalBilledGb: Number((totalBytesBilled / GB).toFixed(3)),
+      estimatedOnDemandUsd: Number(((totalBytesBilled / TB) * 6.25).toFixed(4)),
+      totalSlotSec: Number((totalSlotMs / 1000).toFixed(1)),
+      avgQueueWaitMs: topJobs.length ? Math.round(queueWaitSum / topJobs.length) : 0,
+      maxQueueWaitMs,
+    };
+
+    let geminiDiagnosis = null;
+    if (diagnoseWithGemini && topJobs.length > 0) {
+      const cleanModel = String(geminiModel || 'gemini-4-neon').trim();
+      const digest = topJobs
+        .slice(0, 10)
+        .map(
+          (j, i) =>
+            `${i + 1}. [${j.statementType}] billed=${j.billedGb}GB ($${j.estCostUsd}), slot=${j.slotSec}s, queue=${j.queueWaitMs}ms, err=${j.errorMessage || 'none'} | SQL: ${j.queryPreview}`
+        )
+        .join('\n');
+      const prompt = `You are a Principal BigQuery FinOps & Performance SRE. Give 3 concise, high-impact remediation bullets based strictly on this live ${days}-day INFORMATION_SCHEMA.${scopeUsed} telemetry in ${safeLocation}:\n\nSummary: ${JSON.stringify(summary)}\nTop Jobs:\n${digest}`;
+      const urls = [
+        `https://aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/global/publishers/google/models/${encodeURIComponent(cleanModel)}:generateContent`,
+        `https://us-central1-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/us-central1/publishers/google/models/${encodeURIComponent(cleanModel)}:generateContent`,
+      ];
+      for (const u of urls) {
+        try {
+          const gRes = await gcpFetch(u, token, projectId, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              contents: [{ role: 'user', parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.2, maxOutputTokens: 380 },
+            },
+            timeout: 20000,
+          });
+          const text = gRes?.candidates?.[0]?.content?.parts?.map((p) => p?.text || '').join('').trim();
+          if (text) {
+            geminiDiagnosis = { modelUsed: cleanModel, text };
+            break;
+          }
+        } catch {
+          // try next endpoint
+        }
+      }
+    }
+
+    return res.json({
+      ok: true,
+      summary,
+      topJobs: topJobs.slice(0, 15),
+      geminiDiagnosis,
+      durationMs: Date.now() - startedAt,
+    });
+  } catch (err) {
+    return res.status(err?.status || 500).json({
+      error: err?.message || 'BigQuery Observability Doctor scan failed.',
+    });
+  }
+});
+
 // 9a-bq-property-graph. POST /api/project/:projectId/bigquery/property-graph
 // Live BigQuery Property Graph (GoogleSQL GQL) discovery, bootstrap, GQL execution, and Gemini 4 NL2GQL
 app.post('/api/project/:projectId/bigquery/property-graph', async (req, res) => {
