@@ -1961,7 +1961,7 @@ spec:
     setWorkerPoolDeploying(true);
     try {
       const res = await axios.post(
-        `/api/project/${encodeURIComponent(projectId)}/gcloud-591/execute`,
+        `/api/project/${encodeURIComponent(projectId)}/alpha-beta/action`,
         {
           action: 'DEPLOY_BETA_WORKER_POOL',
           region: workerPoolRegion,
