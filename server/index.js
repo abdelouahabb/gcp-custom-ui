@@ -13174,30 +13174,52 @@ app.post('/api/project/:projectId/data-fabric/synthesize-bridge', async (req, re
     geminiModel = 'gemini-4-neon',
   } = req.body || {};
 
-  // Live-discover any real BigQuery CLOUD_RESOURCE connection so Object Tables & Vertex AI SQL never hit "Connection not found"
+  // Live-discover any real BigQuery CLOUD_RESOURCE connection matching the dataset's location
+  // (explicitly excluding GCP's virtual wildcard locations/-/connections/__default_cloudresource_connection__)
   let discoveredConnectionFull = null;
+  let datasetLocation = null;
   try {
     const { token } = await resolveRequestAuth(req);
     if (token) {
-      const connRes = await gcpFetch(
-        `https://bigqueryconnection.googleapis.com/v1/projects/${encodeURIComponent(
-          projectId
-        )}/locations/-/connections`,
-        token,
-        projectId,
-        { timeout: 5000 }
-      ).catch(() => ({ connections: [] }));
-      const cloudResConns = (Array.isArray(connRes?.connections) ? connRes.connections : []).filter(
-        (c) => Boolean(c.cloudResource)
-      );
+      const [connRes, dsRes] = await Promise.all([
+        gcpFetch(
+          `https://bigqueryconnection.googleapis.com/v1/projects/${encodeURIComponent(
+            projectId
+          )}/locations/-/connections`,
+          token,
+          projectId,
+          { timeout: 5000 }
+        ).catch(() => ({ connections: [] })),
+        datasetId
+          ? gcpFetch(
+              `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(
+                projectId
+              )}/datasets/${encodeURIComponent(datasetId)}`,
+              token,
+              projectId,
+              { timeout: 4000 }
+            ).catch(() => null)
+          : Promise.resolve(null),
+      ]);
+      datasetLocation = dsRes?.location ? String(dsRes.location).toLowerCase() : null;
+      const cloudResConns = (Array.isArray(connRes?.connections) ? connRes.connections : [])
+        .map((c) => {
+          if (!c?.cloudResource || !c?.name) return null;
+          const parts = String(c.name).split('/');
+          const loc = parts[parts.indexOf('locations') + 1] || '';
+          const cId = parts[parts.indexOf('connections') + 1] || '';
+          // Exclude virtual wildcard connection: locations/-/connections/__default_cloudresource_connection__
+          if (!loc || loc === '-' || !cId || cId.startsWith('__')) return null;
+          return { loc, locLower: loc.toLowerCase(), cId };
+        })
+        .filter(Boolean);
+
+      const targetLocLower = (datasetLocation || region || '').toLowerCase();
       const preferred =
-        cloudResConns.find((c) => String(c.name || '').includes(`/locations/${region}/`)) ||
-        cloudResConns[0];
-      if (preferred?.name) {
-        const parts = String(preferred.name).split('/');
-        const loc = parts[parts.indexOf('locations') + 1] || region;
-        const cId = parts[parts.indexOf('connections') + 1] || '';
-        if (cId) discoveredConnectionFull = `${projectId}.${loc}.${cId}`;
+        cloudResConns.find((c) => c.locLower === targetLocLower) ||
+        (!datasetLocation ? cloudResConns[0] : null);
+      if (preferred) {
+        discoveredConnectionFull = `${projectId}.${preferred.loc}.${preferred.cId}`;
       }
     }
   } catch {
