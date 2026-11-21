@@ -13161,6 +13161,307 @@ app.post('/api/project/:projectId/bigquery/grant-connection-sa-roles', async (re
   }
 });
 
+// 9a-data-fabric-orchestrate. POST /api/project/:projectId/data-fabric/orchestrate
+// Compiles any of the 4 Data Fabric bridges into Cloud Workflows YAML, Composer Airflow DAG, or Dataform SQLX,
+// and supports live Cloud Workflows deployment (workflows.googleapis.com/v1) + live execution (workflowexecutions.googleapis.com/v1)
+app.post('/api/project/:projectId/data-fabric/orchestrate', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    action = 'COMPILE',
+    targetFormat = 'CLOUD_WORKFLOWS', // CLOUD_WORKFLOWS | COMPOSER_DAG | DATAFORM_SQLX
+    bridgeId = 'GCS_BQ_GEMINI4_ALLOYDB_RAG',
+    bucketName = 'bronze-landing-bucket',
+    alloyClusterId = 'alloydb-express-app',
+    datasetId = 'gold_lakehouse_ai',
+    region = 'us-central1',
+    geminiModel = 'gemini-4-neon',
+    workflowName = '',
+    scheduleCron = '0 */6 * * *',
+    sourceContents = '',
+  } = req.body || {};
+
+  const startedAt = Date.now();
+  const safeRegion = String(region || 'us-central1').replace(/[^a-z0-9-]/gi, '') || 'us-central1';
+  const safeDataset = String(datasetId || 'gold_lakehouse_ai').replace(/[^a-zA-Z0-9_]/g, '_') || 'gold_lakehouse_ai';
+  const safeBucket = String(bucketName || 'bronze-landing-bucket').replace(/[^a-z0-9._-]/gi, '') || 'bronze-landing-bucket';
+  const safeAlloy = String(alloyClusterId || 'alloydb-express-app').replace(/[^a-z0-9-]/gi, '') || 'alloydb-express-app';
+  const defaultWfId = `cloudpulse-${String(bridgeId || 'fabric').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 32)}`;
+  const safeWorkflowId = (String(workflowName || defaultWfId).toLowerCase().replace(/[^a-z0-9_-]/g, '-').replace(/^[^a-z]+/, 'wf-') || defaultWfId).slice(0, 60);
+
+  const buildArtifacts = () => {
+    const bridgeSql =
+      bridgeId === 'ALLOYDB_BIGQUERY_FEDERATION'
+        ? `SELECT COUNT(*) AS row_count, CURRENT_TIMESTAMP() AS checked_at FROM \`${projectId}.${safeDataset}.INFORMATION_SCHEMA.TABLES\``
+        : bridgeId === 'GCS_SPARK_BIGLAKE_BQ'
+        ? `SELECT table_name, table_type, creation_time FROM \`${projectId}.${safeDataset}.INFORMATION_SCHEMA.TABLES\` ORDER BY creation_time DESC LIMIT 20`
+        : `SELECT table_name, creation_time FROM \`${projectId}.${safeDataset}.INFORMATION_SCHEMA.TABLES\` ORDER BY creation_time DESC LIMIT 20`;
+
+    const workflowsYaml = `# CloudPulse 2026 — Live Google Cloud Workflow (${bridgeId})
+# Project: ${projectId} | Region: ${safeRegion} | Schedule: ${scheduleCron}
+main:
+  params: [args]
+  steps:
+    - init:
+        assign:
+          - project_id: "${projectId}"
+          - region: "${safeRegion}"
+          - dataset_id: "${safeDataset}"
+          - bucket_name: "${safeBucket}"
+          - alloy_cluster: "${safeAlloy}"
+          - gemini_model: "${geminiModel}"
+    - verify_gcs_bucket:
+        call: googleapis.storage.v1.buckets.get
+        args:
+          bucket: \${bucket_name}
+        result: bucket_meta
+    - run_bigquery_fabric_step:
+        call: googleapis.bigquery.v2.jobs.query
+        args:
+          projectId: \${project_id}
+          body:
+            query: "${bridgeSql.replace(/"/g, '\\"')}"
+            useLegacySql: false
+        result: bq_result
+    - return_telemetry:
+        return:
+          status: "SUCCEEDED"
+          bridge: "${bridgeId}"
+          bucket_location: \${bucket_meta.location}
+          bigquery_job_id: \${bq_result.jobReference.jobId}
+          rows_checked: \${bq_result.totalRows}
+          gemini_model: \${gemini_model}
+`;
+
+    const composerDag = `"""
+CloudPulse 2026 — Managed Airflow / Cloud Composer DAG (${bridgeId})
+Deploy to: gs://<your-composer-bucket>/dags/${safeWorkflowId.replace(/-/g, '_')}.py
+"""
+from datetime import datetime, timedelta
+from airflow import DAG
+from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator
+
+DEFAULT_ARGS = {
+    "owner": "cloudpulse-data-fabric",
+    "depends_on_past": False,
+    "retries": 2,
+    "retry_delay": timedelta(minutes=3),
+}
+
+with DAG(
+    dag_id="${safeWorkflowId.replace(/-/g, '_')}",
+    default_args=DEFAULT_ARGS,
+    description="Auto-generated 6-Engine Data Fabric DAG (${bridgeId})",
+    schedule="${scheduleCron}",
+    start_date=datetime(2026, 1, 1),
+    catchup=False,
+    tags=["cloudpulse", "data-fabric", "${bridgeId.toLowerCase()}"],
+) as dag:
+    run_fabric_bigquery_stage = BigQueryInsertJobOperator(
+        task_id="run_fabric_bigquery_stage",
+        project_id="${projectId}",
+        location="${safeRegion}",
+        configuration={
+            "query": {
+                "query": """${bridgeSql}""",
+                "useLegacySql": False,
+            }
+        },
+    )
+`;
+
+    const dataformSqlx = `-- definitions/${safeWorkflowId.replace(/-/g, '_')}.sqlx
+-- CloudPulse 2026 — Dataform SQLX Production Pipeline (${bridgeId})
+config {
+  type: "table",
+  schema: "${safeDataset}",
+  name: "${safeWorkflowId.replace(/-/g, '_')}_gold",
+  description: "Auto-orchestrated Data Fabric Gold table for ${bridgeId} (${geminiModel})",
+  tags: ["cloudpulse", "data-fabric", "${bridgeId.toLowerCase()}"],
+  assertions: {
+    nonNull: ["checked_at"]
+  }
+}
+
+SELECT
+  "${bridgeId}" AS bridge_id,
+  "${safeBucket}" AS source_bucket,
+  "${safeAlloy}" AS alloydb_cluster,
+  "${geminiModel}" AS gemini_model,
+  CURRENT_TIMESTAMP() AS checked_at,
+  table_name,
+  table_type
+FROM \`${projectId}.${safeDataset}.INFORMATION_SCHEMA.TABLES\`
+`;
+
+    if (targetFormat === 'COMPOSER_DAG') {
+      return {
+        format: 'COMPOSER_DAG',
+        language: 'python',
+        filename: `${safeWorkflowId.replace(/-/g, '_')}.py`,
+        workflowId: safeWorkflowId,
+        code: composerDag,
+        deployHint: `gcloud composer environments storage dags import --environment=<COMPOSER_ENV> --location=${safeRegion} --source=${safeWorkflowId.replace(/-/g, '_')}.py`,
+      };
+    }
+    if (targetFormat === 'DATAFORM_SQLX') {
+      return {
+        format: 'DATAFORM_SQLX',
+        language: 'sql',
+        filename: `${safeWorkflowId.replace(/-/g, '_')}.sqlx`,
+        workflowId: safeWorkflowId,
+        code: dataformSqlx,
+        deployHint: `dataform compile && dataform run --tags data-fabric`,
+      };
+    }
+    return {
+      format: 'CLOUD_WORKFLOWS',
+      language: 'yaml',
+      filename: `${safeWorkflowId}.yaml`,
+      workflowId: safeWorkflowId,
+      code: workflowsYaml,
+      deployHint: `gcloud workflows deploy ${safeWorkflowId} --location=${safeRegion} --project=${projectId} --source=${safeWorkflowId}.yaml`,
+    };
+  };
+
+  if (action === 'COMPILE') {
+    return res.json({
+      ok: true,
+      action: 'COMPILE',
+      projectId,
+      region: safeRegion,
+      bridgeId,
+      ...buildArtifacts(),
+      durationMs: Date.now() - startedAt,
+    });
+  }
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
+    }
+
+    if (action === 'LIST_WORKFLOWS') {
+      const listRes = await gcpFetch(
+        `https://workflows.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/locations/${encodeURIComponent(safeRegion)}/workflows?pageSize=25`,
+        token,
+        projectId,
+        { timeout: 10000 }
+      );
+      const workflows = (Array.isArray(listRes?.workflows) ? listRes.workflows : []).map((w) => {
+        const shortId = String(w.name || '').split('/').pop() || '';
+        return {
+          id: shortId,
+          name: w.name,
+          state: w.state || 'ACTIVE',
+          revisionId: w.revisionId || '',
+          updateTime: w.updateTime || w.createTime || '',
+          description: w.description || '',
+        };
+      });
+      return res.json({
+        ok: true,
+        action: 'LIST_WORKFLOWS',
+        projectId,
+        region: safeRegion,
+        workflows,
+        durationMs: Date.now() - startedAt,
+      });
+    }
+
+    if (action === 'DEPLOY_WORKFLOW') {
+      const yamlBody = String(sourceContents || buildArtifacts().code).trim();
+      const baseUrl = `https://workflows.googleapis.com/v1/projects/${encodeURIComponent(
+        projectId
+      )}/locations/${encodeURIComponent(safeRegion)}/workflows`;
+      const payload = {
+        description: `CloudPulse 2026 Data Fabric Auto-Orchestrated Workflow (${bridgeId})`,
+        sourceContents: yamlBody,
+      };
+      let opRes = null;
+      let actionTaken = 'CREATED';
+      try {
+        opRes = await gcpFetch(
+          `${baseUrl}?workflowId=${encodeURIComponent(safeWorkflowId)}`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: payload,
+            timeout: 15000,
+          }
+        );
+      } catch (createErr) {
+        if (createErr?.status === 409 || /ALREADY_EXISTS|already exists/i.test(String(createErr?.message || ''))) {
+          actionTaken = 'UPDATED';
+          opRes = await gcpFetch(
+            `${baseUrl}/${encodeURIComponent(safeWorkflowId)}?updateMask=sourceContents,description`,
+            token,
+            projectId,
+            {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: payload,
+              timeout: 15000,
+            }
+          );
+        } else {
+          throw createErr;
+        }
+      }
+      return res.json({
+        ok: true,
+        action: 'DEPLOY_WORKFLOW',
+        actionTaken,
+        workflowId: safeWorkflowId,
+        region: safeRegion,
+        operationName: opRes?.name || null,
+        consoleUrl: `https://console.cloud.google.com/workflows/workflow/${encodeURIComponent(
+          safeRegion
+        )}/${encodeURIComponent(safeWorkflowId)}/executions?project=${encodeURIComponent(projectId)}`,
+        durationMs: Date.now() - startedAt,
+      });
+    }
+
+    if (action === 'EXECUTE_WORKFLOW') {
+      const execRes = await gcpFetch(
+        `https://workflowexecutions.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/locations/${encodeURIComponent(safeRegion)}/workflows/${encodeURIComponent(
+          safeWorkflowId
+        )}/executions`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: { argument: JSON.stringify({ triggeredBy: 'CloudPulse-2026', bridgeId }) },
+          timeout: 15000,
+        }
+      );
+      return res.json({
+        ok: true,
+        action: 'EXECUTE_WORKFLOW',
+        workflowId: safeWorkflowId,
+        region: safeRegion,
+        executionName: execRes?.name || null,
+        state: execRes?.state || 'ACTIVE',
+        startTime: execRes?.startTime || null,
+        durationMs: Date.now() - startedAt,
+      });
+    }
+
+    return res.status(400).json({ error: `Unsupported orchestrate action: ${action}` });
+  } catch (err) {
+    return res.status(err?.status || 500).json({
+      error: err?.message || 'Data Fabric Auto-Orchestrator request failed.',
+    });
+  }
+});
+
 // 9a-data-fabric-rag-loop. POST /api/project/:projectId/data-fabric/rag-loop
 // Real 4-stage live RAG pipeline: GCS Upload -> BigQuery + Gemini 4 + text-embedding-005 -> AlloyDB Omni SCaNN -> Sub-5ms Semantic Search
 app.post('/api/project/:projectId/data-fabric/rag-loop', async (req, res) => {

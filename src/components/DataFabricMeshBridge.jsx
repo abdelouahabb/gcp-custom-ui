@@ -19,6 +19,8 @@ import {
   UploadCloud,
   Search,
   Zap,
+  Rocket,
+  Clock,
 } from 'lucide-react';
 import MermaidArchitectureDiagram from './MermaidArchitectureDiagram';
 
@@ -83,6 +85,137 @@ export default function DataFabricMeshBridge({
     'How does AlloyDB Express upgrade to Enterprise and serve sub-5ms RAG?'
   );
   const [ragSearchResult, setRagSearchResult] = useState(null);
+
+  // Data Fabric Auto-Orchestrator state (Cloud Workflows YAML / Composer DAG / Dataform SQLX + Live Deploy)
+  const [orchFormat, setOrchFormat] = useState('CLOUD_WORKFLOWS');
+  const [orchWorkflowName, setOrchWorkflowName] = useState('cloudpulse-fabric-rag-pipeline');
+  const [orchScheduleCron, setOrchScheduleCron] = useState('0 */6 * * *');
+  const [orchCompiled, setOrchCompiled] = useState(null);
+  const [orchCompiling, setOrchCompiling] = useState(false);
+  const [orchDeploying, setOrchDeploying] = useState(false);
+  const [orchDeployReceipt, setOrchDeployReceipt] = useState(null);
+  const [liveWorkflows, setLiveWorkflows] = useState([]);
+  const [loadingWorkflows, setLoadingWorkflows] = useState(false);
+  const [executingWorkflowId, setExecutingWorkflowId] = useState(null);
+  const [copiedOrch, setCopiedOrch] = useState(false);
+
+  const compileOrchestration = useCallback(
+    async (overrideFormat = null) => {
+      if (!projectId) return;
+      setOrchCompiling(true);
+      try {
+        const { data } = await axios.post(
+          `/api/project/${encodeURIComponent(projectId)}/data-fabric/orchestrate`,
+          {
+            action: 'COMPILE',
+            targetFormat: overrideFormat || orchFormat,
+            bridgeId: activeBridgeId,
+            bucketName: selectedBucket || 'bronze-landing-bucket',
+            alloyClusterId: selectedAlloy || 'alloydb-express-app',
+            datasetId: selectedDataset || 'gold_lakehouse_ai',
+            region: selectedRegion || 'us-central1',
+            geminiModel,
+            workflowName: orchWorkflowName,
+            scheduleCron: orchScheduleCron,
+          }
+        );
+        setOrchCompiled(data);
+      } catch (err) {
+        onShowError?.(err?.response?.data?.error || err.message || 'Orchestration compile failed.');
+      } finally {
+        setOrchCompiling(false);
+      }
+    },
+    [
+      projectId,
+      orchFormat,
+      activeBridgeId,
+      selectedBucket,
+      selectedAlloy,
+      selectedDataset,
+      selectedRegion,
+      geminiModel,
+      orchWorkflowName,
+      orchScheduleCron,
+      onShowError,
+    ]
+  );
+
+  useEffect(() => {
+    compileOrchestration(orchFormat);
+  }, [compileOrchestration, orchFormat]);
+
+  const fetchLiveWorkflows = useCallback(async () => {
+    if (!projectId) return;
+    setLoadingWorkflows(true);
+    try {
+      const { data } = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/data-fabric/orchestrate`,
+        {
+          action: 'LIST_WORKFLOWS',
+          region: selectedRegion || 'us-central1',
+        }
+      );
+      setLiveWorkflows(Array.isArray(data?.workflows) ? data.workflows : []);
+    } catch {
+      setLiveWorkflows([]);
+    } finally {
+      setLoadingWorkflows(false);
+    }
+  }, [projectId, selectedRegion]);
+
+  useEffect(() => {
+    fetchLiveWorkflows();
+  }, [fetchLiveWorkflows]);
+
+  const handleDeployWorkflow = async () => {
+    if (!projectId || !orchCompiled?.code) return;
+    setOrchDeploying(true);
+    try {
+      const { data } = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/data-fabric/orchestrate`,
+        {
+          action: 'DEPLOY_WORKFLOW',
+          bridgeId: activeBridgeId,
+          region: selectedRegion || 'us-central1',
+          workflowName: orchWorkflowName,
+          sourceContents: orchCompiled.code,
+        }
+      );
+      setOrchDeployReceipt(data);
+      onShowToast?.(
+        `Cloud Workflow "${data.workflowId}" ${data.actionTaken} in ${data.region} (${data.durationMs}ms)!`
+      );
+      fetchLiveWorkflows();
+    } catch (err) {
+      if (err?.code === 'CLOUDPULSE_DESTRUCTIVE_CANCELLED') return;
+      onShowError?.(err?.response?.data?.error || err.message || 'Failed to deploy Cloud Workflow.');
+    } finally {
+      setOrchDeploying(false);
+    }
+  };
+
+  const handleExecuteWorkflow = async (wfId) => {
+    if (!projectId || !wfId) return;
+    setExecutingWorkflowId(wfId);
+    try {
+      const { data } = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/data-fabric/orchestrate`,
+        {
+          action: 'EXECUTE_WORKFLOW',
+          bridgeId: activeBridgeId,
+          region: selectedRegion || 'us-central1',
+          workflowName: wfId,
+        }
+      );
+      onShowToast?.(`Triggered live execution of "${wfId}" (state: ${data.state})!`);
+    } catch (err) {
+      if (err?.code === 'CLOUDPULSE_DESTRUCTIVE_CANCELLED') return;
+      onShowError?.(err?.response?.data?.error || err.message || `Failed to execute workflow ${wfId}.`);
+    } finally {
+      setExecutingWorkflowId(null);
+    }
+  };
 
   const runRagStage1Upload = async () => {
     if (!projectId) return null;
@@ -811,6 +944,211 @@ export default function DataFabricMeshBridge({
                   No documents indexed in <code>public.cloudpulse_rag_docs</code> yet — run Stages 1 → 3 above first.
                 </div>
               )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Data Fabric Auto-Orchestrator: Cloud Workflows YAML · Composer Airflow DAG · Dataform SQLX + Live Deploy */}
+      <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#10141d] space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Rocket className="w-4 h-4 text-amber-500 shrink-0" />
+              <h4 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+                Data Fabric Auto-Orchestrator (Cloud Workflows · Composer Airflow DAG · Dataform SQLX)
+              </h4>
+            </div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              Compiles your active bridge (<strong>{activeBridgeId}</strong>) into production orchestration code and deploys live to <strong>Google Cloud Workflows</strong> (<code>workflows.googleapis.com/v1</code>).
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {[
+              { id: 'CLOUD_WORKFLOWS', label: 'Cloud Workflows YAML' },
+              { id: 'COMPOSER_DAG', label: 'Composer Airflow DAG' },
+              { id: 'DATAFORM_SQLX', label: 'Dataform SQLX' },
+            ].map((fmt) => {
+              const active = orchFormat === fmt.id;
+              return (
+                <button
+                  key={fmt.id}
+                  type="button"
+                  onClick={() => setOrchFormat(fmt.id)}
+                  className={`px-2.5 py-1.5 rounded-lg border text-xs font-bold cursor-pointer transition-colors ${
+                    active
+                      ? 'border-amber-500 bg-amber-500/15 text-amber-900 dark:text-amber-100'
+                      : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:border-amber-500/40'
+                  }`}
+                >
+                  {fmt.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+          <div>
+            <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+              Workflow / DAG ID
+            </label>
+            <input
+              type="text"
+              value={orchWorkflowName}
+              onChange={(e) => setOrchWorkflowName(e.target.value)}
+              className="w-full px-2.5 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 font-mono text-xs text-zinc-900 dark:text-zinc-100"
+            />
+          </div>
+          <div>
+            <label className="block text-[10.5px] font-mono text-zinc-500 mb-1">
+              Cron Schedule
+            </label>
+            <div className="relative">
+              <Clock className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={orchScheduleCron}
+                onChange={(e) => setOrchScheduleCron(e.target.value)}
+                className="w-full pl-8 pr-2.5 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 font-mono text-xs text-zinc-900 dark:text-zinc-100"
+              />
+            </div>
+          </div>
+          <div className="flex items-end gap-2 flex-wrap">
+            {orchFormat === 'CLOUD_WORKFLOWS' && (
+              <button
+                type="button"
+                disabled={orchDeploying || !orchCompiled?.code}
+                onClick={handleDeployWorkflow}
+                className="flex-1 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                {orchDeploying ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Rocket className="w-3.5 h-3.5" />
+                )}
+                <span>{orchDeploying ? 'Deploying...' : 'Deploy Live to Cloud Workflows'}</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                if (!orchCompiled?.code) return;
+                navigator.clipboard?.writeText(orchCompiled.code);
+                setCopiedOrch(true);
+                onShowToast?.(`Copied ${orchCompiled.filename}`);
+                setTimeout(() => setCopiedOrch(false), 1800);
+              }}
+              className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+            >
+              {copiedOrch ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+              Copy
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!orchCompiled?.code) return;
+                const blob = new Blob([orchCompiled.code], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = orchCompiled.filename || 'workflow.yaml';
+                a.click();
+                URL.revokeObjectURL(url);
+                onShowToast?.(`Downloaded ${orchCompiled.filename}`);
+              }}
+              className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" />
+              {orchCompiled?.filename || 'Download'}
+            </button>
+          </div>
+        </div>
+
+        {orchDeployReceipt?.ok && (
+          <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/35 text-xs font-mono flex flex-wrap items-center justify-between gap-2 text-emerald-800 dark:text-emerald-200">
+            <span className="flex items-center gap-1.5 font-bold">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
+              Workflow {orchDeployReceipt.workflowId} ({orchDeployReceipt.actionTaken} in {orchDeployReceipt.region} · {orchDeployReceipt.durationMs}ms)
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={executingWorkflowId === orchDeployReceipt.workflowId}
+                onClick={() => handleExecuteWorkflow(orchDeployReceipt.workflowId)}
+                className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer"
+              >
+                <Play className="w-3 h-3" />
+                Trigger Execution Now
+              </button>
+              {orchDeployReceipt.consoleUrl && (
+                <a
+                  href={orchDeployReceipt.consoleUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] inline-flex items-center gap-1"
+                >
+                  Console <ArrowUpRight className="w-3 h-3" />
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        <pre className="p-3.5 rounded-lg bg-zinc-950 text-amber-200 font-mono text-[10.5px] max-h-72 overflow-auto whitespace-pre-wrap">
+          {orchCompiling ? '# Compiling production orchestrator artifact...' : orchCompiled?.code || ''}
+        </pre>
+
+        {/* Live Deployed Cloud Workflows in Region */}
+        <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200 dark:border-zinc-800 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] font-mono font-bold text-zinc-700 dark:text-zinc-300">
+              Live Deployed Cloud Workflows in {selectedRegion} ({liveWorkflows.length})
+            </span>
+            <button
+              type="button"
+              onClick={fetchLiveWorkflows}
+              disabled={loadingWorkflows}
+              className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-[10.5px] font-mono font-bold text-zinc-700 dark:text-zinc-300 inline-flex items-center gap-1 cursor-pointer"
+            >
+              <RefreshCw className={`w-3 h-3 ${loadingWorkflows ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          </div>
+          {liveWorkflows.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {liveWorkflows.map((wf) => (
+                <div
+                  key={wf.name}
+                  className="p-2.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-2 text-xs"
+                >
+                  <div className="min-w-0">
+                    <div className="font-mono font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                      {wf.id}
+                    </div>
+                    <div className="text-[10px] font-mono text-zinc-500">
+                      {wf.state} · rev {wf.revisionId || '—'}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={executingWorkflowId === wf.id}
+                    onClick={() => handleExecuteWorkflow(wf.id)}
+                    className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer shrink-0"
+                  >
+                    {executingWorkflowId === wf.id ? (
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Play className="w-3 h-3" />
+                    )}
+                    Run
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-[11px] font-mono text-zinc-500">
+              No Cloud Workflows deployed in {selectedRegion} yet — click <strong>Deploy Live to Cloud Workflows</strong> above to ship your first serverless Data Fabric workflow.
             </div>
           )}
         </div>

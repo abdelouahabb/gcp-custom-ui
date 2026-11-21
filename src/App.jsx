@@ -2293,6 +2293,7 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/alloydb/export-terraform') ||
       rawUrl.includes('/alloydb/nl2sql') ||
       rawUrl.includes('/data-fabric/synthesize-bridge') ||
+      (rawUrl.includes('/data-fabric/orchestrate') && (body.action === 'COMPILE' || body.action === 'LIST_WORKFLOWS')) ||
       (rawUrl.includes('/data-fabric/rag-loop') && body.stage === 'QUERY_SCANN_RAG') ||
       (rawUrl.includes('/alloydb/execute-sql') &&
         String(body.mode || '').toUpperCase() === 'INTROSPECT_ALLOYDB') ||
@@ -5146,6 +5147,53 @@ function classifyDestructiveAxiosConfig(config) {
           costWarning: `ALWAYS-FREE STORAGE ELIGIBLE (~$0.00): Storing a few kilobytes of seed rows falls within BigQuery's 10 GiB/month Always-Free storage tier.`,
           impactWarning: `Appends rows into live BigQuery table "${dsId}.${tblId}" in project "${projectId}".`,
         };
+      }
+      if (rawUrl.includes('/data-fabric/orchestrate')) {
+        const wfAction = String(body.action || '');
+        const wfName = body.workflowName || 'cloudpulse-fabric-workflow';
+        const wfRegion = body.region || 'us-central1';
+        if (wfAction === 'DEPLOY_WORKFLOW') {
+          return {
+            gateType: 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title: `Deploy Cloud Workflow "${wfName}" to ${wfRegion}?`,
+            laymanSummary: `In Plain English: Creates or updates a serverless Google Cloud Workflow named "${wfName}" in ${wfRegion} (${projectId}) using the compiled YAML pipeline.`,
+            headerBadge: 'Data Fabric Auto-Orchestrator — Live Cloud Workflows Deploy',
+            targetLabel: 'Target Cloud Workflow',
+            resourceKind: 'Cloud Workflow (workflows.googleapis.com/v1)',
+            targetName: `${projectId}/${wfRegion}/${wfName}`,
+            location: wfRegion,
+            projectId,
+            method: 'DEPLOY WORKFLOW',
+            endpoint: rawUrl,
+            confirmLabel: `Deploy Workflow "${wfName}"`,
+            cancelToast: 'Cloud Workflow deployment cancelled.',
+            whatHappensNext: `1. Calls workflows.googleapis.com/v1 to create (or PATCH if existing) "${wfName}" in ${wfRegion}.\n2. Returns the live Cloud Console URL so you can inspect or trigger executions.`,
+            costWarning: `FREE TIER ELIGIBLE: Cloud Workflows includes 5,000 free internal steps/month ($0.01 per 1,000 steps thereafter); idle deployed workflows cost $0.00/mo.`,
+            impactWarning: `Creates or updates Cloud Workflow "${wfName}" in project "${projectId}".`,
+          };
+        }
+        if (wfAction === 'EXECUTE_WORKFLOW') {
+          return {
+            gateType: 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title: `Trigger Live Execution of Cloud Workflow "${wfName}"?`,
+            laymanSummary: `In Plain English: Starts a live serverless execution of "${wfName}" in ${wfRegion} (${projectId}) via workflowexecutions.googleapis.com/v1.`,
+            headerBadge: 'Data Fabric Auto-Orchestrator — Live Execution Trigger',
+            targetLabel: 'Target Cloud Workflow Execution',
+            resourceKind: 'Cloud Workflow Execution (workflowexecutions.googleapis.com/v1)',
+            targetName: `${projectId}/${wfRegion}/${wfName}`,
+            location: wfRegion,
+            projectId,
+            method: 'EXECUTE WORKFLOW',
+            endpoint: rawUrl,
+            confirmLabel: `Run "${wfName}" Now`,
+            cancelToast: 'Workflow execution cancelled.',
+            whatHappensNext: `1. Submits a new execution to workflowexecutions.googleapis.com/v1.\n2. Runs the live GCS + BigQuery steps serverlessly on Google Cloud.`,
+            costWarning: `NEGLIGIBLE COST (~$0.00): Covered by Cloud Workflows' 5,000 free steps/month tier.`,
+            impactWarning: `Triggers live execution of "${wfName}" in project "${projectId}".`,
+          };
+        }
       }
       if (rawUrl.includes('/data-fabric/rag-loop')) {
         const stage = String(body.stage || '');
