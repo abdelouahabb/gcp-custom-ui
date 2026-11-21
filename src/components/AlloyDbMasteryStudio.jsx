@@ -34,6 +34,13 @@ import {
   TrendingDown,
   FileCode,
   Wand2,
+  Presentation,
+  ChevronLeft,
+  ChevronRight,
+  Timer,
+  Pause,
+  RotateCcw,
+  MessageSquare,
 } from 'lucide-react';
 import ReactECharts from 'echarts-for-react';
 import MermaidArchitectureDiagram from './MermaidArchitectureDiagram';
@@ -83,6 +90,196 @@ const ALLOYDB_PILLARS = [
     badge: '4 Pillars · 10 Labs',
     icon: BookOpen,
     subtitle: 'Interactive matrix of all 10 AlloyDB differentiation scenarios & live jump links',
+  },
+];
+
+const DEMO_DIRECTOR_TRACKS = [
+  {
+    id: 'KEYNOTE_10M',
+    label: '10-Min Keynote: Express → Sovereign Enterprise',
+    durationMin: 10,
+    audience: 'Developers, Architects & Executives',
+    beats: [
+      {
+        id: 'k1',
+        title: 'Beat 1 · Zero-Friction AlloyDB Express (PG 18)',
+        targetSec: 120,
+        pillar: 'EXPRESS_QUICKSTART',
+        sayThis:
+          'Developers used to skip AlloyDB because Enterprise required VPC peering and always-on nodes. AlloyDB Express starts with 1 command (--enable-express), PostgreSQL 18, Public DNS, and Scale-to-Zero—and upgrades in-place to 288-vCPU Enterprise with --no-enable-express.',
+        objection:
+          'Q: "Why not Neon or Supabase?" → A: You get the same instant scale-to-zero Day-1 DX, but Day 100 is an in-place flag flip to Google Colossus 99.99% SLA, Columnar HTAP, and SCaNN—zero migration.',
+        actionLabel: 'Run 6-Gate Live GCP Readiness X-Ray',
+        actionKey: 'RUN_READINESS_XRAY',
+      },
+      {
+        id: 'k2',
+        title: 'Beat 2 · Live Local Omni Parity & Real psql Introspection',
+        targetSec: 120,
+        pillar: 'LIVE_SQL_AND_OMNI',
+        sayThis:
+          'Develop locally at $0.00/hr against real google/alloydbomni Docker—identical PostgreSQL, google_columnar_engine, and google_ml_integration extensions—then swap DATABASE_URL to Cloud AlloyDB.',
+        objection:
+          'Q: "Does it actually run real Postgres?" → A: Watch live /usr/bin/psql introspect our running local AlloyDB Omni container in ~75ms.',
+        actionLabel: 'Introspect Live AlloyDB Omni via psql',
+        actionKey: 'RUN_LIVE_INTROSPECT',
+      },
+      {
+        id: 'k3',
+        title: 'Beat 3 · SCaNN Vector vs. pgvector HNSW at 10M–100M Scale',
+        targetSec: 120,
+        pillar: 'SCANN_VECTOR_RAG',
+        sayThis:
+          'Standard pgvector HNSW blows up RAM at 10M+ vectors. Google Research SCaNN cuts index RAM by ~75% and boosts QPS 4x–10x while keeping hybrid relational WHERE filters inside ACID PostgreSQL.',
+        objection:
+          'Q: "Do we need Pinecone/Qdrant?" → A: No—eliminate sync drift and extra vector-DB bills by running SCaNN + inline Vertex AI embedding() inside AlloyDB.',
+        actionLabel: 'Load Live SCaNN PoV Benchmark into psql',
+        actionKey: 'LOAD_SCANN_POV',
+      },
+      {
+        id: 'k4',
+        title: 'Beat 4 · Zero Vendor Lock-in (pglogical DDL Audit & Stock PG Exit)',
+        targetSec: 120,
+        pillar: 'ZERO_LOCKIN_PGLOGICAL',
+        subView: 'STOCK_PG_EXIT_DR',
+        sayThis:
+          'AlloyDB is 100% PostgreSQL wire-compatible. Audit any existing Aurora/RDS schema in seconds for missing Primary Keys or Aurora lock-in extensions, and replicate continuously OUT to stock PostgreSQL for a regulator-verifiable exit.',
+        objection:
+          'Q: "What if we ever need to leave?" → A: Native pglogical bi-directional WAL streaming gives you a live, tested failover to open-source PostgreSQL—zero lock-in.',
+        actionLabel: 'Run Live PostgreSQL DDL Compatibility Audit',
+        actionKey: 'RUN_COMPAT_AUDIT',
+      },
+      {
+        id: 'k5',
+        title: 'Beat 5 · C-Suite Sign-Off: Sovereign CMEK/DORA + Terraform HCL',
+        targetSec: 120,
+        pillar: 'BEYOND_AURORA_AGENTS',
+        subView: 'SOVEREIGN_SHIELD',
+        sayThis:
+          'For the CISO and CFO: bind EU clusters to your own Cloud KMS / External Key Manager (CMEK/EKM), verify 6 Sovereign DORA/GDPR controls live, and export both the Boardroom Migration Dossier and production Terraform HCL in 1 click.',
+        objection:
+          'Q: "How do we pass DORA Art. 28?" → A: CMEK/EKM key sovereignty + EU residency + pgaudit + air-gapped AlloyDB Omni & pglogical exit—all verified live.',
+        actionLabel: 'Run Live 6-Control Sovereign Cloud Audit',
+        actionKey: 'RUN_SOVEREIGN_AUDIT',
+      },
+    ],
+  },
+  {
+    id: 'CSUITE_7M',
+    label: '7-Min C-Suite & CISO Pitch: Beyond Aurora & Sovereign Cloud',
+    durationMin: 7,
+    audience: 'CTO, CFO, CISO, VP Engineering',
+    beats: [
+      {
+        id: 'c1',
+        title: 'Beat 1 · 3-Systems-to-1 TCO Consolidation vs. AWS Aurora',
+        targetSec: 120,
+        pillar: 'BEYOND_AURORA_AGENTS',
+        subView: 'AURORA_PARITY',
+        sayThis:
+          'Consolidate AWS Aurora + standalone Vector DB + Redshift/OLAP offload into one AlloyDB cluster with 99.99% SLA inclusive of maintenance—watch the 36-month cumulative savings curve widen live.',
+        objection:
+          'Q: "What about Aurora I/O surprise bills?" → A: AlloyDB eliminates per-I/O billing spikes and accelerates analytics 100x natively via the built-in Columnar Engine.',
+        actionLabel: 'Export Boardroom Executive Dossier (.md)',
+        actionKey: 'EXPORT_DOSSIER',
+      },
+      {
+        id: 'c2',
+        title: 'Beat 2 · Live 6-Control Sovereign CMEK/EKM & DORA/GDPR Shield',
+        targetSec: 120,
+        pillar: 'BEYOND_AURORA_AGENTS',
+        subView: 'SOVEREIGN_SHIELD',
+        sayThis:
+          'Live-audit real Cloud KMS keys, EU data residency, Zero Public IP (PSC), pgaudit, and DORA Art. 28 exit readiness across your GCP project.',
+        objection:
+          'Q: "Who holds the encryption keys?" → A: You do—via Cloud KMS CMEK or External Key Manager (Thales/Fortanix/Utimaco) with cryptographic revocation.',
+        actionLabel: 'Run Live 6-Control Sovereign Cloud Audit',
+        actionKey: 'RUN_SOVEREIGN_AUDIT',
+      },
+      {
+        id: 'c3',
+        title: 'Beat 3 · Zero-Lock-in Exit Proof (pglogical → Stock Postgres)',
+        targetSec: 90,
+        pillar: 'ZERO_LOCKIN_PGLOGICAL',
+        subView: 'STOCK_PG_EXIT_DR',
+        sayThis:
+          'Regulators demand a tested exit plan, not a slide. AlloyDB streams WAL changes continuously to stock open-source PostgreSQL anywhere.',
+        objection:
+          'Q: "Does our existing app code need rewrites?" → A: Zero lines changed—Spring Boot, Prisma, Django, and standard psycopg/pg drivers work drop-in.',
+        actionLabel: 'Run Live DDL & pglogical Audit',
+        actionKey: 'RUN_COMPAT_AUDIT',
+      },
+      {
+        id: 'c4',
+        title: 'Beat 4 · Instant Production Terraform HCL Blueprint (.tf)',
+        targetSec: 90,
+        pillar: 'BEYOND_AURORA_AGENTS',
+        subView: 'TERRAFORM_HCL',
+        sayThis:
+          'Turn this entire Sovereign AlloyDB architecture—CMEK cluster, Read Pool, pgaudit flags, and Zero-Password IAM principal—into auditable Terraform HCL in 1 click.',
+        objection:
+          'Q: "How fast can platform engineering deploy this?" → A: Download the compiled .tf bound to your live projectNumber and run terraform plan today.',
+        actionLabel: 'Compile Live Production Terraform HCL',
+        actionKey: 'COMPILE_TERRAFORM',
+      },
+    ],
+  },
+  {
+    id: 'AI_DEV_8M',
+    label: '8-Min AI & Data Engineer Deep Dive: SCaNN + Gemini 4 Agents',
+    durationMin: 8,
+    audience: 'AI/ML Engineers, GenAI Architects, DBAs',
+    beats: [
+      {
+        id: 'a1',
+        title: 'Beat 1 · SCaNN Index RAM Curve vs. pgvector HNSW',
+        targetSec: 120,
+        pillar: 'SCANN_VECTOR_RAG',
+        sayThis:
+          'Compare tree-based anisotropic quantization (SCaNN) vs graph-heavy HNSW across 1M–100M vectors and 768–3072 dimensions—~75% less RAM and higher recall under selective WHERE filters.',
+        objection:
+          'Q: "How is it tuned?" → A: MODE=AUTO handles tree partitioning and auto-maintenance automatically as rows grow.',
+        actionLabel: 'Load Live SCaNN PoV Benchmark',
+        actionKey: 'LOAD_SCANN_POV',
+      },
+      {
+        id: 'a2',
+        title: 'Beat 2 · Dual-Engine Gemini 4 NL2SQL Copilot',
+        targetSec: 120,
+        pillar: 'LIVE_SQL_AND_OMNI',
+        sayThis:
+          'Synthesize runnable AlloyDB SCaNN, Columnar, and pglogical SQL from plain English using Gemini 4 Neon, Carbon, Argon, or Hydrogen—via keyless Vertex AI OAuth2 or RSA-vaulted AI Studio key.',
+        objection:
+          'Q: "Can we run it immediately?" → A: 1 click loads it straight into the live /usr/bin/psql runner above.',
+        actionLabel: 'Run Dual-Engine Gemini 4 NL2SQL Now',
+        actionKey: 'RUN_NL2SQL',
+      },
+      {
+        id: 'a3',
+        title: 'Beat 3 · Autonomous AI Agents Inside PostgreSQL',
+        targetSec: 120,
+        pillar: 'BEYOND_AURORA_AGENTS',
+        subView: 'AI_AGENTS',
+        sayThis:
+          'Store transactional agent state, LangGraph checkpoints, auto-generated vector embeddings, and inline Gemini 4 reasoning in one ACID database—replacing 3 separate stores.',
+        objection:
+          'Q: "Why fails inline embedding() in prod?" → A: Usually missing roles/aiplatform.user on gcp-sa-alloydb—our 6-Gate X-Ray catches and fixes it in 1 click.',
+        actionLabel: 'Run 6-Gate Vertex AI & IAM Readiness X-Ray',
+        actionKey: 'RUN_READINESS_XRAY',
+      },
+      {
+        id: 'a4',
+        title: 'Beat 4 · Ship Today on AlloyDB Express + Cloud Run',
+        targetSec: 120,
+        pillar: 'EXPRESS_QUICKSTART',
+        sayThis:
+          'Start on AlloyDB Express PG 18 with Next.js + Cloud Run, then upgrade in-place to Enterprise Read Pools without changing a single connection string.',
+        objection:
+          'Q: "Can we test all 10 scenarios?" → A: Open the 10-Topic Field Playbook tab for 1-click runnable labs across every scenario.',
+        actionLabel: 'Open 10-Topic Field Playbook Matrix',
+        actionKey: 'OPEN_PLAYBOOK',
+      },
+    ],
   },
 ];
 
@@ -317,6 +514,13 @@ CREATE TABLE knowledge_docs (
   const [nlModel, setNlModel] = useState('gemini-4-neon');
   const [nlResult, setNlResult] = useState(null);
   const [runningNl2Sql, setRunningNl2Sql] = useState(false);
+
+  // --- Revolutionary Live Demo Director & Presenter Cockpit State ---
+  const [demoModeOpen, setDemoModeOpen] = useState(false);
+  const [demoTrackId, setDemoTrackId] = useState('KEYNOTE_10M');
+  const [demoBeatIdx, setDemoBeatIdx] = useState(0);
+  const [demoTimerRunning, setDemoTimerRunning] = useState(false);
+  const [demoElapsedSec, setDemoElapsedSec] = useState(0);
 
   useEffect(() => {
     if (initialSubTab && ALLOYDB_PILLARS.some((p) => p.id === initialSubTab)) {
@@ -592,6 +796,125 @@ CREATE TABLE knowledge_docs (
     }, 1500);
     return () => clearInterval(timer);
   }, [omniStatus?.job?.active, fetchOmniStatus]);
+
+  // Live Demo Director Timer & Keyboard Shortcuts (Alt+Right / Alt+Left)
+  const activeDemoTrack = useMemo(
+    () => DEMO_DIRECTOR_TRACKS.find((t) => t.id === demoTrackId) || DEMO_DIRECTOR_TRACKS[0],
+    [demoTrackId]
+  );
+  const activeDemoBeat = activeDemoTrack.beats[demoBeatIdx] || activeDemoTrack.beats[0];
+
+  useEffect(() => {
+    if (!demoModeOpen || !demoTimerRunning) return;
+    const id = setInterval(() => setDemoElapsedSec((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, [demoModeOpen, demoTimerRunning]);
+
+  const goToDemoBeat = useCallback(
+    (trackObj, idx) => {
+      const safeIdx = Math.max(0, Math.min(trackObj.beats.length - 1, idx));
+      const beat = trackObj.beats[safeIdx];
+      setDemoBeatIdx(safeIdx);
+      if (beat?.pillar) setActivePillar(beat.pillar);
+      if (beat?.pillar === 'ZERO_LOCKIN_PGLOGICAL' && beat.subView) {
+        setLockInLab(beat.subView);
+      } else if (beat?.pillar === 'BEYOND_AURORA_AGENTS' && beat.subView) {
+        setAuroraView(beat.subView);
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!demoModeOpen) return;
+    const onKeyDown = (e) => {
+      if (e.altKey && e.key === 'ArrowRight') {
+        e.preventDefault();
+        goToDemoBeat(activeDemoTrack, demoBeatIdx + 1);
+      } else if (e.altKey && e.key === 'ArrowLeft') {
+        e.preventDefault();
+        goToDemoBeat(activeDemoTrack, demoBeatIdx - 1);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [demoModeOpen, activeDemoTrack, demoBeatIdx, goToDemoBeat]);
+
+  const executeDemoBeatAction = async (actionKey) => {
+    if (actionKey === 'RUN_READINESS_XRAY') {
+      await runReadinessXray();
+    } else if (actionKey === 'RUN_LIVE_INTROSPECT') {
+      setActivePillar('LIVE_SQL_AND_OMNI');
+      await executeLiveSql('INTROSPECT_ALLOYDB');
+    } else if (actionKey === 'LOAD_SCANN_POV') {
+      setLiveSqlInput(`-- Live Proof-of-Value Benchmark: Seed 2,000 Vectors & Compare SCaNN vs Sequential Scan
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS alloydb_scann;
+DROP TABLE IF EXISTS cloudpulse_pov_vectors;
+CREATE TABLE cloudpulse_pov_vectors (
+  id SERIAL PRIMARY KEY,
+  category TEXT NOT NULL,
+  embedding vector(128) NOT NULL
+);
+INSERT INTO cloudpulse_pov_vectors (category, embedding)
+SELECT CASE WHEN g % 3 = 0 THEN 'runbook' ELSE 'incident' END,
+       (SELECT array_agg(random()::float4)::vector(128) FROM generate_series(1, 128))
+FROM generate_series(1, 2000) g;
+CREATE INDEX idx_pov_scann ON cloudpulse_pov_vectors USING scann (embedding cosine) WITH (num_leaves=20);
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT id, category FROM cloudpulse_pov_vectors
+ORDER BY embedding <=> (SELECT embedding FROM cloudpulse_pov_vectors LIMIT 1)
+LIMIT 10;`);
+      setActivePillar('LIVE_SQL_AND_OMNI');
+      notify('Loaded Live SCaNN PoV Benchmark — click Execute Live SQL!');
+    } else if (actionKey === 'RUN_COMPAT_AUDIT') {
+      setActivePillar('ZERO_LOCKIN_PGLOGICAL');
+      await runCompatAudit();
+    } else if (actionKey === 'RUN_SOVEREIGN_AUDIT') {
+      setActivePillar('BEYOND_AURORA_AGENTS');
+      setAuroraView('SOVEREIGN_SHIELD');
+      await runSovereignAudit();
+    } else if (actionKey === 'EXPORT_DOSSIER') {
+      exportExecutiveDossier();
+    } else if (actionKey === 'COMPILE_TERRAFORM') {
+      setActivePillar('BEYOND_AURORA_AGENTS');
+      setAuroraView('TERRAFORM_HCL');
+      await compileTerraformHcl();
+    } else if (actionKey === 'RUN_NL2SQL') {
+      setActivePillar('LIVE_SQL_AND_OMNI');
+      await runNl2SqlCopilot();
+    } else if (actionKey === 'OPEN_PLAYBOOK') {
+      setActivePillar('PLAYBOOK_MATRIX');
+    }
+  };
+
+  const exportPresenterRunbook = () => {
+    const md = `# AlloyDB Live Demo Director Runbook: ${activeDemoTrack.label}
+
+- **Audience**: ${activeDemoTrack.audience}
+- **Target Duration**: ${activeDemoTrack.durationMin} minutes
+- **GCP Project**: \`${projectId || 'unspecified'}\`
+
+${activeDemoTrack.beats
+  .map(
+    (b, i) => `## ${i + 1}. ${b.title} (${Math.round(b.targetSec / 60)} min)
+- **CloudPulse Pillar**: \`${b.pillar}\`${b.subView ? ` → \`${b.subView}\`` : ''}
+- **Say This Out Loud**: ${b.sayThis}
+- **Audience Q&A Killer**: ${b.objection}
+- **Live Demo Action**: ${b.actionLabel}
+`
+  )
+  .join('\n')}
+`;
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `alloydb-live-demo-${activeDemoTrack.id.toLowerCase()}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    notify(`Exported Presenter Runbook (${activeDemoTrack.label})`);
+  };
 
   const executeAlloyAction = async (payload, key) => {
     if (!projectId) return;
@@ -1251,6 +1574,25 @@ GROUP BY 1 ORDER BY turns DESC;`;
             )}
             <button
               type="button"
+              onClick={() => {
+                const nextOpen = !demoModeOpen;
+                setDemoModeOpen(nextOpen);
+                if (nextOpen) {
+                  setDemoTimerRunning(true);
+                  goToDemoBeat(activeDemoTrack, demoBeatIdx);
+                }
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer border transition-all ${
+                demoModeOpen
+                  ? 'border-amber-500 bg-amber-500/20 text-amber-800 dark:text-amber-200'
+                  : 'border-amber-500/45 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-200'
+              }`}
+            >
+              <Presentation className="w-3.5 h-3.5" />
+              {demoModeOpen ? 'Close Live Demo Director' : 'Live Demo Mode'}
+            </button>
+            <button
+              type="button"
               onClick={exportExecutiveDossier}
               className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
             >
@@ -1297,6 +1639,145 @@ GROUP BY 1 ORDER BY turns DESC;`;
             )}
           </div>
         </div>
+
+        {/* Revolutionary Live Demo Director & Presenter Cockpit */}
+        {demoModeOpen && activeDemoBeat && (
+          <div className="p-4 rounded-xl border-2 border-amber-500/60 bg-gradient-to-br from-amber-500/10 via-white to-blue-500/5 dark:from-amber-500/15 dark:via-[#111622] dark:to-blue-500/10 space-y-3 shadow-md">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/25 pb-2.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase bg-amber-500/25 text-amber-900 dark:text-amber-200 border border-amber-500/40">
+                  <Presentation className="w-3 h-3" />
+                  LIVE DEMO DIRECTOR
+                </span>
+                <select
+                  value={demoTrackId}
+                  onChange={(e) => {
+                    const nextTrack =
+                      DEMO_DIRECTOR_TRACKS.find((t) => t.id === e.target.value) ||
+                      DEMO_DIRECTOR_TRACKS[0];
+                    setDemoTrackId(nextTrack.id);
+                    setDemoElapsedSec(0);
+                    goToDemoBeat(nextTrack, 0);
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100"
+                >
+                  {DEMO_DIRECTOR_TRACKS.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400">
+                  Audience: {activeDemoTrack.audience}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 font-mono text-xs">
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-zinc-900 text-emerald-300 font-bold">
+                  <Timer className="w-3.5 h-3.5 text-amber-400" />
+                  {String(Math.floor(demoElapsedSec / 60)).padStart(2, '0')}:
+                  {String(demoElapsedSec % 60).padStart(2, '0')} / {activeDemoTrack.durationMin}:00
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setDemoTimerRunning((r) => !r)}
+                  className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                >
+                  {demoTimerRunning ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                  {demoTimerRunning ? 'Pause' : 'Resume'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDemoElapsedSec(0)}
+                  className="p-1 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                  title="Reset timer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={exportPresenterRunbook}
+                  className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                >
+                  <Download className="w-3 h-3" />
+                  Export Script (.md)
+                </button>
+              </div>
+            </div>
+
+            {/* Clickable Beat Stepper */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-1.5">
+              {activeDemoTrack.beats.map((b, idx) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => goToDemoBeat(activeDemoTrack, idx)}
+                  className={`px-2.5 py-1.5 rounded-lg border text-left text-[10.5px] font-mono transition-all cursor-pointer truncate ${
+                    idx === demoBeatIdx
+                      ? 'border-amber-500 bg-amber-500/20 text-amber-900 dark:text-amber-100 font-extrabold'
+                      : idx < demoBeatIdx
+                      ? 'border-emerald-500/35 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'
+                      : 'border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/60 text-zinc-600 dark:text-zinc-400'
+                  }`}
+                >
+                  {b.title}
+                </button>
+              ))}
+            </div>
+
+            {/* Active Beat Teleprompter + Q&A Objection Killer + 1-Click Live Execution */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-stretch">
+              <div className="lg:col-span-6 p-3 rounded-lg bg-white dark:bg-zinc-950/90 border border-zinc-200 dark:border-zinc-800 space-y-1">
+                <div className="text-[10px] font-mono font-extrabold uppercase tracking-wider text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+                  <MessageSquare className="w-3 h-3" />
+                  Say This Out Loud ({activeDemoBeat.title})
+                </div>
+                <p className="text-xs text-zinc-800 dark:text-zinc-100 leading-relaxed font-medium">
+                  &ldquo;{activeDemoBeat.sayThis}&rdquo;
+                </p>
+              </div>
+              <div className="lg:col-span-6 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 space-y-1">
+                <div className="text-[10px] font-mono font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                  Audience Q&amp;A Objection Killer
+                </div>
+                <p className="text-xs text-emerald-950 dark:text-emerald-100 leading-relaxed">
+                  {activeDemoBeat.objection}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={demoBeatIdx === 0}
+                  onClick={() => goToDemoBeat(activeDemoTrack, demoBeatIdx - 1)}
+                  className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-bold inline-flex items-center gap-1 cursor-pointer disabled:opacity-40"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  Prev Beat (Alt+←)
+                </button>
+                <button
+                  type="button"
+                  disabled={demoBeatIdx >= activeDemoTrack.beats.length - 1}
+                  onClick={() => goToDemoBeat(activeDemoTrack, demoBeatIdx + 1)}
+                  className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-bold inline-flex items-center gap-1 cursor-pointer disabled:opacity-40"
+                >
+                  Next Beat (Alt+→)
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => executeDemoBeatAction(activeDemoBeat.actionKey)}
+                className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                Execute Live: {activeDemoBeat.actionLabel}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* 6-Pillar Navigation Selector (Warm Amber Selection Language) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2">
