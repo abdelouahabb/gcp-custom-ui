@@ -2292,6 +2292,7 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/alloydb/compat-audit') ||
       rawUrl.includes('/alloydb/export-terraform') ||
       rawUrl.includes('/alloydb/nl2sql') ||
+      rawUrl.includes('/data-fabric/synthesize-bridge') ||
       (rawUrl.includes('/alloydb/execute-sql') &&
         String(body.mode || '').toUpperCase() === 'INTROSPECT_ALLOYDB') ||
       (rawUrl.includes('/cloudrun-bridge/action') &&
@@ -8176,6 +8177,7 @@ function CloudPulseCockpit() {
     COMPACTION_DOCTOR: 'Iceberg Small-File Compaction Doctor',
     DATABRICKS_UNITY_BRIDGE: 'Federated Databricks Unity & AWS Glue Bridge',
     MEDALLION_ELT: 'Bronze-Silver-Gold Medallion ELT',
+    DATA_FABRIC_MESH: 'Live 6-Engine Data Fabric Mesh & Cross-Studio Bridge',
     SCHEMA_CONTRACTS: 'Live Schema Contracts & Drift Firewall',
     SERVERLESS_SPARK: 'Serverless Spark Pipeline Builder',
     SERVERLESS_BATCHES: 'Serverless Spark 3.5 Batches',

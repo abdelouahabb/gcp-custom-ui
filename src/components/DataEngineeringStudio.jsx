@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import IcebergLakehousePlaybookMatrix from './IcebergLakehousePlaybookMatrix';
 import MermaidArchitectureDiagram from './MermaidArchitectureDiagram';
+import DataFabricMeshBridge from './DataFabricMeshBridge';
 
 export default function DataEngineeringStudio({
   projectId,
@@ -991,6 +992,12 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
             {[
               {
+                id: 'DATA_FABRIC_MESH',
+                icon: Workflow,
+                label: 'Live 6-Engine Data Fabric Mesh & Bridge',
+                badge: 'GCS·AlloyDB·Spark·BQ',
+              },
+              {
                 id: 'ICEBERG_50_MATRIX',
                 icon: Layers,
                 label: '50-Playbook Iceberg Lakehouse Matrix',
@@ -1095,6 +1102,17 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
       </div>
 
       {/* TAB 0: 50-PLAYBOOK BORDERLESS ICEBERG LAKEHOUSE MATRIX */}
+      {activeSubTab === 'DATA_FABRIC_MESH' && (
+        <DataFabricMeshBridge
+          projectId={projectId}
+          onNavigateTab={onNavigateTab}
+          onOpenBigQuerySql={onOpenBigQuerySql}
+          onRunInShell={onRunInShell}
+          onShowToast={onShowToast}
+          onShowError={onShowError}
+        />
+      )}
+
       {activeSubTab === 'ICEBERG_50_MATRIX' && (
         <IcebergLakehousePlaybookMatrix
           projectId={projectId}

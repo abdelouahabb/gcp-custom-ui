@@ -1634,6 +1634,14 @@ GROUP BY 1 ORDER BY turns DESC;`;
                   </button>
                   <button
                     type="button"
+                    onClick={() => onNavigateTab('DATA_ENGINEER_STUDIO', 'DATA_FABRIC_MESH')}
+                    className="px-3 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-mono font-bold inline-flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer"
+                  >
+                    <span>6-Engine Data Fabric</span>
+                    <ArrowUpRight className="w-3.5 h-3.5 shrink-0" />
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => onNavigateTab('MCP_HUB')}
                     className="px-3 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-mono font-bold inline-flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer"
                   >
