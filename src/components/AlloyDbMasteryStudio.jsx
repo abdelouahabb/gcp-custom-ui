@@ -1524,8 +1524,8 @@ GROUP BY 1 ORDER BY turns DESC;`;
           HEADER & LIVE ALLOYDB FLEET TELEMETRY BAR
          ================================================================= */}
       <div className="p-4 sm:p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#10141d] space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1">
+        <div className="space-y-3">
+          <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold uppercase tracking-wider bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/35">
                 <Database className="w-3 h-3" />
@@ -1549,7 +1549,7 @@ GROUP BY 1 ORDER BY turns DESC;`;
             <h2 className="text-lg sm:text-xl font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight">
               AlloyDB Mastery, Express Quickstart, Zero Lock-in &amp; SCaNN AI Command Center
             </h2>
-            <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-4xl">
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 max-w-5xl leading-relaxed">
               Live <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">alloydb.googleapis.com/v1beta</code> fleet control plane + interactive engineering workbenches for{' '}
               <strong className="text-zinc-900 dark:text-zinc-200">AlloyDB Express (PG 18)</strong>,{' '}
               <strong className="text-zinc-900 dark:text-zinc-200">Zero Lock-in (`pglogical` + Omni)</strong>,{' '}
@@ -1558,85 +1558,91 @@ GROUP BY 1 ORDER BY turns DESC;`;
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {!overview?.apiEnabled && (
+          {/* Dedicated Full-Width Action Bar (Spacious, Zero Button Collisions) */}
+          <div className="flex flex-wrap items-center justify-between gap-2.5 pt-3 border-t border-zinc-200/80 dark:border-zinc-800/80">
+            <div className="flex flex-wrap items-center gap-2.5">
+              {!overview?.apiEnabled && (
+                <button
+                  type="button"
+                  disabled={busyKey === 'ENABLE_API'}
+                  onClick={() =>
+                    executeAlloyAction({ action: 'ENABLE_ALLOYDB_API' }, 'ENABLE_API')
+                  }
+                  className="px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-60"
+                >
+                  <Zap className="w-3.5 h-3.5 shrink-0" />
+                  <span>{busyKey === 'ENABLE_API' ? 'Enabling...' : 'Enable AlloyDB API'}</span>
+                </button>
+              )}
               <button
                 type="button"
-                disabled={busyKey === 'ENABLE_API'}
-                onClick={() =>
-                  executeAlloyAction({ action: 'ENABLE_ALLOYDB_API' }, 'ENABLE_API')
-                }
-                className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                onClick={() => {
+                  const nextOpen = !demoModeOpen;
+                  setDemoModeOpen(nextOpen);
+                  if (nextOpen) {
+                    setDemoTimerRunning(true);
+                    goToDemoBeat(activeDemoTrack, demoBeatIdx);
+                  }
+                }}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer border transition-all ${
+                  demoModeOpen
+                    ? 'border-amber-500 bg-amber-500/20 text-amber-800 dark:text-amber-200'
+                    : 'border-amber-500/45 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-200'
+                }`}
               >
-                <Zap className="w-3.5 h-3.5" />
-                {busyKey === 'ENABLE_API' ? 'Enabling...' : 'Enable AlloyDB API'}
+                <Presentation className="w-3.5 h-3.5 shrink-0" />
+                <span>{demoModeOpen ? 'Close Live Demo Director' : 'Live Demo Mode'}</span>
               </button>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                const nextOpen = !demoModeOpen;
-                setDemoModeOpen(nextOpen);
-                if (nextOpen) {
-                  setDemoTimerRunning(true);
-                  goToDemoBeat(activeDemoTrack, demoBeatIdx);
-                }
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer border transition-all ${
-                demoModeOpen
-                  ? 'border-amber-500 bg-amber-500/20 text-amber-800 dark:text-amber-200'
-                  : 'border-amber-500/45 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-200'
-              }`}
-            >
-              <Presentation className="w-3.5 h-3.5" />
-              {demoModeOpen ? 'Close Live Demo Director' : 'Live Demo Mode'}
-            </button>
-            <button
-              type="button"
-              onClick={exportExecutiveDossier}
-              className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
-            >
-              <Download className="w-3.5 h-3.5" />
-              Export Executive Dossier (.md)
-            </button>
-            <button
-              type="button"
-              onClick={runReadinessXray}
-              disabled={loadingXray}
-              className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-              {loadingXray ? 'Scanning 6 Gates...' : '6-Gate GCP Readiness X-Ray'}
-            </button>
-            <button
-              type="button"
-              onClick={fetchOverview}
-              disabled={loading}
-              className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              Refresh Live Fleet
-            </button>
-            {typeof onNavigateTab === 'function' && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('CLOUD_SQL_STUDIO')}
-                  className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
-                >
-                  Cloud SQL Studio
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onNavigateTab('MCP_HUB')}
-                  className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
-                >
-                  AlloyDB MCP
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                </button>
-              </>
-            )}
+              <button
+                type="button"
+                onClick={exportExecutiveDossier}
+                className="px-3.5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5 shrink-0" />
+                <span>Export Executive Dossier (.md)</span>
+              </button>
+              <button
+                type="button"
+                onClick={runReadinessXray}
+                disabled={loadingXray}
+                className="px-3.5 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                <span>{loadingXray ? 'Scanning 6 Gates...' : '6-Gate GCP Readiness X-Ray'}</span>
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={fetchOverview}
+                disabled={loading}
+                className="px-3 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-bold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 shrink-0 ${loading ? 'animate-spin' : ''}`} />
+                <span>Refresh Live Fleet</span>
+              </button>
+              {typeof onNavigateTab === 'function' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => onNavigateTab('CLOUD_SQL_STUDIO')}
+                    className="px-3 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-mono font-bold inline-flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer"
+                  >
+                    <span>Cloud SQL Studio</span>
+                    <ArrowUpRight className="w-3.5 h-3.5 shrink-0" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onNavigateTab('MCP_HUB')}
+                    className="px-3 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-mono font-bold inline-flex items-center gap-1 whitespace-nowrap shrink-0 cursor-pointer"
+                  >
+                    <span>AlloyDB MCP</span>
+                    <ArrowUpRight className="w-3.5 h-3.5 shrink-0" />
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1705,14 +1711,14 @@ GROUP BY 1 ORDER BY turns DESC;`;
               </div>
             </div>
 
-            {/* Clickable Beat Stepper */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-1.5">
+            {/* Clickable Beat Stepper (Spacious Multi-Line Cards, Zero Clipping) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
               {activeDemoTrack.beats.map((b, idx) => (
                 <button
                   key={b.id}
                   type="button"
                   onClick={() => goToDemoBeat(activeDemoTrack, idx)}
-                  className={`px-2.5 py-1.5 rounded-lg border text-left text-[10.5px] font-mono transition-all cursor-pointer truncate ${
+                  className={`flex flex-col items-start justify-center p-2.5 rounded-lg border text-left text-[11px] font-mono leading-snug whitespace-normal transition-all cursor-pointer ${
                     idx === demoBeatIdx
                       ? 'border-amber-500 bg-amber-500/20 text-amber-900 dark:text-amber-100 font-extrabold'
                       : idx < demoBeatIdx
