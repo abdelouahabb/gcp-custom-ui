@@ -13054,6 +13054,113 @@ app.get('/api/project/:projectId/data-fabric/mesh', async (req, res) => {
   }
 });
 
+// 9a-bq-conn-iam. POST /api/project/:projectId/bigquery/grant-connection-sa-roles
+// Grants roles/aiplatform.user (Agent Platform User) and roles/storage.objectViewer to a BigQuery Connection Service Account (bqcx-...@gcp-sa-bigquery-condel.iam.gserviceaccount.com)
+app.post('/api/project/:projectId/bigquery/grant-connection-sa-roles', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    serviceAccountEmail = '',
+    roles = ['roles/aiplatform.user', 'roles/storage.objectViewer'],
+  } = req.body || {};
+
+  const cleanEmail = String(serviceAccountEmail || '').trim();
+  if (!/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.iam\.gserviceaccount\.com$/.test(cleanEmail)) {
+    return res.status(400).json({
+      error: 'Invalid or missing BigQuery Connection service account email.',
+    });
+  }
+
+  const allowedRoles = new Set([
+    'roles/aiplatform.user',
+    'roles/storage.objectViewer',
+    'roles/bigquery.connectionUser',
+  ]);
+  const targetRoles = (Array.isArray(roles) ? roles : ['roles/aiplatform.user'])
+    .map((r) => String(r || '').trim())
+    .filter((r) => allowedRoles.has(r));
+
+  if (targetRoles.length === 0) {
+    return res.status(400).json({ error: 'No valid IAM roles specified.' });
+  }
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
+    }
+
+    const encProj = encodeURIComponent(projectId);
+    const member = `serviceAccount:${cleanEmail}`;
+    const policy = await gcpFetch(
+      `https://cloudresourcemanager.googleapis.com/v1/projects/${encProj}:getIamPolicy`,
+      token,
+      projectId,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: { options: { requestedPolicyVersion: 3 } },
+        timeout: 10000,
+      }
+    );
+
+    const bindings = Array.isArray(policy?.bindings) ? policy.bindings.map((b) => ({ ...b, members: [...(b.members || [])] })) : [];
+    const rolesGranted = [];
+    const alreadyPresentRoles = [];
+
+    for (const role of targetRoles) {
+      const existing = bindings.find((b) => b.role === role && !b.condition);
+      if (existing) {
+        if (existing.members.includes(member)) {
+          alreadyPresentRoles.push(role);
+        } else {
+          existing.members.push(member);
+          rolesGranted.push(role);
+        }
+      } else {
+        bindings.push({ role, members: [member] });
+        rolesGranted.push(role);
+      }
+    }
+
+    if (rolesGranted.length > 0) {
+      await gcpFetch(
+        `https://cloudresourcemanager.googleapis.com/v1/projects/${encProj}:setIamPolicy`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: { policy: { ...policy, bindings } },
+          timeout: 12000,
+        }
+      );
+      recordFlightEvent(projectId, {
+        action: 'BQ_CONNECTION_SA_IAM_GRANTED',
+        resourceType: 'IAM_BINDING',
+        resourceName: cleanEmail,
+        region: 'global',
+        details: `Granted ${rolesGranted.join(', ')} to ${cleanEmail}`,
+      });
+    }
+
+    return res.json({
+      ok: true,
+      projectId,
+      serviceAccountEmail: cleanEmail,
+      rolesGranted,
+      alreadyPresentRoles,
+      message:
+        rolesGranted.length > 0
+          ? `Granted ${rolesGranted.join(' & ')} to ${cleanEmail} on project ${projectId}. IAM propagation typically takes 15–60 seconds.`
+          : `${cleanEmail} already has ${alreadyPresentRoles.join(' & ')} on project ${projectId}.`,
+    });
+  } catch (err) {
+    return res.status(err?.status || 500).json({
+      error: err?.message || 'Failed to update project IAM policy for BigQuery Connection service account.',
+    });
+  }
+});
+
 // 9a-data-fabric-bridge. POST /api/project/:projectId/data-fabric/synthesize-bridge
 // Synthesizes real runnable cross-engine bridges (SQL, PySpark 3.5 Lightning, gcloud CLI) wired to live discovered assets
 app.post('/api/project/:projectId/data-fabric/synthesize-bridge', async (req, res) => {

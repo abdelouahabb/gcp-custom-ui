@@ -5146,6 +5146,31 @@ function classifyDestructiveAxiosConfig(config) {
           impactWarning: `Appends rows into live BigQuery table "${dsId}.${tblId}" in project "${projectId}".`,
         };
       }
+      if (rawUrl.includes('/bigquery/grant-connection-sa-roles')) {
+        const saEmail = String(body.serviceAccountEmail || 'bqcx-...@gcp-sa-bigquery-condel.iam.gserviceaccount.com');
+        const requestedRoles = Array.isArray(body.roles) && body.roles.length > 0
+          ? body.roles
+          : ['roles/aiplatform.user', 'roles/storage.objectViewer'];
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Grant BigQuery AI & GCS IAM Roles to Connection Service Account?`,
+          laymanSummary: `In Plain English: Grants ${requestedRoles.join(' + ')} (Agent Platform User + Storage Object Viewer) to your BigQuery Connection service account (${saEmail}) in project "${projectId}" so BigQuery Remote Models (Gemini 4) and GCS Object Tables execute without permission errors.`,
+          headerBadge: 'BigQuery Connection IAM Policy Mutation',
+          targetLabel: 'Target Connection Service Account',
+          resourceKind: 'Project IAM Policy (cloudresourcemanager.googleapis.com/v1)',
+          targetName: saEmail,
+          location: 'global',
+          projectId,
+          method: 'SET IAM POLICY',
+          endpoint: rawUrl,
+          confirmLabel: `Grant ${requestedRoles.join(' + ')}`,
+          cancelToast: `BigQuery Connection IAM grant cancelled.`,
+          whatHappensNext: `1. Fetches the current project IAM policy via cloudresourcemanager.googleapis.com/v1/projects/${projectId}:getIamPolicy.\n2. Appends serviceAccount:${saEmail} to ${requestedRoles.join(', ')}.\n3. Commits the updated policy via :setIamPolicy (takes ~15–60s to propagate globally in GCP).`,
+          costWarning: `ZERO COST ($0.00): IAM role bindings are completely free in Google Cloud.`,
+          impactWarning: `Grants ${requestedRoles.join(', ')} to ${saEmail} on project "${projectId}".`,
+        };
+      }
       if (rawUrl.includes('/bigquery/query')) {
         return {
           gateType: 'ONE_TAP_CLOUD_ACTION',

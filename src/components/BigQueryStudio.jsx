@@ -217,6 +217,8 @@ export default function BigQueryStudio({
   const [maxBytesGuardGb, setMaxBytesGuardGb] = useState(1); // 1 GB safety guard
   const [runningQuery, setRunningQuery] = useState(false);
   const [queryResult, setQueryResult] = useState(null);
+  const [grantingConnSaIam, setGrantingConnSaIam] = useState(false);
+  const [grantedConnSaEmail, setGrantedConnSaEmail] = useState(null);
   const [showSqlDiffSideBySide, setShowSqlDiffSideBySide] = useState(true);
   const [rowSearchFilter, setRowSearchFilter] = useState('');
   const [dailyExecFrequency, setDailyExecFrequency] = useState(100); // 100 runs/day for annualized savings
@@ -635,6 +637,34 @@ LIMIT 25;`;
       );
     } finally {
       setSeedingTableId(null);
+    }
+  };
+
+  // 1-Click IAM Remediation for BigQuery Connection Service Account (bqcx-...@gcp-sa-bigquery-condel.iam.gserviceaccount.com)
+  const handleGrantConnectionSaRoles = async (
+    saEmail,
+    roles = ['roles/aiplatform.user', 'roles/storage.objectViewer']
+  ) => {
+    if (!projectId || !saEmail) return;
+    setGrantingConnSaIam(true);
+    try {
+      const res = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/bigquery/grant-connection-sa-roles`,
+        { serviceAccountEmail: saEmail, roles }
+      );
+      setGrantedConnSaEmail(saEmail);
+      onShowToast?.(
+        res.data?.message ||
+          `Granted ${roles.join(' & ')} to ${saEmail}. Wait ~15–30s for IAM propagation, then re-run SQL.`
+      );
+    } catch (err) {
+      if (err?.code === 'CLOUDPULSE_DESTRUCTIVE_CANCELLED') return;
+      onShowError?.(
+        err.response?.data?.error ||
+          `Failed to grant IAM roles to ${saEmail}.`
+      );
+    } finally {
+      setGrantingConnSaIam(false);
     }
   };
 
@@ -2106,6 +2136,73 @@ LIMIT 25;`;
                       <div className="text-[11px] opacity-90 break-words">
                         {queryResult.error || queryResult.apiNotice}
                       </div>
+                      {(() => {
+                        const errText = String(queryResult.error || queryResult.apiNotice || '');
+                        const saMatch = errText.match(
+                          /([a-z0-9._-]+@gcp-sa-bigquery-condel\.iam\.gserviceaccount\.com)/i
+                        );
+                        if (!saMatch) return null;
+                        const detectedSa = saMatch[1];
+                        const isGranted = grantedConnSaEmail === detectedSa;
+                        return (
+                          <div className="mt-2 pt-2.5 border-t border-red-500/25 flex flex-wrap items-center justify-between gap-2.5">
+                            <div className="text-[11px] text-zinc-800 dark:text-zinc-200 space-y-0.5">
+                              <div className="font-bold flex items-center gap-1.5 text-amber-700 dark:text-amber-300">
+                                <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                                <span>
+                                  BigQuery Connection Service Account Missing AI / GCS IAM Roles
+                                </span>
+                              </div>
+                              <div className="text-[10px] opacity-85">
+                                Grant <span className="font-bold">roles/aiplatform.user</span> (Agent Platform User) &amp;{' '}
+                                <span className="font-bold">roles/storage.objectViewer</span> to{' '}
+                                <code className="px-1 py-0.5 rounded bg-black/10 dark:bg-white/10">
+                                  {detectedSa}
+                                </code>
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button
+                                type="button"
+                                disabled={grantingConnSaIam}
+                                onClick={() =>
+                                  handleGrantConnectionSaRoles(detectedSa, [
+                                    'roles/aiplatform.user',
+                                    'roles/storage.objectViewer',
+                                  ])
+                                }
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-[11px] font-bold cursor-pointer transition-colors"
+                              >
+                                {grantingConnSaIam ? (
+                                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                ) : isGranted ? (
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                ) : (
+                                  <ShieldCheck className="w-3.5 h-3.5" />
+                                )}
+                                <span>
+                                  {grantingConnSaIam
+                                    ? 'Granting IAM Roles...'
+                                    : isGranted
+                                    ? 'IAM Granted — Re-Grant if Needed'
+                                    : '1-Click Grant Agent Platform User + GCS Viewer'}
+                                </span>
+                              </button>
+                              {isGranted && (
+                                <button
+                                  type="button"
+                                  disabled={runningQuery}
+                                  onClick={() => handleExecuteQuery(false)}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-[11px] font-bold cursor-pointer transition-colors"
+                                >
+                                  <Play className="w-3.5 h-3.5" />
+                                  <span>Re-Run SQL Now</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
 
