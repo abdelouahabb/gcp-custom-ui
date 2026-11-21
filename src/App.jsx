@@ -7387,7 +7387,7 @@ function classifyDestructiveAxiosConfig(config) {
       }
       if (rawUrl.includes('/alloydb/omni-local')) {
         const omniAct = String(body.action || 'STATUS').toUpperCase();
-        if (omniAct === 'STATUS') return null;
+        if (omniAct === 'STATUS' || omniAct === 'CANCEL_OMNI_JOB') return null;
         const cName = body.containerName || 'alloydb-omni-dev';
         const omniSpecs = {
           START_OMNI: {

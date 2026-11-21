@@ -12182,16 +12182,38 @@ app.post('/api/project/:projectId/alloydb/omni-local', async (req, res) => {
               pushLog(`Image ${fullImage} not cached locally — pulling from Docker Hub (first pull may take 1-3 min)...`);
               await new Promise((resolve, reject) => {
                 const pullProc = spawn('/usr/bin/docker', ['pull', fullImage]);
+                job._proc = pullProc;
                 let stderrBuf = '';
+                let lastOutputAt = Date.now();
+                const heartbeat = setInterval(() => {
+                  if (!job.active || job.phase !== 'PULLING_IMAGE') {
+                    clearInterval(heartbeat);
+                    return;
+                  }
+                  const quietSec = Math.round((Date.now() - lastOutputAt) / 1000);
+                  if (quietSec >= 12) {
+                    pushLog(
+                      `Still downloading/extracting large AlloyDB Omni layers (~3-4 GB uncompressed; Docker suppresses bar output over pipes, quiet ${quietSec}s)...`
+                    );
+                  }
+                }, 12000);
                 pullProc.stdout.on('data', (chunk) => {
+                  lastOutputAt = Date.now();
                   String(chunk).split(/\r?\n/).forEach((l) => pushLog(l));
                 });
                 pullProc.stderr.on('data', (chunk) => {
+                  lastOutputAt = Date.now();
                   stderrBuf += String(chunk);
                   String(chunk).split(/\r?\n/).forEach((l) => pushLog(l));
                 });
-                pullProc.on('error', (e) => reject(e));
+                pullProc.on('error', (e) => {
+                  clearInterval(heartbeat);
+                  job._proc = null;
+                  reject(e);
+                });
                 pullProc.on('close', (code) => {
+                  clearInterval(heartbeat);
+                  job._proc = null;
                   if (code === 0) resolve();
                   else reject(new Error(stderrBuf.trim() || `docker pull exited with code ${code}`));
                 });
@@ -12269,6 +12291,19 @@ app.post('/api/project/:projectId/alloydb/omni-local', async (req, res) => {
         job: getJobSnapshot(),
         suggestedDsn: `postgres://postgres:${password}@127.0.0.1:${safePort}/postgres`,
       });
+    }
+
+    if (action === 'CANCEL_OMNI_JOB') {
+      const existingJob = alloyDbOmniJobs.get(safeName);
+      if (existingJob?._proc) {
+        try {
+          existingJob._proc.kill('SIGTERM');
+        } catch {
+          // ignore
+        }
+      }
+      alloyDbOmniJobs.delete(safeName);
+      return res.json({ ok: true, action, message: `Cancelled in-progress AlloyDB Omni pull/startup job for "${safeName}".` });
     }
 
     if (action === 'STOP_OMNI') {

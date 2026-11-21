@@ -3194,7 +3194,18 @@ GROUP BY 1 ORDER BY turns DESC;`;
                       {omniStatus.job.image} · {omniStatus.job.phase.replace(/_/g, ' ')}
                     </span>
                   </span>
-                  <span className="text-zinc-400">Elapsed: {omniStatus.job.elapsedSec}s</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-zinc-400">Elapsed: {omniStatus.job.elapsedSec}s</span>
+                    {omniStatus.job.active && (
+                      <button
+                        type="button"
+                        onClick={() => runOmniAction('CANCEL_OMNI_JOB')}
+                        className="px-2 py-0.5 rounded bg-rose-500/20 hover:bg-rose-500/35 border border-rose-500/40 text-rose-300 text-[10px] font-bold cursor-pointer"
+                      >
+                        Cancel Pull
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="grid grid-cols-4 gap-1 text-[9.5px] font-mono">
                   {[
