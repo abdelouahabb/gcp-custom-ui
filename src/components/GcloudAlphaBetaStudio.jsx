@@ -6224,7 +6224,7 @@ srun torchrun --nnodes=2 --nproc_per_node=8 /mnt/lustre/train_frontier.py`;
               </h3>
             </div>
             <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              Verified directly from <code className="font-mono">/home/abdelouahab/google-cloud-sdk/RELEASE_NOTES</code>:
+              Verified directly from <code className="font-mono">$CLOUDSDK_ROOT_DIR/RELEASE_NOTES</code>:
             </p>
             <div className="space-y-2.5 text-xs font-mono">
               <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-1">
@@ -6470,7 +6470,7 @@ srun torchrun --nnodes=2 --nproc_per_node=8 /mnt/lustre/train_frontier.py`;
               </h3>
             </div>
             <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-              Verified directly from <code className="font-mono">/home/abdelouahab/google-cloud-sdk/RELEASE_NOTES</code>:
+              Verified directly from <code className="font-mono">$CLOUDSDK_ROOT_DIR/RELEASE_NOTES</code>:
             </p>
             <div className="space-y-2.5 text-xs font-mono">
               <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-1">

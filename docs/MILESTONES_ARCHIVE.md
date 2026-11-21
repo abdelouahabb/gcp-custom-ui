@@ -1,11 +1,11 @@
 # CloudPulse 2026 (`gcp-ui`) — Antigravity (`agy`) & Agent Context Handoff
 
 ## 1. Project Overview & Architecture
-- **Repository Root**: `/home/abdelouahab/gcp-ui` (`cloudpulse-2026-gcp-pwa`, v3.0.0)
+- **Repository Root**: `<repo-root>` (`cloudpulse-2026-gcp-pwa`, v3.0.0)
 - **Git Remote**: `git@github.com:abdelouahabb/gcp-custom-ui.git` (`main` branch)
 - **Stack**:
   - **Frontend**: React 19 + Vite 6 + Tailwind CSS + Lucide React + ECharts + Xterm.js (`http://localhost:5173`)
-  - **Backend**: Express + WebSocket (`ws`) + `ssh2` SFTP/SSH bridge + Google Cloud REST APIs (`http://127.0.0.1:4000`, [`server/index.js`](file:///home/abdelouahab/gcp-ui/server/index.js))
+  - **Backend**: Express + WebSocket (`ws`) + `ssh2` SFTP/SSH bridge + Google Cloud REST APIs (`http://127.0.0.1:4000`, [`server/index.js`](../server/index.js))
   - **Start Dev Server**: `npm run dev` (Vite auto-heals and launches `server/index.js` on port `4000`).
 
 ---
@@ -15,14 +15,14 @@
 2. **Dynamic Multi-Project Discovery Only**: Never hardcode any GCP project ID anywhere in frontend or backend code.
 3. **Zero Emojis in UI**: Strictly use `lucide-react` SVG icons across all JSX components.
 4. **Button Color Discipline**: Solid blue fill (`bg-blue-600 text-white`) is strictly reserved for enabled/active states.
-5. **Mandatory Destructive Action Gatekeeper**: All destructive HTTP `DELETE` or `POST` operations must be registered in `classifyDestructiveAxiosConfig` inside [`src/App.jsx`](file:///home/abdelouahab/gcp-ui/src/App.jsx#L520-L625) so the global confirmation modal intercepts them before execution.
+5. **Mandatory Destructive Action Gatekeeper**: All destructive HTTP `DELETE` or `POST` operations must be registered in `classifyDestructiveAxiosConfig` inside [`src/App.jsx`](../src/App.jsx#L520-L625) so the global confirmation modal intercepts them before execution.
 
 ---
 
 ## 3. Recently Completed Milestones (Latest Session Progress)
 
 ### A. SFTP-to-GCS Same-Region (`$0.00/GB` Egress) Backup Streamer (Committed in `d3ea807`)
-- **Files**: [`src/components/VmFleetAndSsh.jsx`](file:///home/abdelouahab/gcp-ui/src/components/VmFleetAndSsh.jsx), [`server/index.js`](file:///home/abdelouahab/gcp-ui/server/index.js)
+- **Files**: [`src/components/VmFleetAndSsh.jsx`](../src/components/VmFleetAndSsh.jsx), [`server/index.js`](../server/index.js)
 - **Capabilities**:
   - Selection-aware source path sync from the SFTP file/folder browser (keeps exact file or directory name on target `gs://` object).
   - Automatic same-region bucket matching (e.g., VM in `us-central1-a` $\to$ bucket in `US-CENTRAL1` for `$0.00/GB` intra-region transfer).
@@ -31,10 +31,10 @@
 
 ### B. Cloud Storage Fleet & Object Intelligence Studio — Sweep (Keep Bucket) & Selective Batch Deletion
 - **Files**:
-  - [`server/index.js`](file:///home/abdelouahab/gcp-ui/server/index.js#L28085-L28342)
-  - [`src/components/CloudStorageStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/CloudStorageStudio.jsx#L469-L550) & [`lines 1418–1710`](file:///home/abdelouahab/gcp-ui/src/components/CloudStorageStudio.jsx#L1418-L1710)
-  - [`src/components/GcsObjectWorkbench.jsx`](file:///home/abdelouahab/gcp-ui/src/components/GcsObjectWorkbench.jsx#L1344-L1456) & [`lines 2624–2810`](file:///home/abdelouahab/gcp-ui/src/components/GcsObjectWorkbench.jsx#L2624-L2810)
-  - [`src/App.jsx`](file:///home/abdelouahab/gcp-ui/src/App.jsx#L550-L615)
+  - [`server/index.js`](../server/index.js#L28085-L28342)
+  - [`src/components/CloudStorageStudio.jsx`](../src/components/CloudStorageStudio.jsx#L469-L550) & [`lines 1418–1710`](../src/components/CloudStorageStudio.jsx#L1418-L1710)
+  - [`src/components/GcsObjectWorkbench.jsx`](../src/components/GcsObjectWorkbench.jsx#L1344-L1456) & [`lines 2624–2810`](../src/components/GcsObjectWorkbench.jsx#L2624-L2810)
+  - [`src/App.jsx`](../src/App.jsx#L550-L615)
 - **Capabilities**:
   - **Bucket Governance Tab (`CloudStorageStudio.jsx`)**:
     - Per-bucket **`Sweep Bucket`** button (`POST /api/project/:id/storage/buckets/:bucketName/sweep`) that purges all objects and generations while **keeping the bucket itself intact** (preserving IAM, CORS, Lifecycle, and Cloud Run Gen2 FUSE mounts), alongside **`Empty & Delete`**.
@@ -46,9 +46,9 @@
 
 ### C. 4-Pillar 100X DevOps & SRE Logging Command Hub (`Chrono-Log Time-Machine & SRE Triage`)
 - **Files**:
-  - [`server/index.js`](file:///home/abdelouahab/gcp-ui/server/index.js#L21000-L22100)
-  - [`src/components/LogStreamerAndShell.jsx`](file:///home/abdelouahab/gcp-ui/src/components/LogStreamerAndShell.jsx#L2050-L3180)
-  - [`src/App.jsx`](file:///home/abdelouahab/gcp-ui/src/App.jsx#L8211-L8223)
+  - [`server/index.js`](../server/index.js#L21000-L22100)
+  - [`src/components/LogStreamerAndShell.jsx`](../src/components/LogStreamerAndShell.jsx#L2050-L3180)
+  - [`src/App.jsx`](../src/App.jsx#L8211-L8223)
 - **Capabilities**:
   1. **Pillar 1 — Multi-Project Error Radar & 16-Preset DevOps/SRE Filter Library**: Live scan across all discovered GCP projects + 1-click LQL presets (Cloud Run 5xx/Cold Starts, GCE Serial Console/OOM/SSHD, Cloud Audit IAM/Delete, VPC Firewall Drops, GKE CrashLoopBackOff, Cloud SQL Deadlocks).
   2. **Pillar 2 — Live VM OS `journalctl` / `dmesg` / Container & Unit Inspector**: Direct SSH execution (`POST /api/project/:id/chrono-logs/vm-live-journal`) streaming real `journalctl`, `dmesg -T`, `/var/log/syslog`, `sshd`, `docker/containerd`, failed `systemd` units, and top CPU/RAM processes from running GCE VMs.
@@ -60,9 +60,9 @@
 
 ### D. GDE Mode (`Alt+G`) 7-Shield Live Demo & Screen-Share Privacy Engine
 - **Files**:
-  - [`src/components/GdeStreamerPrivacyShield.jsx`](file:///home/abdelouahab/gcp-ui/src/components/GdeStreamerPrivacyShield.jsx)
-  - [`src/components/XtermWebSshTerminal.jsx`](file:///home/abdelouahab/gcp-ui/src/components/XtermWebSshTerminal.jsx)
-  - [`src/components/InnovationHoverExplainer.jsx`](file:///home/abdelouahab/gcp-ui/src/components/InnovationHoverExplainer.jsx)
+  - [`src/components/GdeStreamerPrivacyShield.jsx`](../src/components/GdeStreamerPrivacyShield.jsx)
+  - [`src/components/XtermWebSshTerminal.jsx`](../src/components/XtermWebSshTerminal.jsx)
+  - [`src/components/InnovationHoverExplainer.jsx`](../src/components/InnovationHoverExplainer.jsx)
 - **Capabilities**:
   - **Derived SSH / OS-Login Username & `/home/<user>` Redaction**: Automatically derives local and OS-Login POSIX usernames from `accountEmail` and masks `/home/<user>`, `/Users/<user>`, `user@host`, and `su - <user>` across SFTP Browser, Disk Hotspot Analyzer, and `journalctl`.
   - **Zero-Flash Synchronous `MutationObserver` + `<svg>` + `title`/`placeholder` + Unfocused `<input>` Masking**: Redacts DOM mutations synchronously before browser paint (`0ms` flash), masks `<svg>` `<text>`/`<tspan>` in Mermaid/ECharts, redacts native `title`/`placeholder` attributes, and visually masks unfocused text `<input>`/`.value` properties while preserving 100% of React state and live GCP API calls.
@@ -70,8 +70,8 @@
 
 ### E. Global Network World Map — Live GCE VM SSH & `/var/log/auth.log` Geo-Telemetry + 4-Scenario Mode Overlays
 - **Files**:
-  - [`server/index.js`](file:///home/abdelouahab/gcp-ui/server/index.js#L80888-L82740)
-  - [`src/components/GlobalNetworkWorldMap.jsx`](file:///home/abdelouahab/gcp-ui/src/components/GlobalNetworkWorldMap.jsx)
+  - [`server/index.js`](../server/index.js#L80888-L82740)
+  - [`src/components/GlobalNetworkWorldMap.jsx`](../src/components/GlobalNetworkWorldMap.jsx)
 - **Capabilities**:
   - **Inside-VM SSH & Serial Console Log Collector (`collectLiveVmSshTelemetryForMap`)**: Connects to running GCE VMs via SSH (with Serial Port 1 fallback) to parse live `/var/log/auth.log` (`sshd` accepted & blocked `[preauth]` events), `ss -tnH state established` active SSH sessions, and `who`, geo-locating every remote IP with `resolveRemoteIpGeo`.
   - **Always-Visible Live GCE SSH Tunnel Beam & Telemetry Strip**: Draws a live emerald `LIVE GCE SSH:22` arc from `YOU` to the running VM region plus geo-located red `SSH:<COUNTRY>` probe origin nodes on the SVG map, paired with a 1-click **Live GCE VM SSH & `/var/log/auth.log` Telemetry Strip** below the map.
@@ -84,10 +84,10 @@
 
 ### F. Managed Service for Apache Spark & Dataproc Serverless Studio (`MANAGED_SPARK_STUDIO`)
 - **Files**:
-  - [`src/components/ManagedSparkStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/ManagedSparkStudio.jsx)
-  - [`server/index.js`](file:///home/abdelouahab/gcp-ui/server/index.js#L40145-L43070)
-  - [`src/App.jsx`](file:///home/abdelouahab/gcp-ui/src/App.jsx#L7701-L7725)
-  - [`src/components/BigQueryStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/BigQueryStudio.jsx), [`src/components/GcsObjectWorkbench.jsx`](file:///home/abdelouahab/gcp-ui/src/components/GcsObjectWorkbench.jsx), [`src/components/DataEngineeringStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/DataEngineeringStudio.jsx)
+  - [`src/components/ManagedSparkStudio.jsx`](../src/components/ManagedSparkStudio.jsx)
+  - [`server/index.js`](../server/index.js#L40145-L43070)
+  - [`src/App.jsx`](../src/App.jsx#L7701-L7725)
+  - [`src/components/BigQueryStudio.jsx`](../src/components/BigQueryStudio.jsx), [`src/components/GcsObjectWorkbench.jsx`](../src/components/GcsObjectWorkbench.jsx), [`src/components/DataEngineeringStudio.jsx`](../src/components/DataEngineeringStudio.jsx)
 - **Capabilities**:
   - **Live Multi-Region Fleet Discovery (`GET /api/project/:id/managed-spark/overview`)**: Discovers Dataproc Serverless Batches (`locations/:region/batches`), Interactive Spark Connect Sessions (`locations/:region/sessions`), Session Templates (`locations/:region/sessionTemplates`), GCE Clusters (`regions/:region/clusters`), `dataproc.googleapis.com` / `biglake.googleapis.com` API status, and 7-Role Spark IAM readiness.
   - **4-Stage Physical Execution Plan DAG & 6-Gate Live Python 3 AST X-Ray (`PREFLIGHT_SPARK_BATCH_XRAY`) + 4-Profile Executor, Heap & C++ Lightning Engine Cockpit (`SPARK_HARDWARE_PROFILES`)**: Runs a real `python3` `ast` + `py_compile` subprocess on the edited PySpark script to synthesize a 4-Stage Physical Execution Plan (`Stage 0 Scan` $\to$ `Stage 1 Broadcast/Shuffle Exchange` $\to$ `Stage 2 WholeStageCodegen / C++ Vectorized` $\to$ `Stage 3 ACID Sink Commit`), audits 6 live GCP infrastructure gates (including Same-Region `$0.00/GB` GCS Data-Gravity alignment and BigQuery target dataset/table readiness), and offers 4 interactive hardware profiles (`MICRO_ETL`, `PROD_LAKEHOUSE`, `HEAVY_SHUFFLE`, and `LIGHTNING_TURBO` `spark.dataproc.engine=lightningEngine`).
@@ -99,19 +99,19 @@
 
 ### G. Google Cloud SDK `592.0.0` (`2026-11-03` · `2026.10.30`) Frontier Lab & Wave 5 GA Upgrades
 - **Files**:
-  - [`src/components/GcloudAlphaBetaStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/GcloudAlphaBetaStudio.jsx)
-  - [`src/components/StudioGcpAdvantageBar.jsx`](file:///home/abdelouahab/gcp-ui/src/components/StudioGcpAdvantageBar.jsx)
-  - [`src/components/CloudSqlAndAlloyDbStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/CloudSqlAndAlloyDbStudio.jsx)
-  - [`src/components/ManagedSparkStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/ManagedSparkStudio.jsx)
-  - [`server/index.js`](file:///home/abdelouahab/gcp-ui/server/index.js#L56749-L60480)
+  - [`src/components/GcloudAlphaBetaStudio.jsx`](../src/components/GcloudAlphaBetaStudio.jsx)
+  - [`src/components/StudioGcpAdvantageBar.jsx`](../src/components/StudioGcpAdvantageBar.jsx)
+  - [`src/components/CloudSqlAndAlloyDbStudio.jsx`](../src/components/CloudSqlAndAlloyDbStudio.jsx)
+  - [`src/components/ManagedSparkStudio.jsx`](../src/components/ManagedSparkStudio.jsx)
+  - [`server/index.js`](../server/index.js#L56749-L60480)
 - **Capabilities**:
   - **Wave 5 `SCAN_WAVE5_GCLOUD_592_UPGRADES` 8-Pillar Live Probe & 13-Suite Audit**: Probes and synthesizes AlloyDB Autoscaler (`--enable-autoscaler`, `--autoscaler-target-connections-count`, cron schedules), Cloud SQL PSC DNS reconciliation (`gcloud sql instances reconcile-networking`), GKE Ambient Service Mesh (`--enable-ambient-networking`) & Dataplane V2 Migration (`--enable-dataplane-v2`), Backup & DR Auto-Protection (`gcloud backup-dr auto-protection-policies`), Dataproc DWS Scheduled Spark Clusters (`--scheduling-timeout`, `--requested-run-duration`), Cloud Run `--public`, Dataplex Data Documentation (`--custom-instructions`, `--sql-dialect`), BigLake CMEK (`--kms-key`), Agent Registry `--scanning-policy` (breaking change replacing `--scanning-state`), and Cloud KMS ECDH KEM (`kem-ecdh-p256`/`p384`).
 
 ### H. Dual-Engine Cloud Storage Secret, Credential & Regulated PII X-Ray Scanner (`LOCAL_RAM_REGEX_LUHN` vs `CLOUD_DLP_VISION_OCR`) & 100% `<button>` Hover Explainer Coverage
 - **Files**:
-  - [`src/components/EngineerMoonshotsWave3.jsx`](file:///home/abdelouahab/gcp-ui/src/components/EngineerMoonshotsWave3.jsx#L187-L325) & [`lines 1240–1605`](file:///home/abdelouahab/gcp-ui/src/components/EngineerMoonshotsWave3.jsx#L1240-L1605)
-  - [`src/components/InnovationHoverExplainer.jsx`](file:///home/abdelouahab/gcp-ui/src/components/InnovationHoverExplainer.jsx)
-  - [`server/index.js`](file:///home/abdelouahab/gcp-ui/server/index.js#L29009-L29660)
+  - [`src/components/EngineerMoonshotsWave3.jsx`](../src/components/EngineerMoonshotsWave3.jsx#L187-L325) & [`lines 1240–1605`](../src/components/EngineerMoonshotsWave3.jsx#L1240-L1605)
+  - [`src/components/InnovationHoverExplainer.jsx`](../src/components/InnovationHoverExplainer.jsx)
+  - [`server/index.js`](../server/index.js#L29009-L29660)
 - **Capabilities**:
   - **Engine 1 (`LOCAL_RAM_REGEX_LUHN`, Default · `$0.00` API Cost · Zero OCR Binary Required)**: Streams structured text/code/config objects (`.env`, `.json`, `.yaml`, `.csv`, `.log`, `.pem`, `.sql`, `.tfstate`) up to `128 KB` via `?alt=media` into Node.js RAM and evaluates 11 credential & PII regex signatures + Luhn Mod-10 PAN checksum (`verifyLuhnChecksum`) + Shannon Entropy (`computeShannonEntropy` in `bits/char`), with 1-tap in-place UTF-8 sanitization.
   - **Engine 2 (`CLOUD_DLP_VISION_OCR`, Optional Choice · `dlp.googleapis.com/v2`)**: Combines Engine 1 with Google Cloud Sensitive Data Protection REST API (`content:inspect`, `content:deidentify`, and `image:redact`) to inspect both text AND binary images (`.png`, `.jpg`, `.webp` up to `512 KB`) using Google’s cloud-hosted Vision OCR (`byteItem`) and burn opaque black pixel bounding boxes over leaked secrets/PII inside images.
@@ -119,12 +119,12 @@
 
 ### I. Secret Manager Lifecycle Studio, DLP-to-Secret-Manager (`sm://`) Vaulting & Unified Warm-Amber Architectural Design System
 - **Files**:
-  - [`src/components/SecretManagerVaultExplorer.jsx`](file:///home/abdelouahab/gcp-ui/src/components/SecretManagerVaultExplorer.jsx)
-  - [`src/components/EngineerMoonshotsWave3.jsx`](file:///home/abdelouahab/gcp-ui/src/components/EngineerMoonshotsWave3.jsx)
-  - [`src/components/SovereignTimeMachineIamStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/SovereignTimeMachineIamStudio.jsx)
-  - [`src/components/Startup10xMentorStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/Startup10xMentorStudio.jsx)
-  - [`src/components/SortableKpiRow.jsx`](file:///home/abdelouahab/gcp-ui/src/components/SortableKpiRow.jsx)
-  - [`src/index.css`](file:///home/abdelouahab/gcp-ui/src/index.css), [`src/App.jsx`](file:///home/abdelouahab/gcp-ui/src/App.jsx)
+  - [`src/components/SecretManagerVaultExplorer.jsx`](../src/components/SecretManagerVaultExplorer.jsx)
+  - [`src/components/EngineerMoonshotsWave3.jsx`](../src/components/EngineerMoonshotsWave3.jsx)
+  - [`src/components/SovereignTimeMachineIamStudio.jsx`](../src/components/SovereignTimeMachineIamStudio.jsx)
+  - [`src/components/Startup10xMentorStudio.jsx`](../src/components/Startup10xMentorStudio.jsx)
+  - [`src/components/SortableKpiRow.jsx`](../src/components/SortableKpiRow.jsx)
+  - [`src/index.css`](../src/index.css), [`src/App.jsx`](../src/App.jsx)
 - **Capabilities**:
   - **DLP-to-Secret-Manager (`VAULT_AND_MASK`) & Rehydrate (`POST /api/project/:id/storage/buckets/:bucketName/dlp-rehydrate`)**: Instead of destructively erasing plaintext credentials in Cloud Storage, vaults every discovered credential into `secretmanager.googleapis.com/v1` (`projects/<id>/secrets/cloudpulse-dlp-.../versions/latest`), replaces the file value with a `sm://projects/...` pointer, hides the vault button once vaulted, and supports 1-click file rehydration.
   - **Dedicated Secret Manager Lifecycle & Rotation Studio (`SecretManagerVaultExplorer.jsx`)**: 2-column table-grid Secret row layout (`grid-cols-[minmax(0,1fr)_auto]`) with fixed-width aligned action columns (`Peek Value`, `+ Rotate`, `sm:// URI`, `Delete`), version enable/disable (`$0.00/mo` disabled state), and permanent version destruction gated by `classifyDestructiveAxiosConfig`.
@@ -135,13 +135,13 @@
 
 ### J. 4-Pillar Cryptographic Ransomware Resilience & Clean-Room Rollback Studio (`X4`), Bi-Directional `Active Bucket:` Reactivity, Redesigned 3-Zone Object Workbench IDE, Cross-Studio Navigation Guard & 100% Plain-English Action Gatekeeper
 - **Files**:
-  - [`server/index.js`](file:///home/abdelouahab/gcp-ui/server/index.js#L29660-L30070)
-  - [`src/components/EngineerMoonshotsWave3.jsx`](file:///home/abdelouahab/gcp-ui/src/components/EngineerMoonshotsWave3.jsx#L206-L246) & [`lines 680–920`](file:///home/abdelouahab/gcp-ui/src/components/EngineerMoonshotsWave3.jsx#L680-L920) & [`lines 2840–3460`](file:///home/abdelouahab/gcp-ui/src/components/EngineerMoonshotsWave3.jsx#L2840-L3460)
-  - [`src/components/CloudStorageStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/CloudStorageStudio.jsx)
-  - [`src/components/GcsObjectWorkbench.jsx`](file:///home/abdelouahab/gcp-ui/src/components/GcsObjectWorkbench.jsx)
-  - [`src/components/InnovationHoverExplainer.jsx`](file:///home/abdelouahab/gcp-ui/src/components/InnovationHoverExplainer.jsx)
-  - [`src/components/InteractiveDocsGuide.jsx`](file:///home/abdelouahab/gcp-ui/src/components/InteractiveDocsGuide.jsx)
-  - [`src/App.jsx`](file:///home/abdelouahab/gcp-ui/src/App.jsx), [`src/index.css`](file:///home/abdelouahab/gcp-ui/src/index.css)
+  - [`server/index.js`](../server/index.js#L29660-L30070)
+  - [`src/components/EngineerMoonshotsWave3.jsx`](../src/components/EngineerMoonshotsWave3.jsx#L206-L246) & [`lines 680–920`](../src/components/EngineerMoonshotsWave3.jsx#L680-L920) & [`lines 2840–3460`](../src/components/EngineerMoonshotsWave3.jsx#L2840-L3460)
+  - [`src/components/CloudStorageStudio.jsx`](../src/components/CloudStorageStudio.jsx)
+  - [`src/components/GcsObjectWorkbench.jsx`](../src/components/GcsObjectWorkbench.jsx)
+  - [`src/components/InnovationHoverExplainer.jsx`](../src/components/InnovationHoverExplainer.jsx)
+  - [`src/components/InteractiveDocsGuide.jsx`](../src/components/InteractiveDocsGuide.jsx)
+  - [`src/App.jsx`](../src/App.jsx), [`src/index.css`](../src/index.css)
 - **Capabilities**:
   - **4-Pillar Cryptographic Ransomware Air-Gap & Live Clean-Room Recovery Drill Studio (`X4`)**:
     - `POST /api/project/:id/storage/buckets/:bucketName/ransomware-deep-audit`: 6-Gate live metadata & IAM blast-radius X-Ray (`PAP`, `Uniform IAM`, `Soft-Delete 7d–90d`, `Object Versioning`, `SEC 17a-4 WORM Retention`, and `CMEK + Over-Privileged IAM Principals`) plus live noncurrent (`?versions=true`) and soft-deleted (`?softDeleted=true`) generation inventory.
@@ -152,13 +152,13 @@
 
 ### K. Wave 23 Skill-Grounded Enterprise Moonshot Suite & Actionable 5-Pillar Cloud Architect Remote MCP Control Plane
 - **Files**:
-  - [`server/index.js`](file:///home/abdelouahab/gcp-ui/server/index.js#L67446-L68680) & [`lines 99911–101965`](file:///home/abdelouahab/gcp-ui/server/index.js#L99911-L101965)
-  - [`src/components/GoogleCloudRemoteMcpStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/GoogleCloudRemoteMcpStudio.jsx)
-  - [`src/components/BigQueryStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/BigQueryStudio.jsx)
-  - [`src/components/SovereignTimeMachineIamStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/SovereignTimeMachineIamStudio.jsx)
-  - [`src/components/GkeFleetStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/GkeFleetStudio.jsx)
-  - [`src/components/VmFleetAndSsh.jsx`](file:///home/abdelouahab/gcp-ui/src/components/VmFleetAndSsh.jsx)
-  - [`src/components/InnovationHoverExplainer.jsx`](file:///home/abdelouahab/gcp-ui/src/components/InnovationHoverExplainer.jsx), [`src/components/InteractiveDocsGuide.jsx`](file:///home/abdelouahab/gcp-ui/src/components/InteractiveDocsGuide.jsx), [`src/App.jsx`](file:///home/abdelouahab/gcp-ui/src/App.jsx), [`src/index.css`](file:///home/abdelouahab/gcp-ui/src/index.css)
+  - [`server/index.js`](../server/index.js#L67446-L68680) & [`lines 99911–101965`](../server/index.js#L99911-L101965)
+  - [`src/components/GoogleCloudRemoteMcpStudio.jsx`](../src/components/GoogleCloudRemoteMcpStudio.jsx)
+  - [`src/components/BigQueryStudio.jsx`](../src/components/BigQueryStudio.jsx)
+  - [`src/components/SovereignTimeMachineIamStudio.jsx`](../src/components/SovereignTimeMachineIamStudio.jsx)
+  - [`src/components/GkeFleetStudio.jsx`](../src/components/GkeFleetStudio.jsx)
+  - [`src/components/VmFleetAndSsh.jsx`](../src/components/VmFleetAndSsh.jsx)
+  - [`src/components/InnovationHoverExplainer.jsx`](../src/components/InnovationHoverExplainer.jsx), [`src/components/InteractiveDocsGuide.jsx`](../src/components/InteractiveDocsGuide.jsx), [`src/App.jsx`](../src/App.jsx), [`src/index.css`](../src/index.css)
 - **Capabilities**:
   - **Actionable 5-Pillar Cloud Architect Remote MCP Control Plane (`GoogleCloudRemoteMcpStudio.jsx`)**:
     1. **Pillar 1 — MCP Stack Readiness Doctor & 1-Click Batch API Provisioner**: `POST /api/project/:id/mcp/architect-doctor` & `POST /api/project/:id/mcp/batch-enable-apis`.
@@ -175,13 +175,13 @@
 
 ### L. Wave 24 Flagship Enterprise Cloud Cockpit UX/UI Architecture Upgrade
 - **Files**:
-  - [`index.html`](file:///home/abdelouahab/gcp-ui/index.html)
-  - [`src/index.css`](file:///home/abdelouahab/gcp-ui/src/index.css)
-  - [`src/App.jsx`](file:///home/abdelouahab/gcp-ui/src/App.jsx)
-  - [`src/components/SortableKpiRow.jsx`](file:///home/abdelouahab/gcp-ui/src/components/SortableKpiRow.jsx)
-  - [`src/components/ResourceControlCenter.jsx`](file:///home/abdelouahab/gcp-ui/src/components/ResourceControlCenter.jsx)
-  - [`src/components/CommandPaletteModal.jsx`](file:///home/abdelouahab/gcp-ui/src/components/CommandPaletteModal.jsx)
-  - [`src/components/InnovationHoverExplainer.jsx`](file:///home/abdelouahab/gcp-ui/src/components/InnovationHoverExplainer.jsx)
+  - [`index.html`](../index.html)
+  - [`src/index.css`](../src/index.css)
+  - [`src/App.jsx`](../src/App.jsx)
+  - [`src/components/SortableKpiRow.jsx`](../src/components/SortableKpiRow.jsx)
+  - [`src/components/ResourceControlCenter.jsx`](../src/components/ResourceControlCenter.jsx)
+  - [`src/components/CommandPaletteModal.jsx`](../src/components/CommandPaletteModal.jsx)
+  - [`src/components/InnovationHoverExplainer.jsx`](../src/components/InnovationHoverExplainer.jsx)
 - **Capabilities**:
   - **Precision Obsidian & Daylight Design System (`src/index.css`, `index.html`)**: Unified `#090b10` / `#f4f6f9` canvas, `#10141d` elevated cards with top-edge specular light-catch, `7px` low-profile scrollbars, `.cp-kbd` hardware keycaps, `.cp-toast-progress` countdown bars, and `160ms` `.cp-studio-enter` transitions across all 26 studios.
   - **3-Zone Cloud Command Header (`src/App.jsx`)**: Left Rail collapse toggle (`[` shortcut) + clickable Brand identity + Searchable Multi-Project Switcher (inline filter + project numbers), Center Global Omnibox Search & Voice Ops Bar (`⌘K`), and Right Burn-Rate pill (`$/hr`), `Alt+G` Privacy Shield, Cockpit tray, `+ Provision` CTA, Mobile PWA frame simulator, and Theme toggle.
@@ -192,10 +192,10 @@
 
 ### M. 100% Bespoke Confirmation Modal Gatekeeper Coverage, Cross-Studio Navigation Wiring, War-Room Cloud Logging Root-Cause Correlation & Zero-Emoji Typography Polish
 - **Files**:
-  - [`src/App.jsx`](file:///home/abdelouahab/gcp-ui/src/App.jsx)
-  - [`server/index.js`](file:///home/abdelouahab/gcp-ui/server/index.js)
-  - [`src/components/Startup10xMentorStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/Startup10xMentorStudio.jsx)
-  - [`src/components/CloudStorageStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/CloudStorageStudio.jsx), [`src/components/BigQueryStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/BigQueryStudio.jsx), [`src/components/LogStreamerAndShell.jsx`](file:///home/abdelouahab/gcp-ui/src/components/LogStreamerAndShell.jsx), [`src/components/Wave16EnterpriseMoonshotStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/Wave16EnterpriseMoonshotStudio.jsx)
+  - [`src/App.jsx`](../src/App.jsx)
+  - [`server/index.js`](../server/index.js)
+  - [`src/components/Startup10xMentorStudio.jsx`](../src/components/Startup10xMentorStudio.jsx)
+  - [`src/components/CloudStorageStudio.jsx`](../src/components/CloudStorageStudio.jsx), [`src/components/BigQueryStudio.jsx`](../src/components/BigQueryStudio.jsx), [`src/components/LogStreamerAndShell.jsx`](../src/components/LogStreamerAndShell.jsx), [`src/components/Wave16EnterpriseMoonshotStudio.jsx`](../src/components/Wave16EnterpriseMoonshotStudio.jsx)
   - 22 Studio JSX components across `src/components/`
 - **Capabilities**:
   - **100% Bespoke Plain-English Action Confirmation Modals (`0` Generic Fallbacks across all `410` `axios` Calls)**: Fixed outer path-filter reachability and `PATCH /cloudrun/:region/:serviceName/scale` matching in `classifyDestructiveAxiosConfig`, narrowed read-only exemptions so `/scp/backup-to-gcs`, `UPDATE_SCALING`, and `ASSIGN_RG_IAM_ROLE` trigger detailed modals, and added explicit per-action impact descriptions across IAM Surgeon (11 actions), SRE War-Room (13 actions), PAM (7 actions), Workload Manager (4 actions), Managed Spark, Data Engineering, Frontier Wave 10, Quantum Nexus, SDK 591/592, MCP Remediation, Why GCP Wins, and AWS/Azure Parity (41 actions).
@@ -205,9 +205,9 @@
 
 ### N. Google Cloud Local Emulators Studio (`LOCAL_EMULATORS`) — `$0.00/hr` 127.0.0.1 Inner-Loop Twin, Interactive Local REST Workbench & Cloud-to-Local Schema Sync
 - **Files**:
-  - [`server/emulatorsRoutes.js`](file:///home/abdelouahab/gcp-ui/server/emulatorsRoutes.js) (new ES module exporting `registerCloudEmulatorsRoutes`, registered in [`server/index.js`](file:///home/abdelouahab/gcp-ui/server/index.js))
-  - [`src/components/LocalCloudEmulatorsStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/LocalCloudEmulatorsStudio.jsx)
-  - [`src/App.jsx`](file:///home/abdelouahab/gcp-ui/src/App.jsx), [`src/components/InnovationHoverExplainer.jsx`](file:///home/abdelouahab/gcp-ui/src/components/InnovationHoverExplainer.jsx), [`src/components/InteractiveDocsGuide.jsx`](file:///home/abdelouahab/gcp-ui/src/components/InteractiveDocsGuide.jsx)
+  - [`server/emulatorsRoutes.js`](../server/emulatorsRoutes.js) (new ES module exporting `registerCloudEmulatorsRoutes`, registered in [`server/index.js`](../server/index.js))
+  - [`src/components/LocalCloudEmulatorsStudio.jsx`](../src/components/LocalCloudEmulatorsStudio.jsx)
+  - [`src/App.jsx`](../src/App.jsx), [`src/components/InnovationHoverExplainer.jsx`](../src/components/InnovationHoverExplainer.jsx), [`src/components/InteractiveDocsGuide.jsx`](../src/components/InteractiveDocsGuide.jsx)
 - **Capabilities**:
   - **5 Official Local Emulators on `127.0.0.1`**: `PUBSUB` (`:8085`), `FIRESTORE` (`:8086`), `DATASTORE` (`:8081`), `SPANNER` (gRPC `:9010` / REST `:9020`), and `BIGTABLE` (`:8089`), launched as detached process groups via `gcloud beta emulators ...` (`GCLOUD_CLI`) or `docker run --rm --name cloudpulse-emu-<type>` (`DOCKER`), with a 300-line stdout/stderr ring buffer per run, TCP readiness polling, and process-group cleanup on exit. A missing Java 25+ JRE, SDK component, or uncached Docker image returns a structured HTTP `422` with a copyable remediation command instead of a crash.
   - **8 Real Local REST / Process Endpoints (`server/emulatorsRoutes.js`)**: `GET /api/project/:id/emulators/overview` (host `gcloud`/Java/Docker readiness, per-emulator PID/RSS/TCP RTT, live Cloud asset counts, `*_EMULATOR_HOST` export bundle), `POST .../emulators/start`, `POST .../emulators/stop` (`stopAll` or single `emulatorType`), `POST .../emulators/reset-data`, `POST .../emulators/install-component` (strict 5-component allowlist), `GET .../emulators/:emulatorType/logs`, `POST .../emulators/workbench` (Pub/Sub, Datastore, Firestore, Spanner, and universal `PROBE_PORT` actions executed against `127.0.0.1:<port>`), and `POST .../emulators/clone-cloud-schema` (read-only Cloud REST discovery mirrored into the local emulator). `:id` is validated against `/^[a-z0-9][a-z0-9-]{2,62}$/i` and never hardcoded.
@@ -218,9 +218,9 @@
 
 ### O. Cloud Flight-Deck Nexus Studio (`CLOUD_NEXUS`) — Terraform Drift & Vertex AI Arena (Blast-Radius and Flight Recorder moved in Wave 27, see P)
 - **Files**:
-  - [`server/cloudNexusRoutes.js`](file:///home/abdelouahab/gcp-ui/server/cloudNexusRoutes.js) (ES module mounted in [`server/index.js`](file:///home/abdelouahab/gcp-ui/server/index.js))
-  - [`src/components/CloudFlightDeckNexusStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/CloudFlightDeckNexusStudio.jsx)
-  - [`src/App.jsx`](file:///home/abdelouahab/gcp-ui/src/App.jsx), [`src/components/InnovationHoverExplainer.jsx`](file:///home/abdelouahab/gcp-ui/src/components/InnovationHoverExplainer.jsx), [`src/components/InteractiveDocsGuide.jsx`](file:///home/abdelouahab/gcp-ui/src/components/InteractiveDocsGuide.jsx)
+  - [`server/cloudNexusRoutes.js`](../server/cloudNexusRoutes.js) (ES module mounted in [`server/index.js`](../server/index.js))
+  - [`src/components/CloudFlightDeckNexusStudio.jsx`](../src/components/CloudFlightDeckNexusStudio.jsx)
+  - [`src/App.jsx`](../src/App.jsx), [`src/components/InnovationHoverExplainer.jsx`](../src/components/InnovationHoverExplainer.jsx), [`src/components/InteractiveDocsGuide.jsx`](../src/components/InteractiveDocsGuide.jsx)
 - **Capabilities**:
   - **Pillars / Sub-Tabs (standalone studio now has 2: `TERRAFORM_DRIFT`, `VERTEX_ARENA`; `BLAST_RADIUS` and `FLIGHT_RECORDER` are embedded panels, see P)**: `TERRAFORM_DRIFT` (live inventory scan, named snapshots, snapshot diff, HCL copy / bundle download), `BLAST_RADIUS` (live topology graph, node impact selection, real TCP reachability probe, Network Intelligence Connectivity Tests), `VERTEX_ARENA` (Vertex AI model arena, red-team probe, evaluation history), and `FLIGHT_RECORDER` (merged audit / error / deploy timeline with window scrub, HTTP resilience burst probe, Cloud Run canary shift). Warm-Amber sub-tab selection; `bg-blue-600` reserved for enabled primary CTAs.
   - **8 Endpoints**: `GET /api/project/:id/nexus/terraform-scan`, `POST .../nexus/terraform-snapshot` (`SAVE_SNAPSHOT` / `DIFF_SNAPSHOTS` / `DELETE_SNAPSHOT`), `GET .../nexus/blast-radius`, `POST .../nexus/packet-probe` (`LIVE_REACHABILITY_PROBE` / `CREATE_CONNECTIVITY_TEST` / `DELETE_CONNECTIVITY_TEST`), `GET .../nexus/vertex-overview`, `POST .../nexus/vertex-benchmark` (`RUN_ARENA` / `RUN_REDTEAM_PROBE` / `CLEAR_EVAL_HISTORY`), `GET .../nexus/flight-recorder?windowMinutes=60`, and `POST .../nexus/canary-rehearsal` (`HTTP_RESILIENCE_PROBE` only; live canary traffic shifting is owned by Cloud Run Fleet, reached via a 1-click deep-link). `:id` is dynamically discovered, never hardcoded.
@@ -231,9 +231,9 @@
 ### P. Wave 26/27 — Ops Frontier Pillars, Consolidated Into Canonical Studios (Zero-Duplicate)
 - **Status**: Wave 26 shipped a standalone `CLOUD_OPS_FRONTIER` studio (commit `df0834c`). Wave 27 Phase A removed duplicate SA-key deletion and Cloud Run canary traffic shifting (checkpoint `54e279c`); Phase B retired the standalone sidebar item and embedded each pillar in the studio that owns that domain.
 - **Files**:
-  - [`server/wave26FrontierRoutes.js`](file:///home/abdelouahab/gcp-ui/server/wave26FrontierRoutes.js) (`/api/project/:id/frontier/*`), [`server/cloudNexusRoutes.js`](file:///home/abdelouahab/gcp-ui/server/cloudNexusRoutes.js)
-  - [`src/components/OpsFrontierPanels.jsx`](file:///home/abdelouahab/gcp-ui/src/components/OpsFrontierPanels.jsx) (named exports `QuotaRadarPanel`, `WifKeylessPanel`, `DnsTlsPanel`, `PubSubTimeMachinePanel`; no standalone studio), [`src/components/CloudFlightDeckNexusStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/CloudFlightDeckNexusStudio.jsx) (standalone Terraform + Vertex only; exports `BlastRadiusPanel`, `FlightRecorderPanel`)
-  - [`src/App.jsx`](file:///home/abdelouahab/gcp-ui/src/App.jsx), [`src/components/InnovationHoverExplainer.jsx`](file:///home/abdelouahab/gcp-ui/src/components/InnovationHoverExplainer.jsx), [`src/components/InteractiveDocsGuide.jsx`](file:///home/abdelouahab/gcp-ui/src/components/InteractiveDocsGuide.jsx)
+  - [`server/wave26FrontierRoutes.js`](../server/wave26FrontierRoutes.js) (`/api/project/:id/frontier/*`), [`server/cloudNexusRoutes.js`](../server/cloudNexusRoutes.js)
+  - [`src/components/OpsFrontierPanels.jsx`](../src/components/OpsFrontierPanels.jsx) (named exports `QuotaRadarPanel`, `WifKeylessPanel`, `DnsTlsPanel`, `PubSubTimeMachinePanel`; no standalone studio), [`src/components/CloudFlightDeckNexusStudio.jsx`](../src/components/CloudFlightDeckNexusStudio.jsx) (standalone Terraform + Vertex only; exports `BlastRadiusPanel`, `FlightRecorderPanel`)
+  - [`src/App.jsx`](../src/App.jsx), [`src/components/InnovationHoverExplainer.jsx`](../src/components/InnovationHoverExplainer.jsx), [`src/components/InteractiveDocsGuide.jsx`](../src/components/InteractiveDocsGuide.jsx)
 - **Canonical homes**:
   - `SRE_WAR_ROOM`: sub-tabs `GPU_QUOTA_RADAR` (Compute/GPU quota radar, Monitoring alert) and `CAUSAL_FLIGHT_RECORDER` (audit/error/deploy timeline, HTTP resilience probe).
   - `SOVEREIGN_STUDIO`: sub-tab `WIF_KEYLESS` (Workload Identity Pools, OIDC YAML) with a deep-link to the existing SA key vault (`IAM_SURGEON_SA_VAULT`).
@@ -247,9 +247,9 @@
 
 ### Q. AlloyDB Mastery, Express (PG 18), Sovereign Cloud CMEK/DORA & Live `psql` / Omni Docker Studio (`ALLOYDB_STUDIO`)
 - **Files**:
-  - [`src/components/AlloyDbMasteryStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/AlloyDbMasteryStudio.jsx)
-  - [`server/index.js`](file:///home/abdelouahab/gcp-ui/server/index.js#L11083-L12420)
-  - [`src/App.jsx`](file:///home/abdelouahab/gcp-ui/src/App.jsx), [`src/components/CloudSqlAndAlloyDbStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/CloudSqlAndAlloyDbStudio.jsx), [`src/components/OltpDatabaseContinuityBar.jsx`](file:///home/abdelouahab/gcp-ui/src/components/OltpDatabaseContinuityBar.jsx), [`src/components/AwsAzureEnvySuiteStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/AwsAzureEnvySuiteStudio.jsx), [`src/components/SovereignTimeMachineIamStudio.jsx`](file:///home/abdelouahab/gcp-ui/src/components/SovereignTimeMachineIamStudio.jsx), [`src/components/CommandPaletteModal.jsx`](file:///home/abdelouahab/gcp-ui/src/components/CommandPaletteModal.jsx)
+  - [`src/components/AlloyDbMasteryStudio.jsx`](../src/components/AlloyDbMasteryStudio.jsx)
+  - [`server/index.js`](../server/index.js#L11083-L12420)
+  - [`src/App.jsx`](../src/App.jsx), [`src/components/CloudSqlAndAlloyDbStudio.jsx`](../src/components/CloudSqlAndAlloyDbStudio.jsx), [`src/components/OltpDatabaseContinuityBar.jsx`](../src/components/OltpDatabaseContinuityBar.jsx), [`src/components/AwsAzureEnvySuiteStudio.jsx`](../src/components/AwsAzureEnvySuiteStudio.jsx), [`src/components/SovereignTimeMachineIamStudio.jsx`](../src/components/SovereignTimeMachineIamStudio.jsx), [`src/components/CommandPaletteModal.jsx`](../src/components/CommandPaletteModal.jsx)
 - **Capabilities**:
   - **6 Interactive Pillars Covering 10 AlloyDB Differentiation Scenarios**: `EXPRESS_QUICKSTART` (Live PG 18 Express provisioner, 1-click in-place Enterprise upgrade, full cluster lifecycle toolbar: `+ 2-Node Read Pool`, `Scale vCPU`, `Enable 10X Flags`, `Snapshot Backup`, `+ Zero-Password IAM User`, Hackathon-to-Production starter kits), `ZERO_LOCKIN_PGLOGICAL` (inbound `pglogical`, 100% PG compatibility, AlloyDB Omni Docker, stock PG DR exit + deterministic DDL & `pglogical` Compatibility X-Ray Auditor), `SCANN_VECTOR_RAG` (SCaNN vs `pgvector` HNSW ECharts RAM scaling curve + inline Vertex AI `embedding()` SQL), `BEYOND_AURORA_AGENTS` (Autonomous PostgreSQL AI Agents, 36-Month C-Suite TCO Consolidation ECharts + **1-Click Executive Migration Dossier `.md` Exporter**, **Sovereign Cloud, CMEK/EKM & DORA/GDPR Shield**, and **Live Terraform HCL `.tf` Compiler**), `LIVE_SQL_AND_OMNI` (real `/usr/bin/psql` wire-protocol SQL & `EXPLAIN (ANALYZE, BUFFERS)` runner + 1-click Live SCaNN PoV Benchmark + **Dual-Engine Gemini 4 NL2SQL Copilot** + real `/usr/bin/docker` `google/alloydbomni:latest` live 4-step streaming pull/`pg_isready` console & local image cache detector), and `PLAYBOOK_MATRIX` (all 10 scenarios with 1-click `Launch Live Lab →`).
   - **8 Live Backend Endpoints (`server/index.js`)**: `GET /api/project/:id/alloydb/overview`, `POST /api/project/:id/alloydb/action` (13 live actions), `POST /api/project/:id/alloydb/readiness-xray`, `POST /api/project/:id/alloydb/sovereign-audit`, `POST /api/project/:id/alloydb/execute-sql`, `POST /api/project/:id/alloydb/omni-local`, `POST /api/project/:id/alloydb/compat-audit`, `POST /api/project/:id/alloydb/export-terraform`, and `POST /api/project/:id/alloydb/nl2sql`.

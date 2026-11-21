@@ -12010,7 +12010,7 @@ SELECT slot_name, plugin, active FROM pg_replication_slots;`;
     const wrappedSql = `SET statement_timeout = '12000';\n${queryToRun}`;
     const { stdout, stderr } = await new Promise((resolve, reject) => {
       execFile(
-        '/usr/bin/psql',
+        'psql',
         [cleanDsn, '-v', 'ON_ERROR_STOP=1', '-P', 'pager=off', '-c', wrappedSql],
         { timeout: 15000, maxBuffer: 512 * 1024, env: { ...process.env, PGCONNECT_TIMEOUT: '8' } },
         (err, out, errOut) => {
@@ -12071,7 +12071,7 @@ app.post('/api/project/:projectId/alloydb/omni-local', async (req, res) => {
 
   const runDocker = (args, timeoutMs = 20000) =>
     new Promise((resolve, reject) => {
-      execFile('/usr/bin/docker', args, { timeout: timeoutMs, maxBuffer: 512 * 1024 }, (err, stdout, stderr) => {
+      execFile('docker', args, { timeout: timeoutMs, maxBuffer: 512 * 1024 }, (err, stdout, stderr) => {
         if (err) return reject(new Error(String(stderr || err.message || 'Docker command failed').trim()));
         resolve({ stdout: String(stdout || '').trim(), stderr: String(stderr || '').trim() });
       });
@@ -12209,7 +12209,7 @@ app.post('/api/project/:projectId/alloydb/omni-local', async (req, res) => {
               job.phase = 'PULLING_IMAGE';
               pushLog(`Image ${fullImage} not cached locally — pulling from Docker Hub (first pull may take 1-3 min)...`);
               await new Promise((resolve, reject) => {
-                const pullProc = spawn('/usr/bin/docker', ['pull', fullImage]);
+                const pullProc = spawn('docker', ['pull', fullImage]);
                 job._proc = pullProc;
                 let stderrBuf = '';
                 let lastOutputAt = Date.now();
@@ -13523,7 +13523,7 @@ app.post('/api/project/:projectId/data-fabric/rag-loop', async (req, res) => {
   const runLocalPsql = (conn, sqlText) =>
     new Promise((resolve, reject) => {
       const child = spawn(
-        '/usr/bin/psql',
+        'psql',
         ['-h', conn.host, '-p', String(conn.port), '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1', '-t', '-A'],
         {
           env: { ...process.env, PGPASSWORD: conn.password, PGCONNECT_TIMEOUT: '8' },
@@ -90858,7 +90858,7 @@ for s in active_sessions:
 for pip, cnt in peer_counts.items():
     already_in_who = any(s['remoteIp'] == pip for s in active_sessions)
     if not already_in_who:
-        u_name = pts_list[0][0] if pts_list else 'abdelouahab'
+        u_name = pts_list[0][0] if pts_list else (os.environ.get('USER') or 'ssh-user')
         u_tty = pts_list[0][1] if pts_list else ('pts/0' if cnt >= 2 else 'ssh:22')
         p_port = peer_ports.get(pip, [22])[0]
         active_sessions.append({

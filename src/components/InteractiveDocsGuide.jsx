@@ -2187,28 +2187,30 @@ const DOC_SECTIONS = [
   },
   {
     id: 'data-fabric-mesh-rag-loop',
-    wave: 'WAVE 29 DATA FABRIC MESH & LIVE 4-STAGE RAG LOOP · GCS -> BIGQUERY GEMINI 4 -> ALLOYDB OMNI SCANN',
+    wave: 'WAVE 29 DATA FABRIC MESH, LIVE 4-STAGE RAG LOOP & AUTO-ORCHESTRATOR · CLOUD WORKFLOWS · COMPOSER · DATAFORM',
     title:
-      '57. Live 6-Engine Data Fabric Mesh & 4-Stage End-to-End RAG Demo Loop (GCS → BigQuery Gemini 4 → AlloyDB SCaNN)',
-    badge: 'Data Engineering Studio (DataFabricMeshBridge.jsx) · 6 Engines · 4 Bridges · Live 4-Stage RAG Loop',
+      '57. Live 6-Engine Data Fabric Mesh, 4-Stage RAG Demo Loop & Auto-Orchestrator (GCS → BigQuery Gemini 4 → AlloyDB SCaNN → Cloud Workflows)',
+    badge: 'Data Engineering Studio (DataFabricMeshBridge.jsx) · 6 Engines · 4 Bridges · RAG Loop · Auto-Orchestrator',
     badgeColor:
       'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
     icon: Database,
     targetTab: 'DATA_ENGINEERING_STUDIO',
     problemSolved:
-      'Data engineers juggle Cloud Storage, AlloyDB, Cloud SQL, Managed Spark 3.5 Lightning, BigLake Iceberg, and BigQuery AI in separate silos—and rarely see a live, zero-mock RAG pipeline run end-to-end from a real GCS document through Gemini 4 enrichment into sub-5ms AlloyDB SCaNN vector serving.',
+      'Data engineers juggle Cloud Storage, AlloyDB, Cloud SQL, Managed Spark 3.5 Lightning, BigLake Iceberg, and BigQuery AI in separate silos—and rarely see a live, zero-mock RAG pipeline run end-to-end or compile & deploy directly into production Cloud Workflows / Composer / Dataform orchestration.',
     howItWorks: [
       '6-Engine Live Mesh & Data-Gravity Radar: Queries all 6 GCP data engines in parallel, renders a live Mermaid topology, flags cross-region egress risks, and synthesizes 4 runnable cross-engine bridges with live same-region BigQuery CLOUD_RESOURCE connection discovery (or WITH CONNECTION DEFAULT fallback).',
       'Live 4-Stage RAG Demo Loop (POST /api/project/:id/data-fabric/rag-loop): Stage 1 uploads a real Markdown document to gs://<bucket>/docs/<filename>; Stage 2 calls Vertex AI Gemini 4 + text-embedding-005 (768-d) and persists to BigQuery (<dataset>.cloudpulse_rag_gold); Stage 3 auto-discovers your local AlloyDB Omni container and builds a real alloydb_scann cosine index (idx_cloudpulse_rag_scann); Stage 4 executes live semantic search with PostgreSQL EXPLAIN ANALYZE latency and a grounded Gemini 4 answer.',
+      'Data Fabric Auto-Orchestrator (POST /api/project/:id/data-fabric/orchestrate): Compiles any active bridge into Cloud Workflows YAML, Cloud Composer Airflow DAG, or Dataform SQLX, deploys serverless workflows live to workflows.googleapis.com/v1 (auto-PATCH on 409), lists regional workflows, and triggers real executions via workflowexecutions.googleapis.com/v1.',
       'BigQuery Studio Execution UX & Connection IAM Auto-Remediation: Pairs the bridge with a 4-stage live Dremel Execution Flight-Card, DDL/0-row completion cards with 1-click Preview Table (LIMIT 25), and 1-click roles/aiplatform.user + roles/storage.objectViewer remediation when a BigQuery Connection SA hits a permission error.',
     ],
     apisUsed: [
       'GET /api/project/:id/data-fabric/mesh & POST /api/project/:id/data-fabric/synthesize-bridge (bigqueryconnection.googleapis.com/v1 + 6 live engine APIs)',
-      'POST /api/project/:id/data-fabric/rag-loop (storage.googleapis.com/upload, aiplatform.googleapis.com/v1 Gemini 4 & text-embedding-005, bigquery.googleapis.com/bigquery/v2, /usr/bin/psql -> AlloyDB Omni SCaNN)',
+      'POST /api/project/:id/data-fabric/rag-loop (storage.googleapis.com/upload, aiplatform.googleapis.com/v1 Gemini 4 & text-embedding-005, bigquery.googleapis.com/bigquery/v2, psql -> AlloyDB Omni SCaNN)',
+      'POST /api/project/:id/data-fabric/orchestrate (workflows.googleapis.com/v1 & workflowexecutions.googleapis.com/v1)',
       'POST /api/project/:id/bigquery/grant-connection-sa-roles (cloudresourcemanager.googleapis.com/v1 :getIamPolicy / :setIamPolicy)',
     ],
     billingImpact:
-      'Mesh discovery, bridge synthesis, local AlloyDB Omni SCaNN indexing, and Stage 4 vector search cost $0.00 in GCP; Stage 1 GCS upload and Stage 2 Vertex AI / BigQuery writes use standard Always-Free / on-demand GCP tiers (gated by confirmation modals).',
+      'Mesh discovery, bridge synthesis, orchestration compilation, local AlloyDB Omni SCaNN indexing, and Stage 4 vector search cost $0.00 in GCP; Cloud Workflows includes 5,000 free steps/month ($0.00 idle); Stage 1 GCS upload and Stage 2 Vertex AI / BigQuery writes use standard Always-Free / on-demand GCP tiers (gated by confirmation modals).',
   },
 ];
 
