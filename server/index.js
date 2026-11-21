@@ -13067,6 +13067,43 @@ app.post('/api/project/:projectId/data-fabric/synthesize-bridge', async (req, re
     geminiModel = 'gemini-4-neon',
   } = req.body || {};
 
+  // Live-discover any real BigQuery CLOUD_RESOURCE connection so Object Tables & Vertex AI SQL never hit "Connection not found"
+  let discoveredConnectionFull = null;
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (token) {
+      const connRes = await gcpFetch(
+        `https://bigqueryconnection.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/locations/-/connections`,
+        token,
+        projectId,
+        { timeout: 5000 }
+      ).catch(() => ({ connections: [] }));
+      const cloudResConns = (Array.isArray(connRes?.connections) ? connRes.connections : []).filter(
+        (c) => Boolean(c.cloudResource)
+      );
+      const preferred =
+        cloudResConns.find((c) => String(c.name || '').includes(`/locations/${region}/`)) ||
+        cloudResConns[0];
+      if (preferred?.name) {
+        const parts = String(preferred.name).split('/');
+        const loc = parts[parts.indexOf('locations') + 1] || region;
+        const cId = parts[parts.indexOf('connections') + 1] || '';
+        if (cId) discoveredConnectionFull = `${projectId}.${loc}.${cId}`;
+      }
+    }
+  } catch {
+    // non-fatal; fall back to BigQuery DEFAULT connection
+  }
+
+  const bqConnectionClause = discoveredConnectionFull
+    ? `\`${discoveredConnectionFull}\``
+    : 'DEFAULT';
+  const bqConnectionComment = discoveredConnectionFull
+    ? `-- Using live discovered BigQuery CLOUD_RESOURCE connection: ${discoveredConnectionFull}`
+    : `-- Using BigQuery DEFAULT connection (or create a named connection in 1 click via BigLake Studio:\n-- bq mk --connection --connection_type=CLOUD_RESOURCE --location=${region} --project_id=${projectId} biglake-default-conn)`;
+
   const bridges = {
     ALLOYDB_BIGQUERY_FEDERATION: {
       title: 'AlloyDB (OLTP + SCaNN) ⇄ BigQuery (AI & BI) Zero-ETL Federated Bridge',
@@ -13145,15 +13182,20 @@ print("Committed ACID Iceberg table biglake.${datasetId}.silver_events_iceberg")
 -- BRIDGE 3: GCS (gs://${bucketName}) -> BIGQUERY GEMINI 4 (${geminiModel}) -> ALLOYDB SCaNN
 -- End-to-End Enterprise GenAI RAG Pipeline (Zero External Vector DB)
 -- ============================================================================
+${bqConnectionComment}
 -- Step 1: Register BigQuery Object Table over gs://${bucketName}/docs/*
 CREATE OR REPLACE EXTERNAL TABLE \`${projectId}.${datasetId}.gcs_docs_object_table\`
-WITH CONNECTION \`${projectId}.${region}.biglake-default-conn\`
+WITH CONNECTION ${bqConnectionClause}
 OPTIONS (
   object_metadata = 'SIMPLE',
   uris = ['gs://${bucketName}/docs/*']
 );
 
--- Step 2: Enrich & Embed with ${geminiModel} + text-embedding-005 inside BigQuery
+-- Step 2: Register Remote Gemini 4 Model (${geminiModel}) & Enrich Docs Inside BigQuery
+CREATE OR REPLACE MODEL \`${projectId}.${datasetId}.${geminiModel.replace(/[^a-z0-9_]/gi, '_')}\`
+REMOTE WITH CONNECTION ${bqConnectionClause}
+OPTIONS (endpoint = '${geminiModel}');
+
 CREATE OR REPLACE TABLE \`${projectId}.${datasetId}.rag_embeddings_gold\` AS
 SELECT
   uri,
