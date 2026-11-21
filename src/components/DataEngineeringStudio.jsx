@@ -27,6 +27,7 @@ import {
 import IcebergLakehousePlaybookMatrix from './IcebergLakehousePlaybookMatrix';
 import MermaidArchitectureDiagram from './MermaidArchitectureDiagram';
 import DataFabricMeshBridge from './DataFabricMeshBridge';
+import BigQueryPropertyGraphWorkbench from './BigQueryPropertyGraphWorkbench';
 
 export default function DataEngineeringStudio({
   projectId,
@@ -998,6 +999,12 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
                 badge: 'GCS·AlloyDB·Spark·BQ',
               },
               {
+                id: 'BQ_PROPERTY_GRAPH',
+                icon: GitBranch,
+                label: 'BigQuery Property Graph (GQL) Workbench',
+                badge: 'GQL · Gemini 4',
+              },
+              {
                 id: 'ICEBERG_50_MATRIX',
                 icon: Layers,
                 label: '50-Playbook Iceberg Lakehouse Matrix',
@@ -1108,6 +1115,15 @@ print("Zero-Cluster Serverless Spark Iceberg Medallion Commit Complete!")`;
           onNavigateTab={onNavigateTab}
           onOpenBigQuerySql={onOpenBigQuerySql}
           onRunInShell={onRunInShell}
+          onShowToast={onShowToast}
+          onShowError={onShowError}
+        />
+      )}
+
+      {activeSubTab === 'BQ_PROPERTY_GRAPH' && (
+        <BigQueryPropertyGraphWorkbench
+          projectId={projectId}
+          onOpenBigQuerySql={onOpenBigQuerySql}
           onShowToast={onShowToast}
           onShowError={onShowError}
         />

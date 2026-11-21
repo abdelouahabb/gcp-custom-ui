@@ -2295,6 +2295,7 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/data-fabric/synthesize-bridge') ||
       (rawUrl.includes('/data-fabric/orchestrate') && (body.action === 'COMPILE' || body.action === 'LIST_WORKFLOWS')) ||
       (rawUrl.includes('/data-fabric/rag-loop') && body.stage === 'QUERY_SCANN_RAG') ||
+      (rawUrl.includes('/bigquery/property-graph') && (body.action === 'DISCOVER' || body.action === 'AI_NL2GQL' || (body.action === 'RUN_GQL' && Boolean(body.dryRun)))) ||
       (rawUrl.includes('/alloydb/execute-sql') &&
         String(body.mode || '').toUpperCase() === 'INTROSPECT_ALLOYDB') ||
       (rawUrl.includes('/cloudrun-bridge/action') &&
@@ -5147,6 +5148,53 @@ function classifyDestructiveAxiosConfig(config) {
           costWarning: `ALWAYS-FREE STORAGE ELIGIBLE (~$0.00): Storing a few kilobytes of seed rows falls within BigQuery's 10 GiB/month Always-Free storage tier.`,
           impactWarning: `Appends rows into live BigQuery table "${dsId}.${tblId}" in project "${projectId}".`,
         };
+      }
+      if (rawUrl.includes('/bigquery/property-graph')) {
+        const pgAction = String(body.action || '');
+        const ds = body.datasetId || 'target_dataset';
+        const gName = body.graphName || 'cloudpulse_entity_graph';
+        if (pgAction === 'BOOTSTRAP_GRAPH') {
+          return {
+            gateType: 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title: `Create BigQuery Property Graph "${ds}.${gName}"?`,
+            laymanSummary: `In Plain English: Creates and seeds two small starter tables (${ds}.graph_entities and ${ds}.graph_transfers) and executes CREATE OR REPLACE PROPERTY GRAPH ${projectId}.${ds}.${gName} so you can run live GoogleSQL GQL traversals immediately.`,
+            headerBadge: 'BigQuery Property Graph — Live DDL Bootstrap',
+            targetLabel: 'Target BigQuery Property Graph',
+            resourceKind: 'BigQuery Property Graph (bigquery.googleapis.com/bigquery/v2)',
+            targetName: `${projectId}.${ds}.${gName}`,
+            location: 'Dataset Region',
+            projectId,
+            method: 'CREATE PROPERTY GRAPH',
+            endpoint: rawUrl,
+            confirmLabel: `Bootstrap "${gName}"`,
+            cancelToast: 'BigQuery Property Graph bootstrap cancelled.',
+            whatHappensNext: `1. Creates ${ds}.graph_entities (6 nodes) and ${ds}.graph_transfers (6 edges).\n2. Executes CREATE OR REPLACE PROPERTY GRAPH ${projectId}.${ds}.${gName}.`,
+            costWarning: `ALWAYS-FREE TIER ELIGIBLE (~$0.00): Tiny starter tables (<10 KB) well within BigQuery's 10 GiB/mo free storage and 1 TiB/mo free query tiers.`,
+            impactWarning: `Creates/replaces graph_entities, graph_transfers, and Property Graph "${gName}" in ${projectId}.${ds}.`,
+          };
+        }
+        if (pgAction === 'RUN_GQL') {
+          return {
+            gateType: 'ONE_TAP_CLOUD_ACTION',
+            releaseTrack: 'GA',
+            title: `Execute Live BigQuery GQL Query on "${ds}.${gName}"?`,
+            laymanSummary: `In Plain English: Runs your GoogleSQL GQL pattern-matching query live against BigQuery Property Graph ${projectId}.${ds}.${gName} and renders the resulting topology graph and rows.`,
+            headerBadge: 'BigQuery Property Graph — Live GQL Execution',
+            targetLabel: 'Target Property Graph',
+            resourceKind: 'BigQuery GQL Query (bigquery.googleapis.com/bigquery/v2)',
+            targetName: `${projectId}.${ds}.${gName}`,
+            location: 'Dataset Region',
+            projectId,
+            method: 'EXECUTE LIVE GQL',
+            endpoint: rawUrl,
+            confirmLabel: `Run Live GQL`,
+            cancelToast: 'Live GQL execution cancelled.',
+            whatHappensNext: `1. Submits your standalone GoogleSQL GQL query to BigQuery Dremel.\n2. Auto-renders a Mermaid traversal graph and tabular results.`,
+            costWarning: `ALWAYS-FREE TIER ELIGIBLE: Covered by BigQuery's 1 TiB/month Always-Free query tier.`,
+            impactWarning: `Executes a read-only GQL traversal on ${projectId}.${ds}.${gName}.`,
+          };
+        }
       }
       if (rawUrl.includes('/data-fabric/orchestrate')) {
         const wfAction = String(body.action || '');

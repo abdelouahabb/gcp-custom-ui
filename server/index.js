@@ -13161,6 +13161,341 @@ app.post('/api/project/:projectId/bigquery/grant-connection-sa-roles', async (re
   }
 });
 
+// 9a-bq-property-graph. POST /api/project/:projectId/bigquery/property-graph
+// Live BigQuery Property Graph (GoogleSQL GQL) discovery, bootstrap, GQL execution, and Gemini 4 NL2GQL
+app.post('/api/project/:projectId/bigquery/property-graph', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    action = 'DISCOVER', // DISCOVER | BOOTSTRAP_GRAPH | RUN_GQL | AI_NL2GQL
+    datasetId = '',
+    graphName = 'cloudpulse_entity_graph',
+    gqlQuery = '',
+    dryRun = false,
+    nlPrompt = '',
+    geminiModel = 'gemini-4-neon',
+    region = 'us-central1',
+    graphDdl = '',
+  } = req.body || {};
+
+  const startedAt = Date.now();
+  const safeDataset = String(datasetId || '').trim();
+  const safeGraph = String(graphName || 'cloudpulse_entity_graph').replace(/[^a-zA-Z0-9_]/g, '_') || 'cloudpulse_entity_graph';
+  const safeRegion = String(region || 'us-central1').replace(/[^a-z0-9-]/gi, '') || 'us-central1';
+
+  const parseBqRows = (bqRes) => {
+    const fields = Array.isArray(bqRes?.schema?.fields) ? bqRes.schema.fields : [];
+    const rawRows = Array.isArray(bqRes?.rows) ? bqRes.rows : [];
+    return rawRows.map((r) => {
+      const obj = {};
+      fields.forEach((f, idx) => {
+        const val = r?.f?.[idx]?.v;
+        obj[f.name] = val === undefined ? null : val;
+      });
+      return obj;
+    });
+  };
+
+  const buildMermaidFromRows = (rows) => {
+    if (!Array.isArray(rows) || rows.length === 0) return null;
+    const keys = Object.keys(rows[0]);
+    const srcKey = keys.find((k) => /^(src|source|from|start|origin|entity_a)/i.test(k));
+    const dstKey = keys.find((k) => /^(dst|dest|target|to|end|entity_b)/i.test(k));
+    if (!srcKey || !dstKey) return null;
+    const weightKey = keys.find((k) => /(amount|total|usd|count|weight|hops|channel|edge)/i.test(k));
+    const nodeIds = new Map();
+    const getNid = (label) => {
+      const clean = String(label ?? 'Unknown').replace(/["\r\n]/g, ' ').trim().slice(0, 36);
+      if (!nodeIds.has(clean)) nodeIds.set(clean, `N${nodeIds.size + 1}`);
+      return { id: nodeIds.get(clean), label: clean };
+    };
+    const lines = ['flowchart LR'];
+    const seenEdges = new Set();
+    for (const r of rows.slice(0, 24)) {
+      const s = getNid(r[srcKey]);
+      const d = getNid(r[dstKey]);
+      const edgeLbl = weightKey && r[weightKey] !== null && r[weightKey] !== undefined
+        ? String(r[weightKey]).replace(/[|"\r\n]/g, ' ').trim().slice(0, 24)
+        : 'Transfers';
+      const sig = `${s.id}->${d.id}:${edgeLbl}`;
+      if (seenEdges.has(sig)) continue;
+      seenEdges.add(sig);
+      lines.push(`  ${s.id}["${s.label}"] -->|${edgeLbl}| ${d.id}["${d.label}"]`);
+    }
+    return lines.length > 1 ? lines.join('\n') : null;
+  };
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
+    }
+
+    if (action === 'DISCOVER') {
+      // List live datasets first if none specified
+      const dsRes = await gcpFetch(
+        `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/datasets?maxResults=40`,
+        token,
+        projectId,
+        { timeout: 8000 }
+      ).catch(() => ({ datasets: [] }));
+      const datasets = (Array.isArray(dsRes?.datasets) ? dsRes.datasets : []).map((d) => ({
+        datasetId: d?.datasetReference?.datasetId || '',
+        location: d?.location || 'US',
+      })).filter((d) => d.datasetId);
+
+      const targetDs = safeDataset || datasets[0]?.datasetId || '';
+      if (!targetDs || !/^[a-zA-Z0-9_]+$/.test(targetDs)) {
+        return res.json({
+          ok: true,
+          action: 'DISCOVER',
+          datasets,
+          selectedDataset: '',
+          propertyGraphs: [],
+          tables: [],
+          durationMs: Date.now() - startedAt,
+        });
+      }
+
+      const [pgRes, tblRes] = await Promise.all([
+        gcpFetch(
+          `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/queries`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              query: `SELECT property_graph_name, creation_time, ddl FROM \`${projectId}.${targetDs}.INFORMATION_SCHEMA.PROPERTY_GRAPHS\` ORDER BY creation_time DESC LIMIT 25`,
+              useLegacySql: false,
+              timeoutMs: 12000,
+            },
+            timeout: 15000,
+          }
+        ).catch(() => ({ rows: [], schema: { fields: [] } })),
+        gcpFetch(
+          `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/datasets/${encodeURIComponent(targetDs)}/tables?maxResults=40`,
+          token,
+          projectId,
+          { timeout: 8000 }
+        ).catch(() => ({ tables: [] })),
+      ]);
+
+      const propertyGraphs = parseBqRows(pgRes);
+      const tables = (Array.isArray(tblRes?.tables) ? tblRes.tables : []).map((t) => ({
+        tableId: t?.tableReference?.tableId || '',
+        type: t?.type || 'TABLE',
+      })).filter((t) => t.tableId);
+
+      return res.json({
+        ok: true,
+        action: 'DISCOVER',
+        datasets,
+        selectedDataset: targetDs,
+        propertyGraphs,
+        tables,
+        durationMs: Date.now() - startedAt,
+      });
+    }
+
+    if (!safeDataset || !/^[a-zA-Z0-9_]+$/.test(safeDataset)) {
+      return res.status(400).json({ error: 'Please select a valid BigQuery dataset ID.' });
+    }
+
+    if (action === 'BOOTSTRAP_GRAPH') {
+      const entitiesTbl = `${projectId}.${safeDataset}.graph_entities`;
+      const transfersTbl = `${projectId}.${safeDataset}.graph_transfers`;
+      const fullGraph = `${projectId}.${safeDataset}.${safeGraph}`;
+
+      // 1. Seed real node & edge tables
+      const seedSql = `
+CREATE OR REPLACE TABLE \`${entitiesTbl}\` AS
+SELECT 'ent_hq_treasury' AS entity_id, 'Global Treasury HQ' AS entity_name, 'Treasury' AS entity_type, 'us-central1' AS region, 0.12 AS risk_score UNION ALL
+SELECT 'ent_eu_clearing', 'EU Clearing Hub', 'Bank', 'europe-west1', 0.18 UNION ALL
+SELECT 'ent_alloydb_pos', 'AlloyDB POS Gateway', 'Merchant', 'us-central1', 0.25 UNION ALL
+SELECT 'ent_offshore_shell', 'Cayman Shell LLC', 'Shell', 'us-east1', 0.91 UNION ALL
+SELECT 'ent_crypto_bridge', 'Cross-Chain Bridge', 'Exchange', 'us-west1', 0.84 UNION ALL
+SELECT 'ent_ai_vendor', 'Vertex AI Compute Partner', 'Vendor', 'us-central1', 0.08;
+
+CREATE OR REPLACE TABLE \`${transfersTbl}\` AS
+SELECT 'tx_001' AS tx_id, 'ent_hq_treasury' AS from_entity_id, 'ent_eu_clearing' AS to_entity_id, 48500.00 AS amount_usd, 'SEPA_INSTANT' AS channel, TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 4 HOUR) AS tx_ts UNION ALL
+SELECT 'tx_002', 'ent_eu_clearing', 'ent_offshore_shell', 47200.00, 'SWIFT_WIRE', TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 3 HOUR) UNION ALL
+SELECT 'tx_003', 'ent_offshore_shell', 'ent_crypto_bridge', 46800.00, 'STABLECOIN', TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 2 HOUR) UNION ALL
+SELECT 'tx_004', 'ent_crypto_bridge', 'ent_alloydb_pos', 19500.00, 'CARD_SETTLEMENT', TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR) UNION ALL
+SELECT 'tx_005', 'ent_hq_treasury', 'ent_ai_vendor', 12400.00, 'ACH', TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 5 HOUR) UNION ALL
+SELECT 'tx_006', 'ent_alloydb_pos', 'ent_hq_treasury', 31000.00, 'FEDNOW', TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 MINUTE);`;
+
+      const seedRes = await gcpFetch(
+        `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/queries`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: { query: seedSql, useLegacySql: false, timeoutMs: 25000 },
+          timeout: 30000,
+        }
+      );
+      if (Array.isArray(seedRes?.errors) && seedRes.errors.length > 0) {
+        return res.status(400).json({ error: seedRes.errors[0]?.message || 'Failed to seed graph tables.' });
+      }
+
+      // 2. Single-statement CREATE OR REPLACE PROPERTY GRAPH (per DAK bigquery-graph-author rules: prefix table, bare REFERENCES alias, no reserved GQL keywords)
+      const createGraphSql = `CREATE OR REPLACE PROPERTY GRAPH \`${fullGraph}\`
+NODE TABLES (
+  \`${entitiesTbl}\` AS Entity
+    KEY (entity_id)
+    LABEL Entity
+    PROPERTIES (entity_id, entity_name, entity_type, region, risk_score)
+)
+EDGE TABLES (
+  \`${transfersTbl}\` AS Transfers
+    KEY (tx_id)
+    SOURCE KEY (from_entity_id) REFERENCES Entity (entity_id)
+    DESTINATION KEY (to_entity_id) REFERENCES Entity (entity_id)
+    LABEL Transfers
+    PROPERTIES (tx_id, amount_usd, channel, tx_ts)
+)`;
+
+      const graphRes = await gcpFetch(
+        `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/queries`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: { query: createGraphSql, useLegacySql: false, timeoutMs: 25000 },
+          timeout: 30000,
+        }
+      );
+      if (Array.isArray(graphRes?.errors) && graphRes.errors.length > 0) {
+        return res.status(400).json({ error: graphRes.errors[0]?.message || 'Failed to create Property Graph.' });
+      }
+
+      return res.json({
+        ok: true,
+        action: 'BOOTSTRAP_GRAPH',
+        graphFqn: fullGraph,
+        nodeTable: entitiesTbl,
+        edgeTable: transfersTbl,
+        ddl: createGraphSql,
+        bqJobId: graphRes?.jobReference?.jobId || null,
+        mermaidPreview: [
+          'flowchart LR',
+          '  N1["Global Treasury HQ (Treasury)"] -->|$48,500 SEPA| N2["EU Clearing Hub (Bank)"]',
+          '  N2 -->|$47,200 SWIFT| N3["Cayman Shell LLC (Risk 0.91)"]',
+          '  N3 -->|$46,800 STABLECOIN| N4["Cross-Chain Bridge (Risk 0.84)"]',
+          '  N4 -->|$19,500 CARD| N5["AlloyDB POS Gateway (Merchant)"]',
+          '  N5 -->|$31,000 FEDNOW| N1',
+          '  N1 -->|$12,400 ACH| N6["Vertex AI Compute Partner (Vendor)"]',
+        ].join('\n'),
+        durationMs: Date.now() - startedAt,
+      });
+    }
+
+    if (action === 'RUN_GQL') {
+      const queryStr = String(gqlQuery || '').trim();
+      if (!queryStr) {
+        return res.status(400).json({ error: 'GQL query cannot be empty.' });
+      }
+      const bqRes = await gcpFetch(
+        `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/queries`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            query: queryStr,
+            useLegacySql: false,
+            dryRun: Boolean(dryRun),
+            timeoutMs: 25000,
+          },
+          timeout: 30000,
+        }
+      );
+      if (Array.isArray(bqRes?.errors) && bqRes.errors.length > 0) {
+        return res.status(400).json({ error: bqRes.errors[0]?.message || 'BigQuery GQL execution failed.' });
+      }
+      const rows = dryRun ? [] : parseBqRows(bqRes);
+      const totalBytesProcessed = Number(bqRes?.totalBytesProcessed || 0);
+      return res.json({
+        ok: true,
+        action: 'RUN_GQL',
+        dryRun: Boolean(dryRun),
+        bqJobId: bqRes?.jobReference?.jobId || null,
+        totalBytesProcessed,
+        totalRows: dryRun ? 0 : Number(bqRes?.totalRows || rows.length),
+        rows,
+        mermaidGraph: dryRun ? null : buildMermaidFromRows(rows),
+        durationMs: Date.now() - startedAt,
+      });
+    }
+
+    if (action === 'AI_NL2GQL') {
+      const prompt = String(nlPrompt || '').trim();
+      if (!prompt) {
+        return res.status(400).json({ error: 'Enter a natural-language graph question.' });
+      }
+      const cleanModel = String(geminiModel || 'gemini-4-neon').trim();
+      const fullGraph = `\`${projectId}.${safeDataset}.${safeGraph}\``;
+      const sysPrompt = `You are a BigQuery GoogleSQL GQL expert. Output ONLY valid BigQuery GoogleSQL GQL (NEVER Cypher, no markdown fences).
+Rules:
+- Start with: GRAPH ${fullGraph}
+- Use standalone GQL (MATCH ... FILTER ... RETURN ... ORDER BY ... LIMIT ...).
+- NEVER use Cypher syntax. Use FILTER instead of trailing WHERE after LET or for EXISTS subqueries.
+- Implicit GROUP BY in RETURN (do NOT write a GROUP BY clause in standalone GQL).
+- Always alias source & destination columns as source_name and target_name when returning pairs so the UI renders a live topology graph.
+Graph DDL / Schema:
+${graphDdl || `Nodes: Entity(entity_id, entity_name, entity_type, region, risk_score). Edges: Transfers(tx_id, amount_usd, channel, tx_ts) connecting Entity -> Entity.`}
+
+User question: ${prompt}`;
+
+      const urls = [
+        `https://aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/global/publishers/google/models/${encodeURIComponent(cleanModel)}:generateContent`,
+        `https://${encodeURIComponent(safeRegion)}-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/${encodeURIComponent(safeRegion)}/publishers/google/models/${encodeURIComponent(cleanModel)}:generateContent`,
+      ];
+      let generated = '';
+      let lastErr = null;
+      for (const u of urls) {
+        try {
+          const gRes = await gcpFetch(u, token, projectId, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              contents: [{ role: 'user', parts: [{ text: sysPrompt }] }],
+              generationConfig: { temperature: 0.1, maxOutputTokens: 512 },
+            },
+            timeout: 20000,
+          });
+          const raw = gRes?.candidates?.[0]?.content?.parts?.map((p) => p?.text || '').join('').trim() || '';
+          if (raw) {
+            generated = raw.replace(/^```(?:sql|gql)?\s*/i, '').replace(/```\s*$/i, '').trim();
+            break;
+          }
+        } catch (e) {
+          lastErr = e;
+        }
+      }
+      if (!generated) {
+        throw lastErr || new Error(`Gemini 4 (${cleanModel}) returned no GQL.`);
+      }
+      return res.json({
+        ok: true,
+        action: 'AI_NL2GQL',
+        gql: generated,
+        modelUsed: cleanModel,
+        durationMs: Date.now() - startedAt,
+      });
+    }
+
+    return res.status(400).json({ error: `Unsupported property-graph action: ${action}` });
+  } catch (err) {
+    return res.status(err?.status || 500).json({
+      error: err?.message || 'BigQuery Property Graph request failed.',
+    });
+  }
+});
+
 // 9a-data-fabric-orchestrate. POST /api/project/:projectId/data-fabric/orchestrate
 // Compiles any of the 4 Data Fabric bridges into Cloud Workflows YAML, Composer Airflow DAG, or Dataform SQLX,
 // and supports live Cloud Workflows deployment (workflows.googleapis.com/v1) + live execution (workflowexecutions.googleapis.com/v1)

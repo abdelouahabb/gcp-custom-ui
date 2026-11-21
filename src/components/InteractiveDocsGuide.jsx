@@ -2212,6 +2212,32 @@ const DOC_SECTIONS = [
     billingImpact:
       'Mesh discovery, bridge synthesis, orchestration compilation, local AlloyDB Omni SCaNN indexing, and Stage 4 vector search cost $0.00 in GCP; Cloud Workflows includes 5,000 free steps/month ($0.00 idle); Stage 1 GCS upload and Stage 2 Vertex AI / BigQuery writes use standard Always-Free / on-demand GCP tiers (gated by confirmation modals).',
   },
+  {
+    id: 'bigquery-property-graph-gql',
+    wave: 'WAVE 30 BIGQUERY PROPERTY GRAPH (GOOGLESQL GQL) & HYBRID TOPOLOGY WORKBENCH · GEMINI 4 NL2GQL',
+    title:
+      '58. BigQuery Property Graph (GoogleSQL GQL) & Live Topology Workbench (BQ_PROPERTY_GRAPH)',
+    badge: 'Data Engineering Studio (BigQueryPropertyGraphWorkbench.jsx) · GQL · Gemini 4 NL2GQL',
+    badgeColor:
+      'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
+    icon: Database,
+    targetTab: 'DATA_ENGINEERING_STUDIO',
+    problemSolved:
+      'Running multi-hop fraud ring detection, supply-chain traversal, and entity relationship analytics in BigQuery normally requires hand-writing complex recursive CTEs or non-portable Cypher. This workbench brings native BigQuery Property Graphs (GoogleSQL GQL) with live discovery, 1-click graph bootstrap, Gemini 4 NL2GQL, and automatic Mermaid topology rendering.',
+    howItWorks: [
+      'Live Graph Discovery (INFORMATION_SCHEMA.PROPERTY_GRAPHS): Discovers all datasets and existing BigQuery Property Graphs (with live DDL) in the active project.',
+      '1-Click Live Property Graph Bootstrap: Seeds graph_entities (6 nodes) and graph_transfers (6 edges) and executes a compliant CREATE OR REPLACE PROPERTY GRAPH statement (dataset-prefixed tables, bare REFERENCES aliases, zero reserved GQL keywords).',
+      '4 Official GoogleSQL GQL Templates + Gemini 4 NL2GQL Copilot: Covers Direct Top-N, Multi-Hop ->{1,3} Fraud Rings, FILTER EXISTS subqueries, and Implicit GROUP BY rollups, plus live Gemini 4 natural-language-to-GQL synthesis grounded in the graph DDL.',
+      'Dual Output View: Runs $0.00 Dry-Run validation or live GQL execution on BigQuery Dremel and auto-renders both a live Mermaid traversal topology diagram and a tabular result grid.',
+    ],
+    apisUsed: [
+      'POST /api/project/:id/bigquery/property-graph (action: DISCOVER | BOOTSTRAP_GRAPH | RUN_GQL | AI_NL2GQL)',
+      'bigquery.googleapis.com/bigquery/v2 (INFORMATION_SCHEMA.PROPERTY_GRAPHS, CREATE PROPERTY GRAPH, GoogleSQL GQL jobs)',
+      'aiplatform.googleapis.com/v1 (Gemini 4 NL2GQL synthesis)',
+    ],
+    billingImpact:
+      'Discovery, $0.00 Dry-Run GQL validation, and Mermaid rendering cost $0.00; starter graph bootstrap (<10 KB) and GQL traversals fall within BigQuery Always-Free storage (10 GiB/mo) and query (1 TiB/mo) tiers (gated by confirmation modals).',
+  },
 ];
 
 export default function InteractiveDocsGuide({
