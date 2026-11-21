@@ -617,11 +617,22 @@ const STUDIO_TABS = [
     id: 'WAVE5_GCLOUD_592_UPGRADES',
     wave: 'WAVE_5',
     track: 'GA',
-    shortLabel: '[NEW SDK 592.0.0] 8 GA Upgrades (AlloyDB Autoscaler, GKE Ambient Mesh, Backup-DR, DWS Spark)',
+    shortLabel: '[SDK 592.0.0] 8 GA Upgrades (AlloyDB Autoscaler, GKE Ambient Mesh, Backup-DR, DWS Spark)',
     subtitle: 'alloydb --enable-autoscaler [GA] · sql reconcile-networking · GKE --enable-ambient-networking [GA] · backup-dr auto-protection [GA] · dataproc DWS',
     icon: Sparkles,
     ownerStudioTab: 'GKE_FINOPS',
     ownerStudioLabel: 'Open GKE & Database Fleet Studios',
+  },
+  // NEW WAVE 6: GOOGLE CLOUD SDK 594.0.0 (2026-11-17) 8 NEW GA/BETA UPGRADES
+  {
+    id: 'WAVE6_GCLOUD_594_UPGRADES',
+    wave: 'WAVE_6',
+    track: 'GA',
+    shortLabel: '[NEW SDK 594.0.0] 8 GA/Beta Upgrades (AlloyDB z4d LSSD, SQL Blue-Green GA, Iceberg Views, Worker Pools Scaling)',
+    subtitle: 'alloydb z4d-highmem-16-standardlssd · sql blue-green-deployments [GA] · biglake iceberg views [BETA] · run worker-pools --scaling · GKE --default-compute-class',
+    icon: Sparkles,
+    ownerStudioTab: 'ALLOYDB_STUDIO',
+    ownerStudioLabel: 'Open AlloyDB Mastery & Express Studio',
   },
 ];
 
@@ -933,43 +944,45 @@ export default function GcloudAlphaBetaStudio({
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-zinc-900 text-white dark:bg-[#182032] dark:text-amber-300 border border-zinc-800 dark:border-amber-500/35 text-xs font-mono font-extrabold">
                 <Terminal className="w-3.5 h-3.5" />
                 <span>
-                  GCLOUD {overview?.sdk?.coreVersion || '592.0.0'} CLI LAB
-                  (13 COMMAND SUITES)
+                  GCLOUD {overview?.sdk?.coreVersion || '594.0.0'} CLI LAB
+                  (14 COMMAND SUITES)
                 </span>
               </span>
               <ReleaseTrackBadge track="GA" />
               <ReleaseTrackBadge track="BETA" />
               <ReleaseTrackBadge track="ALPHA" />
               <span className="text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
-                core={overview?.sdk?.alphaVersion || '2026.10.30'} · alpha=
-                {overview?.sdk?.alphaVersion || '2026.10.30'} · beta=
-                {overview?.sdk?.betaVersion || '2026.10.30'}
+                core={overview?.sdk?.alphaVersion || '2026.11.13'} · alpha=
+                {overview?.sdk?.alphaVersion || '2026.11.13'} · beta=
+                {overview?.sdk?.betaVersion || '2026.11.13'}
               </span>
             </div>
             <h2 className="text-base sm:text-lg font-extrabold text-zinc-900 dark:text-zinc-100">
               Google Cloud [GA Promoted], [BETA] &amp; [ALPHA] Frontier
-              Capabilities — SDK {overview?.sdk?.coreVersion || '592.0.0'} (2026.10.30) Suite
+              Capabilities — SDK {overview?.sdk?.coreVersion || '594.0.0'} (2026.11.13) Suite
             </h2>
             <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
               Synchronized with{' '}
               <strong className="text-emerald-600 dark:text-emerald-400 font-mono">
-                Google Cloud SDK {overview?.sdk?.coreVersion || '592.0.0'} (2026-11-03 · core 2026.10.30 · Python 3.14.9)
+                Google Cloud SDK {overview?.sdk?.coreVersion || '594.0.0'} (2026-11-17 · core 2026.11.13 · kubectl 1.36.6 · bq 2.1.42 · Python 3.14.9)
               </strong>
-              : Wave 1–5 command groups (<code className="font-mono">alloydb --enable-autoscaler &amp; --autoscaler-target-connections-count [NEW GA 592]</code>,{' '}
-              <code className="font-mono">sql instances reconcile-networking [NEW GA 592]</code>,{' '}
-              <code className="font-mono">container --enable-ambient-networking &amp; --enable-dataplane-v2 [NEW GA 592]</code>,{' '}
-              <code className="font-mono">backup-dr auto-protection-policies [NEW GA 592]</code>,{' '}
-              <code className="font-mono">dataproc --scheduling-timeout &amp; --requested-run-duration [NEW GA 592]</code>,{' '}
-              <code className="font-mono">beta run --public [NEW BETA 592]</code>,{' '}
-              <code className="font-mono">agent-registry skills --scanning-policy [GA 592]</code>,{' '}
-              <code className="font-mono">kms kem-ecdh-p256/p384 [NEW GA 592]</code>,{' '}
+              : Wave 1–6 command groups (<code className="font-mono">alloydb z4d-highmem-16-standardlssd [NEW GA 594]</code>,{' '}
+              <code className="font-mono">sql blue-green-deployments [NEW GA 594]</code>,{' '}
+              <code className="font-mono">biglake iceberg views [NEW BETA 594]</code>,{' '}
+              <code className="font-mono">beta run worker-pools --scaling-cpu-target [NEW BETA 594]</code>,{' '}
+              <code className="font-mono">container --default-compute-class [NEW GA 594]</code>,{' '}
+              <code className="font-mono">agent-registry skill-encryption-spec [NEW GA 594]</code>,{' '}
+              <code className="font-mono">beta service-health impacts [NEW BETA 594]</code>,{' '}
+              <code className="font-mono">alloydb --enable-autoscaler [GA 592]</code>,{' '}
+              <code className="font-mono">container --enable-ambient-networking [GA 592]</code>,{' '}
+              <code className="font-mono">backup-dr auto-protection-policies [GA 592]</code>,{' '}
               <code className="font-mono">pam</code>,{' '}
               <code className="font-mono">model-armor</code>,{' '}
               <code className="font-mono">cluster-director</code>,{' '}
               <code className="font-mono">observability</code>) are wired
               directly to their{' '}
               <strong className="text-emerald-600 dark:text-emerald-400 font-mono">
-                [GA · 592.0.0]
+                [GA · 594.0.0]
               </strong>{' '}
               tracks alongside{' '}
               <strong className="text-amber-600 dark:text-amber-400 font-mono">
@@ -1895,7 +1908,8 @@ export default function GcloudAlphaBetaStudio({
               <option value="WAVE_2">Model Armor, Quotas &amp; AI HPC (5)</option>
               <option value="WAVE_3">Observability &amp; Orchestration (1)</option>
               <option value="WAVE_4">SDK 591.0.0 GA/Beta Upgrades (1)</option>
-              <option value="WAVE_5">NEW SDK 592.0.0 GA/Beta Upgrades (1)</option>
+              <option value="WAVE_5">SDK 592.0.0 GA/Beta Upgrades (1)</option>
+              <option value="WAVE_6">NEW SDK 594.0.0 GA/Beta Upgrades (1)</option>
             </select>
 
             <select
@@ -1959,7 +1973,9 @@ export default function GcloudAlphaBetaStudio({
                   <Icon className="w-4 h-4 shrink-0 opacity-80" />
                   <span
                     className={`text-[9px] font-mono font-extrabold px-1.5 py-0.5 rounded-full ${
-                      tab.wave === 'WAVE_5'
+                      tab.wave === 'WAVE_6'
+                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                        : tab.wave === 'WAVE_5'
                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
                         : tab.wave === 'WAVE_3'
                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
@@ -1968,8 +1984,10 @@ export default function GcloudAlphaBetaStudio({
                         : 'bg-zinc-500/15 text-zinc-400 border border-zinc-500/30'
                     }`}
                   >
-                    {tab.wave === 'WAVE_5'
-                      ? 'NEW 592.0.0'
+                    {tab.wave === 'WAVE_6'
+                      ? 'NEW 594.0.0'
+                      : tab.wave === 'WAVE_5'
+                      ? 'SDK 592.0.0'
                       : tab.wave === 'WAVE_4'
                       ? 'SDK 591.0.0'
                       : tab.wave === 'WAVE_3'
@@ -6497,6 +6515,197 @@ srun torchrun --nnodes=2 --nproc_per_node=8 /mnt/lustre/train_frontier.py`;
                   • <strong>Java 25+ Emulators</strong>: <code className="font-mono">cloud-datastore-emulator 2.3.1</code> &amp; Firestore Emulator <code className="font-mono">v1.23.0</code> (adds <code className="font-mono">add_window_fields</code>) now require Java 25+.<br />
                   • <strong>Firebase Test Lab</strong>: <code className="font-mono">gcloud firebase test</code> deprecated (shutting down Sept 30, 2027 in favor of Developer Device Platform).
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* WAVE 6: GOOGLE CLOUD SDK 594.0.0 (2026-11-17) 8 NEW GA/BETA UPGRADES */}
+      {/* ==================================================================== */}
+      {activeSubTab === 'WAVE6_GCLOUD_594_UPGRADES' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* Left 7 Cols: 8-Pillar Live SDK 594.0.0 Upgrade Probe */}
+          <div className="lg:col-span-7 rounded-2xl border border-amber-500/40 bg-white dark:bg-[#18181b] p-4 sm:p-5 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <ReleaseTrackBadge track="GA" />
+                <h3 className="text-sm font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
+                  Google Cloud SDK 594.0.0 (2026-11-17) — 8-Pillar New Upgrades Probe
+                </h3>
+              </div>
+              <button
+                type="button"
+                disabled={actionRunning === 'SCAN_WAVE6_GCLOUD_594_UPGRADES'}
+                onClick={() =>
+                  executeAlphaBetaAction('SCAN_WAVE6_GCLOUD_594_UPGRADES')
+                }
+                className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 text-xs font-mono font-extrabold transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <Play className="w-3.5 h-3.5" />
+                <span>
+                  {actionRunning === 'SCAN_WAVE6_GCLOUD_594_UPGRADES'
+                    ? 'Probing SDK 594.0.0 (8 Upgrades)...'
+                    : 'Run 8-Pillar SDK 594.0.0 Live Scan'}
+                </span>
+              </button>
+            </div>
+
+            <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              Executes 8 live CLI probes and command synthesizers for the newly
+              promoted capabilities in{' '}
+              <code className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                Google Cloud SDK 594.0.0 (core 2026.11.13 · kubectl 1.36.6 · bq 2.1.42 · Python 3.14.9)
+              </code>
+              :
+            </p>
+
+            <div className="space-y-2.5">
+              {[
+                {
+                  badge: '[NEW GA · 594.0.0]',
+                  title: '1. AlloyDB z4d-highmem-16-standardlssd High-Memory Local SSD Machine Type',
+                  cmd: `gcloud alloydb instances create cp-alloydb-z4d --cluster=cp-alloydb-cluster --region=${region} --instance-type=PRIMARY --machine-type=z4d-highmem-16-standardlssd --project=${projectId}`,
+                  desc: 'New in SDK 594.0.0: supports z4d-highmem-16-standardlssd on gcloud alloydb instances create/update for ultra-low-latency SCaNN vector & Columnar Engine local SSD caching.',
+                  ownerTab: 'ALLOYDB_STUDIO',
+                  ownerLabel: 'AlloyDB Mastery Studio',
+                },
+                {
+                  badge: '[NEW GA · 594.0.0]',
+                  title: '2. Cloud SQL Blue-Green Deployments Promoted to GA (blue-green-deployments)',
+                  cmd: `gcloud sql blue-green-deployments list --project=${projectId}`,
+                  desc: 'Promoted to GA in 594.0.0: zero-downtime Cloud SQL major-version upgrades and schema cutovers via gcloud sql blue-green-deployments.',
+                  ownerTab: 'CLOUD_SQL_STUDIO',
+                  ownerLabel: 'Cloud SQL Studio',
+                },
+                {
+                  badge: '[NEW BETA · 594.0.0]',
+                  title: '3. BigLake Apache Iceberg Views (BETA) & Data Product Sharing Unpublish (GA)',
+                  cmd: `gcloud beta biglake iceberg views list --catalog=cp-iceberg-cat --namespace=analytics --project=${projectId}`,
+                  desc: 'Promoted gcloud biglake iceberg views (create/describe/list/update/delete/IAM) to beta and gcloud biglake data-product-sharing unpublish to GA.',
+                  ownerTab: 'BIGLAKE_STUDIO',
+                  ownerLabel: 'BigLake Iceberg Studio',
+                },
+                {
+                  badge: '[NEW GA/BETA · 594.0.0]',
+                  title: '4. Cloud Run Worker Pools Auto-Scaling (--scaling-cpu-target) & Regional Endpoints GA',
+                  cmd: `gcloud beta run worker-pools deploy cp-queue-worker --image=us-docker.pkg.dev/cloudrun/container/hello:latest --region=${region} --scaling=auto --scaling-cpu-target=65 --min=1 --max=10 --project=${projectId}`,
+                  desc: 'Promoted --scaling, --scaling-cpu-target, --min, and --max to beta worker-pools deploy/update, and promoted regional endpoints to GA across run deploy/services/jobs/worker-pools.',
+                  ownerTab: 'CLOUD_RUN',
+                  ownerLabel: 'Cloud Run Fleet',
+                },
+                {
+                  badge: '[NEW GA · 594.0.0]',
+                  title: '5. Agent Registry Skill Encryption Spec & Revisions Download Promoted to GA',
+                  cmd: `gcloud agent-registry skill-encryption-spec describe --location=global --project=${projectId}`,
+                  desc: 'Promoted gcloud agent-registry skill-encryption-spec and gcloud agent-registry skills revisions download to GA.',
+                  ownerTab: 'MCP_HUB',
+                  ownerLabel: 'Remote MCP Hub',
+                },
+                {
+                  badge: '[NEW GA · 594.0.0]',
+                  title: '6. GKE --default-compute-class Flag (GA), Hub --read-only Membership & kubectl 1.36.6',
+                  cmd: `gcloud container clusters update cp-gke-cluster --region=${region} --default-compute-class=balanced-spot --project=${projectId}`,
+                  desc: 'Added --default-compute-class to gcloud container clusters create/update, upgraded default kubectl to 1.36.6 (removed 1.31), and added --read-only to fleet memberships register.',
+                  ownerTab: 'GKE_STUDIO',
+                  ownerLabel: 'GKE Studio',
+                },
+                {
+                  badge: '[NEW BETA/GA · 594.0.0]',
+                  title: '7. Cloud Service Health Asset Impacts (BETA) & Model Armor --filter-version-selector (GA)',
+                  cmd: `gcloud beta service-health impacts list --location=global --project=${projectId}`,
+                  desc: 'Added gcloud beta service-health impacts list/describe for per-asset outage impact visibility, plus --filter-version-selector on model-armor templates create/update.',
+                  ownerTab: 'SRE_WAR_ROOM',
+                  ownerLabel: 'SRE War-Room',
+                },
+                {
+                  badge: '[NEW GA · 594.0.0]',
+                  title: '8. DMS Schema/Table Filters, Composer 3 --rollback-image-version & Secure Source Scanning',
+                  cmd: `gcloud database-migration migration-jobs list --region=${region} --project=${projectId}`,
+                  desc: 'Added --schemas-filter/--tables-filter to database-migration jobs, --rollback-image-version to Composer 3 environments update, and --enable-vulnerability-scanning to Secure Source Manager repos.',
+                  ownerTab: 'DATA_ENGINEER_STUDIO',
+                  ownerLabel: 'Data Engineering Studio',
+                },
+              ].map((item) => (
+                <div
+                  key={item.title}
+                  className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-900/60 space-y-1.5"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="px-1.5 py-0.5 rounded text-[9.5px] font-mono font-extrabold bg-amber-500/15 text-amber-800 dark:text-amber-200 border border-amber-500/30 shrink-0">
+                        {item.badge}
+                      </span>
+                      <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                        {item.title}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => loadCommandIntoWorkbench(item.cmd, item.title)}
+                        className="px-2 py-0.5 rounded bg-zinc-200/80 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono font-bold cursor-pointer"
+                      >
+                        Load in Workbench
+                      </button>
+                      {typeof onSelectStudioTab === 'function' && item.ownerTab && (
+                        <button
+                          type="button"
+                          onClick={() => onSelectStudioTab(item.ownerTab)}
+                          className="px-2 py-0.5 rounded bg-blue-600/15 hover:bg-blue-600/25 border border-blue-500/30 text-blue-700 dark:text-blue-300 text-[10px] font-mono font-bold cursor-pointer"
+                        >
+                          {item.ownerLabel} →
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                    {item.desc}
+                  </p>
+                  <pre className="p-2 rounded bg-zinc-950 text-emerald-300 font-mono text-[10px] overflow-x-auto whitespace-pre-wrap">
+                    {item.cmd}
+                  </pre>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right 5 Cols: SDK 594.0.0 Breaking Changes & Component Upgrade Digest */}
+          <div className="lg:col-span-5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#18181b] p-4 sm:p-5 space-y-3 text-xs">
+            <h4 className="text-sm font-extrabold font-mono text-zinc-900 dark:text-zinc-100">
+              SDK 594.0.0 (2026-11-17) Breaking Changes &amp; Installed Matrix
+            </h4>
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 space-y-1.5">
+              <div className="font-bold text-rose-700 dark:text-rose-300">
+                1. Breaking Changes in 594.0.0 (Positional Precedence)
+              </div>
+              <div className="text-[11px] text-zinc-600 dark:text-zinc-300 space-y-1">
+                <div>• <strong>gcloud auth</strong>: Positional <code className="font-mono">ACCOUNT_NAME</code> now takes precedence over <code className="font-mono">--account</code> on <code className="font-mono">print-access-token</code>, <code className="font-mono">print-identity-token</code>, <code className="font-mono">login</code>, and <code className="font-mono">activate-service-account</code>.</div>
+                <div>• <strong>Cloud Billing</strong>: <code className="font-mono">ACCOUNT_ID</code> positional arg is now strictly required on <code className="font-mono">billing accounts *-iam-policy*</code> (<code className="font-mono">--account</code> no longer fills a missing ID).</div>
+                <div>• <strong>Compute Shared VPC</strong>: <code className="font-mono">PROJECT_ID</code> positional arg is now strictly required on <code className="font-mono">compute shared-vpc</code> (<code className="font-mono">--project</code> no longer overrides it).</div>
+              </div>
+            </div>
+            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-1.5">
+              <div className="font-bold text-emerald-700 dark:text-emerald-300">
+                2. Live Installed Component Upgrades (2026.11.13)
+              </div>
+              <div className="text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
+                • Google Cloud SDK: <strong>594.0.0</strong> (core / alpha / beta 2026.11.13)<br />
+                • kubectl: <strong>1.36.6</strong> (1.31 removed; supports up to 1.37.2)<br />
+                • bq: <strong>2.1.42</strong> · gsutil: <strong>5.38</strong> · Python: <strong>3.14.9</strong><br />
+                • Emulators: Firestore <strong>1.23.0</strong> · Spanner <strong>1.5.59</strong> · Pub/Sub <strong>0.8.38</strong>
+              </div>
+            </div>
+            <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/30 space-y-1.5">
+              <div className="font-bold text-blue-700 dark:text-blue-300">
+                3. Extra 594.0.0 Networking &amp; Security Additions
+              </div>
+              <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                • Network Connectivity Hubs: <code className="font-mono">--export-psc-published-services-and-regional-google-apis</code> &amp; <code className="font-mono">--export-psc-global-google-apis</code> promoted to GA.<br />
+                • Network Services: <code className="font-mono">gcloud beta network-services express-links</code>.<br />
+                • Network Management: <code className="font-mono">--source-datastream-private-connection</code> on Connectivity Tests.<br />
+                • LRO Diagnostics: Failed long-running operations now print error reasons and troubleshooting links automatically.
               </div>
             </div>
           </div>

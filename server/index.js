@@ -65258,6 +65258,86 @@ spec:
     }
 
     // ========================================================================
+    // 19C. [NEW WAVE 6 · GCLOUD 594.0.0] 8-PILLAR NEW GA & BETA UPGRADES PROBE
+    // ========================================================================
+    if (action === 'SCAN_WAVE6_GCLOUD_594_UPGRADES') {
+      const [
+        alloydbZ4dRes,
+        sqlBlueGreenRes,
+        biglakeViewsRes,
+        runWorkerPoolsRes,
+        agentEncSpecRes,
+        gkeDefaultClassRes,
+        svcHealthImpactsRes,
+        modelArmorRes,
+      ] = await Promise.all([
+        runGcloudAlphaBetaJson(
+          ['alloydb', 'instances', 'list', `--project=${projectId}`, `--region=${region}`, '--format=json'],
+          6500
+        ),
+        runGcloudAlphaBetaJson(
+          ['sql', 'instances', 'list', `--project=${projectId}`, '--format=json'],
+          6500
+        ),
+        runGcloudAlphaBetaJson(
+          ['biglake', 'iceberg', 'catalogs', 'list', `--project=${projectId}`, '--format=json'],
+          6500
+        ),
+        runGcloudAlphaBetaJson(
+          ['beta', 'run', 'worker-pools', 'list', `--project=${projectId}`, `--region=${region}`, '--format=json'],
+          6500
+        ),
+        runGcloudAlphaBetaJson(
+          ['agent-registry', 'skills', 'list', `--project=${projectId}`, '--location=global', '--format=json'],
+          6500
+        ),
+        runGcloudAlphaBetaJson(
+          ['container', 'clusters', 'list', `--project=${projectId}`, '--format=json'],
+          6500
+        ),
+        runGcloudAlphaBetaJson(
+          ['beta', 'service-health', 'impacts', 'list', `--project=${projectId}`, '--location=global', '--format=json'],
+          6500
+        ),
+        runGcloudAlphaBetaJson(
+          ['model-armor', 'templates', 'list', `--project=${projectId}`, `--location=${region}`, '--format=json'],
+          6500
+        ),
+      ]);
+
+      const probes = [
+        { key: 'alloydb_z4d', label: 'AlloyDB z4d-highmem-16-standardlssd [GA 594.0.0]', res: alloydbZ4dRes },
+        { key: 'sql_blue_green', label: 'Cloud SQL Blue-Green Deployments [GA 594.0.0]', res: sqlBlueGreenRes },
+        { key: 'biglake_iceberg_views', label: 'BigLake Iceberg Views [BETA 594.0.0]', res: biglakeViewsRes },
+        { key: 'run_worker_pools_scaling', label: 'Cloud Run Worker Pools Scaling & Regional GA [594.0.0]', res: runWorkerPoolsRes },
+        { key: 'agent_registry_enc_spec', label: 'Agent Registry skill-encryption-spec & revisions download [GA]', res: agentEncSpecRes },
+        { key: 'gke_default_compute_class', label: 'GKE --default-compute-class & kubectl 1.36.6 [GA]', res: gkeDefaultClassRes },
+        { key: 'service_health_impacts', label: 'Cloud Service Health Asset Impacts [BETA 594.0.0]', res: svcHealthImpactsRes },
+        { key: 'model_armor_filter_ver', label: 'Model Armor --filter-version-selector [GA 594.0.0]', res: modelArmorRes },
+      ];
+
+      const succeeded = probes.filter((p) => p.res?.ok).length;
+      return res.json({
+        ok: true,
+        actionKey: action,
+        releaseTrack: 'GA',
+        releaseBadge: '[NEW SDK 594.0.0 · 2026-11-17] 8-Pillar GA & Beta Upgrades',
+        command: probes.map((p) => p.res?.command).filter(Boolean).join(' ; '),
+        durationMs: probes.reduce((acc, p) => acc + Number(p.res?.durationMs || 0), 0),
+        summary: `SDK 594.0.0 (core 2026.11.13 · kubectl 1.36.6 · bq 2.1.42) 8-Pillar Live Probe completed (${succeeded}/8 live CLI probes succeeded in ${region}).`,
+        probes: probes.map((p) => ({
+          key: p.key,
+          label: p.label,
+          ok: Boolean(p.res?.ok),
+          durationMs: Number(p.res?.durationMs || 0),
+          count: Array.isArray(p.res?.data) ? p.res.data.length : 0,
+          command: p.res?.command || '',
+          output: p.res?.stdout || p.res?.stderr || '[]',
+        })),
+      });
+    }
+
+    // ========================================================================
     // 19B. [NEW WAVE 5 · GCLOUD 592.0.0] 8-PILLAR NEW GA & BETA UPGRADES PROBE
     // ========================================================================
     if (action === 'SCAN_WAVE5_GCLOUD_592_UPGRADES') {
@@ -65600,6 +65680,14 @@ spec:
           serviceApi: 'container.googleapis.com',
           sampleCli: `gcloud container clusters list --project=${projectId}`,
           ownerStudioTab: 'GKE_STUDIO',
+        },
+        {
+          suiteId: 'WAVE6_GCLOUD_594_UPGRADES',
+          title: 'SDK 594.0.0 GA/Beta Upgrades (AlloyDB z4d LSSD, SQL Blue-Green GA, Iceberg Views, Worker Pools Scaling, GKE Default ComputeClass)',
+          track: 'GA',
+          serviceApi: 'alloydb.googleapis.com',
+          sampleCli: `gcloud alloydb instances list --region=${region} --project=${projectId}`,
+          ownerStudioTab: 'ALLOYDB_STUDIO',
         },
       ];
 
