@@ -3290,14 +3290,14 @@ GROUP BY 1 ORDER BY turns DESC;`;
 
           {/* Right 7 Cols: Live PostgreSQL / AlloyDB Wire-Protocol psql Runner (Directly paired with Local Omni on the left) */}
           <div className="lg:col-span-7 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#10141d] space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <Terminal className="w-4 h-4 text-emerald-500" />
+                <Terminal className="w-4 h-4 text-emerald-500 shrink-0" />
                 <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
                   Live Wire-Protocol SQL &amp; EXPLAIN (ANALYZE, BUFFERS) Runner
                 </h3>
               </div>
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() =>
@@ -3320,7 +3320,7 @@ SELECT id, category FROM cloudpulse_pov_vectors
 ORDER BY embedding <=> (SELECT embedding FROM cloudpulse_pov_vectors LIMIT 1)
 LIMIT 10;`)
                   }
-                  className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-800 dark:text-amber-200 text-[11px] font-bold cursor-pointer"
+                  className="px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-800 dark:text-amber-200 text-[11px] font-bold cursor-pointer"
                 >
                   Load Live SCaNN PoV Benchmark
                 </button>
@@ -3328,16 +3328,14 @@ LIMIT 10;`)
                   type="button"
                   disabled={Boolean(runningLiveSqlMode)}
                   onClick={() => executeLiveSql('INTROSPECT_ALLOYDB')}
-                  className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                  className="px-2.5 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
                 >
-                  {runningLiveSqlMode === 'INTROSPECT_ALLOYDB' && (
-                    <RefreshCw className="w-3 h-3 animate-spin" />
-                  )}
-                  <span>
-                    {runningLiveSqlMode === 'INTROSPECT_ALLOYDB'
-                      ? 'Introspecting...'
-                      : 'Introspect Live Extensions & Flags'}
-                  </span>
+                  <RefreshCw
+                    className={`w-3 h-3 shrink-0 ${
+                      runningLiveSqlMode === 'INTROSPECT_ALLOYDB' ? 'animate-spin' : ''
+                    }`}
+                  />
+                  <span>Introspect Live Extensions &amp; Flags</span>
                 </button>
               </div>
             </div>
