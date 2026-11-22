@@ -13840,46 +13840,60 @@ app.post('/api/project/:projectId/scc/vulnerabilities', async (req, res) => {
       });
     }
 
-    // Default Action: SCAN live Security Command Center v2 findings
+    // Default Action: SCAN live Security Command Center v2 -> v1 fallback -> clear activation diagnostics
     const filterParts = ['state="ACTIVE"'];
     if (findingClass && findingClass !== 'ALL') {
       const safeClass = String(findingClass).replace(/[^A-Z_]/g, '');
       if (safeClass) filterParts.push(`finding_class="${safeClass}"`);
     }
     const filterEncoded = encodeURIComponent(filterParts.join(' AND '));
+    const extractGcpErr = (e) =>
+      e?.response?.data?.error?.message || e?.message || 'Security Command Center API error.';
 
     let sccRes = null;
     let sccError = null;
     let sccStatus = 'ACTIVE';
-    try {
-      sccRes = await gcpFetch(
-        `https://securitycenter.googleapis.com/v2/projects/${encodeURIComponent(
+    let sccApiVersion = 'v2';
+
+    const sccEndpoints = [
+      {
+        ver: 'v2',
+        url: `https://securitycenter.googleapis.com/v2/projects/${encodeURIComponent(
           projectId
         )}/sources/-/locations/${encodeURIComponent(safeLocation)}/findings?filter=${filterEncoded}&pageSize=80`,
-        token,
-        projectId,
-        { timeout: 12000 }
-      );
-    } catch (e1) {
+      },
+      {
+        ver: 'v1',
+        url: `https://securitycenter.googleapis.com/v1/projects/${encodeURIComponent(
+          projectId
+        )}/sources/-/findings?filter=${filterEncoded}&pageSize=80`,
+      },
+    ];
+
+    for (const ep of sccEndpoints) {
       try {
-        sccRes = await gcpFetch(
-          `https://securitycenter.googleapis.com/v2/projects/${encodeURIComponent(
-            projectId
-          )}/sources/-/findings?filter=${filterEncoded}&pageSize=80`,
-          token,
-          projectId,
-          { timeout: 12000 }
-        );
-      } catch (e2) {
-        sccError = e2?.message || e1?.message || 'Security Command Center v2 API unavailable.';
-        sccStatus = /disabled|not enabled|SERVICE_DISABLED/i.test(sccError)
-          ? 'NOT_ENABLED'
-          : /403|PERMISSION_DENIED|not activated/i.test(sccError)
-          ? 'NO_PERMISSION_OR_INACTIVE'
-          : 'ERROR';
+        sccRes = await gcpFetch(ep.url, token, projectId, { timeout: 12000 });
+        sccApiVersion = ep.ver;
+        sccError = null;
+        sccStatus = 'ACTIVE';
+        break;
+      } catch (err) {
+        sccError = extractGcpErr(err);
+        const httpStatus = err?.status || err?.response?.status;
+        if (httpStatus === 404 || /NOT_FOUND|not found|not activated|has not been enabled/i.test(sccError)) {
+          sccStatus = 'NOT_ACTIVATED';
+        } else if (/disabled|SERVICE_DISABLED/i.test(sccError)) {
+          sccStatus = 'NOT_ENABLED';
+        } else if (httpStatus === 403 || /PERMISSION_DENIED/i.test(sccError)) {
+          sccStatus = 'NO_PERMISSION';
+        } else {
+          sccStatus = 'ERROR';
+        }
       }
     }
 
+    // If SCC is not activated on this project (404), synthesize live fallback vulnerability findings from OS Config Vulnerability Reports across active VMs!
+    let fallbackSourceNote = null;
     const rawResults = Array.isArray(sccRes?.listFindingsResults) ? sccRes.listFindingsResults : [];
     const findings = rawResults.map((item) => {
       const f = item?.finding || {};
@@ -13916,6 +13930,70 @@ app.post('/api/project/:projectId/scc/vulnerabilities', async (req, res) => {
         eventTime: f.eventTime || f.createTime || '',
       };
     });
+
+    if (sccStatus !== 'ACTIVE' && findings.length === 0) {
+      try {
+        const vmAgg = await gcpFetch(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/aggregated/instances?maxResults=25`,
+          token,
+          projectId,
+          { timeout: 8000 }
+        ).catch(() => ({ items: {} }));
+        const vms = [];
+        Object.values(vmAgg?.items || {}).forEach((z) => {
+          if (Array.isArray(z?.instances)) vms.push(...z.instances);
+        });
+        const vulnChecks = await Promise.allSettled(
+          vms.slice(0, 6).map(async (vm) => {
+            const z = String(vm.zone || '').split('/').pop();
+            if (!z) return [];
+            const vr = await gcpFetch(
+              `https://osconfig.googleapis.com/v1/projects/${encodeURIComponent(
+                projectId
+              )}/locations/${encodeURIComponent(z)}/instances/${encodeURIComponent(vm.name)}/vulnerabilityReport`,
+              token,
+              projectId,
+              { timeout: 8000 }
+            );
+            return (Array.isArray(vr?.vulnerabilities) ? vr.vulnerabilities : []).slice(0, 12).map((v) => {
+              const d = v.details || {};
+              const pkg = d?.affectedPackages?.[0]?.packageName || 'os-package';
+              return {
+                name: `osconfig/${z}/${vm.name}/${d.cve || pkg}`,
+                canonicalName: `osconfig/${z}/${vm.name}/${d.cve || pkg}`,
+                category: `OS_VULNERABILITY (${pkg})`,
+                findingClass: 'VULNERABILITY',
+                severity: String(d.severity || 'MEDIUM').toUpperCase(),
+                state: 'ACTIVE',
+                mute: 'UNMUTED',
+                cveId: d.cve || null,
+                cvssV3Score: Number(d?.cvssV3?.baseScore ?? 0),
+                zeroDay: false,
+                observedInTheWild: false,
+                exploitationActivity: null,
+                resourceName: `//compute.googleapis.com/projects/${projectId}/zones/${z}/instances/${vm.name}`,
+                resourceShort: vm.name,
+                resourceType: 'GCE VM (OS Config)',
+                nextSteps: `Upgrade package "${pkg}" via GCE CVE Audit & apt upgrade or OS Config Patch Job.`,
+                description: String(d.description || '').slice(0, 260),
+                externalUri: d?.references?.[0]?.url || (d.cve ? `https://nvd.nist.gov/vuln/detail/${encodeURIComponent(d.cve)}` : null),
+                eventTime: vr.updateTime || '',
+              };
+            });
+          })
+        );
+        for (const r of vulnChecks) {
+          if (r.status === 'fulfilled' && Array.isArray(r.value)) {
+            findings.push(...r.value);
+          }
+        }
+        if (findings.length > 0) {
+          fallbackSourceNote = `SCC v2/v1 is not activated on "${projectId}" yet — automatically pulled ${findings.length} live CVE finding(s) directly from VM Manager OS Config across ${vms.length} VM(s).`;
+        }
+      } catch {
+        // non-fatal fallback
+      }
+    }
 
     const sevRank = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
     findings.sort(
@@ -13962,7 +14040,9 @@ app.post('/api/project/:projectId/scc/vulnerabilities', async (req, res) => {
       projectId,
       location: safeLocation,
       sccStatus,
+      sccApiVersion,
       sccError,
+      fallbackSourceNote,
       consoleUrl: `https://console.cloud.google.com/security/command-center/findings?project=${encodeURIComponent(projectId)}`,
       severityCounts,
       classCounts,
