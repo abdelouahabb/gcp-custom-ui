@@ -2306,7 +2306,7 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/sre/agentic-commander') ||
       rawUrl.includes('/sovereign/compliance-blueprint') ||
       rawUrl.includes('/cve-scan') ||
-      (rawUrl.includes('/scc/vulnerabilities') && (body.action === 'SCAN' || body.action === 'AI_REMEDIATE')) ||
+      (rawUrl.includes('/scc/vulnerabilities') && body.action === 'SCAN') ||
       (rawUrl.includes('/alloydb/execute-sql') &&
         String(body.mode || '').toUpperCase() === 'INTROSPECT_ALLOYDB') ||
       (rawUrl.includes('/cloudrun-bridge/action') &&
@@ -5136,6 +5136,31 @@ function classifyDestructiveAxiosConfig(config) {
     if (rawUrl.includes('/scc/vulnerabilities')) {
       const sccAct = String(body.action || '');
       const cat = body.category || 'SCC Finding';
+      if (sccAct === 'AI_REMEDIATE') {
+        const finding = body.findingPayload || {};
+        const findingTitle = finding.cveId || finding.category || 'Selected Finding';
+        const resShort = finding.resourceShort || projectId;
+        const model = body.geminiModel || 'gemini-3.8-flash-cyber';
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Generate Vertex AI Remediation Playbook for "${findingTitle}"?`,
+          laymanSummary: `In Plain English: Sends this finding's metadata (${findingTitle} on "${resShort}") to Google Cloud Vertex AI (aiplatform.googleapis.com/v1) using "${model}" (with Gemini 4 fallback) to synthesize a root-cause summary, exact gcloud CLI fix, and Terraform HCL snippet. This is read-only AI synthesis—it does NOT modify any cloud resource automatically.`,
+          headerBadge: 'Vertex AI Cybersecurity Remediation — Read-Only Synthesis',
+          targetLabel: 'Target AI Engine & Finding',
+          resourceKind: `Vertex AI Generative API (aiplatform.googleapis.com/v1 · ${model})`,
+          targetName: `${findingTitle} on ${resShort}`,
+          location: 'global / us-central1 (Vertex AI)',
+          projectId,
+          method: 'VERTEX AI SYNTHESIS',
+          endpoint: rawUrl,
+          confirmLabel: `Generate AI Fix (${model})`,
+          cancelToast: 'AI Fix playbook synthesis cancelled.',
+          whatHappensNext: `1. Calls Vertex AI (aiplatform.googleapis.com/v1) using your active GCP OAuth2 credentials (requires Vertex AI API enabled on "${projectId}"—no AI Studio key needed).\n2. Returns a 3-part playbook (Root Cause, exact gcloud fix, Terraform HCL) for you to review before running anything.`,
+          costWarning: `NEGLIGIBLE VERTEX AI COST (<$0.001): Single short prompt (~500 tokens) on Vertex AI; makes zero mutations to your cloud infrastructure.`,
+          impactWarning: `Read-only AI call to Vertex AI (aiplatform.googleapis.com). Requires aiplatform.googleapis.com enabled and Vertex AI User role on "${projectId}".`,
+        };
+      }
       if (sccAct === 'SET_MUTE') {
         const nextMute = body.mute === 'UNMUTED' ? 'UNMUTED' : 'MUTED';
         return {

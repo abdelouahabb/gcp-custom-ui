@@ -13800,6 +13800,7 @@ app.post('/api/project/:projectId/scc/vulnerabilities', async (req, res) => {
       const modelOrder = Array.from(new Set([cleanModel, 'gemini-4-neon', 'gemini-4-carbon']));
       let text = '';
       let used = cleanModel;
+      let lastVertexErr = null;
       for (const m of modelOrder) {
         const urls = [
           `https://aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/global/publishers/google/models/${encodeURIComponent(m)}:generateContent`,
@@ -13822,14 +13823,16 @@ app.post('/api/project/:projectId/scc/vulnerabilities', async (req, res) => {
               used = m;
               break;
             }
-          } catch {
-            // try next endpoint/model
+          } catch (e) {
+            lastVertexErr = e?.response?.data?.error?.message || e?.message || lastVertexErr;
           }
         }
         if (text) break;
       }
       if (!text) {
-        return res.status(502).json({ error: 'Gemini 4 remediation synthesis did not return a response.' });
+        return res.status(502).json({
+          error: `Vertex AI (aiplatform.googleapis.com) failed to generate remediation on project "${projectId}": ${lastVertexErr || 'ensure Vertex AI API (aiplatform.googleapis.com) is enabled and you hold Vertex AI User.'}`,
+        });
       }
       return res.json({
         ok: true,
