@@ -14181,20 +14181,82 @@ app.post('/api/project/:projectId/scc/vulnerabilities', async (req, res) => {
     };
     const zeroDayCount = findings.filter((f) => f.zeroDay || f.observedInTheWild).length;
 
-    // Single-line Mermaid Attack-Surface Graph
+    // Deduplicated 3-Layer Attack-Path Topology Graph (Entry Surface -> Deduplicated Resources -> Remediation Layer)
     const mermaidLines = ['flowchart LR'];
     if (findings.length > 0) {
-      const topByRes = findings.slice(0, 8);
-      topByRes.forEach((f, i) => {
-        const rLbl = String(f.resourceShort).replace(/["\r\n]/g, ' ').slice(0, 26);
-        const cLbl = String(f.cveId || f.category).replace(/["\r\n]/g, ' ').slice(0, 28);
+      const hasInternetExposure = findings.some(
+        (f) => f.category === 'OPEN_FIREWALL_0_0_0_0' || f.category === 'PUBLIC_IAM_PRINCIPAL_BINDING'
+      );
+      mermaidLines.push(
+        hasInternetExposure
+          ? `  ENTRY["Public Internet (0.0.0.0/0 Exposed)"]`
+          : `  ENTRY["Project Perimeter (${projectId})"]`
+      );
+
+      // Group findings by unique (resourceType + resourceShort) so each VM / Firewall / Image appears ONCE
+      const vmGroups = new Map();
+      const fwGroups = [];
+      const gcsBuckets = [];
+      const iamPub = [];
+      const containerImgs = new Map();
+
+      for (const f of findings) {
+        if (f.resourceType === 'VPC Firewall' || f.category === 'OPEN_FIREWALL_0_0_0_0') {
+          fwGroups.push(f);
+        } else if (f.resourceType === 'Cloud Storage Bucket') {
+          gcsBuckets.push(f);
+        } else if (f.category === 'PUBLIC_IAM_PRINCIPAL_BINDING') {
+          iamPub.push(f);
+        } else if (f.resourceType === 'Artifact Registry Image') {
+          const cur = containerImgs.get(f.resourceShort) || { total: 0, highCrit: 0 };
+          cur.total++;
+          if (f.severity === 'CRITICAL' || f.severity === 'HIGH') cur.highCrit++;
+          containerImgs.set(f.resourceShort, cur);
+        } else {
+          const key = `${f.resourceShort}|${f.resourceType}`;
+          const cur = vmGroups.get(key) || { name: f.resourceShort, type: f.resourceType, total: 0, highCrit: 0 };
+          cur.total++;
+          if (f.severity === 'CRITICAL' || f.severity === 'HIGH') cur.highCrit++;
+          vmGroups.set(key, cur);
+        }
+      }
+
+      if (fwGroups.length > 0) {
+        const fwLabel = fwGroups.length === 1 ? fwGroups[0].resourceShort : `${fwGroups.length} Open Firewalls`;
+        mermaidLines.push(`  ENTRY -->|0.0.0.0/0| FW["${String(fwLabel).replace(/["\r\n]/g, ' ').slice(0, 28)}"]`);
+        mermaidLines.push(`  FW -->|Lockdown| REM_FW["Restrict to Cloud IAP (35.235.240.0/20)"]`);
+      }
+
+      let vmIdx = 0;
+      for (const g of Array.from(vmGroups.values()).slice(0, 4)) {
+        const nid = `RES_${vmIdx++}`;
+        const safeName = String(g.name).replace(/["\r\n]/g, ' ').slice(0, 24);
+        const edgeSrc = fwGroups.length > 0 ? 'FW' : 'ENTRY';
         mermaidLines.push(
-          `  R${i}["${rLbl} (${f.resourceType})"] -->|${f.severity}| F${i}["${cLbl}"]`
+          `  ${edgeSrc} -->|${g.total} CVEs| ${nid}["${safeName} (${g.highCrit} Crit/High)"]`
         );
-      });
+        mermaidLines.push(`  ${nid} -->|Patch| REM_OS["apt upgrade / OS Config Patch"]`);
+      }
+
+      if (containerImgs.size > 0) {
+        const imgCount = containerImgs.size;
+        const totalImgCves = Array.from(containerImgs.values()).reduce((s, v) => s + v.total, 0);
+        mermaidLines.push(`  ENTRY -->|${totalImgCves} CVEs| IMG["${imgCount} Container Image(s)"]`);
+        mermaidLines.push(`  IMG -->|Rebuild| REM_IMG["Patch Base Layer & Re-Push"]`);
+      }
+
+      if (gcsBuckets.length > 0) {
+        mermaidLines.push(`  ENTRY -->|No PAP| GCS["${gcsBuckets.length} GCS Bucket(s)"]`);
+        mermaidLines.push(`  GCS -->|Enforce| REM_GCS["Enforce Public Access Prevention"]`);
+      }
+
+      if (iamPub.length > 0) {
+        mermaidLines.push(`  ENTRY -->|allUsers| IAM["${iamPub.length} Public IAM Role(s)"]`);
+        mermaidLines.push(`  IAM -->|Revoke| REM_IAM["Remove Public Principals"]`);
+      }
     } else {
       mermaidLines.push(
-        `  SCC["SCC v2 (${projectId})"] -->|${sccStatus}| CLEAN["0 Active Findings in Scope"]`
+        `  ENTRY["Project Perimeter (${projectId})"] -->|Verified| CLEAN["0 Active Attack Paths"]`
       );
     }
 
