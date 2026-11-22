@@ -13161,6 +13161,314 @@ app.post('/api/project/:projectId/bigquery/grant-connection-sa-roles', async (re
   }
 });
 
+// 9a-finops-autopilot. POST /api/project/:projectId/finops/autopilot-matrix
+// Live 5-Engine Autonomous FinOps Autopilot & Cost-Kill Matrix (BigQuery, Managed Spark, Cloud Logging _Default Sink, Compute/Disks, AlloyDB/Cloud SQL)
+app.post('/api/project/:projectId/finops/autopilot-matrix', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    action = 'SCAN', // SCAN | APPLY_LOG_EXCLUSION
+    region = 'us-central1',
+    bqLocation = 'US',
+    withGemini = false,
+    geminiModel = 'gemini-4-neon',
+    exclusionName = 'cloudpulse-drop-noisy-debug-healthchecks',
+    exclusionFilter = 'severity="DEBUG" OR httpRequest.userAgent:"GoogleHC"',
+  } = req.body || {};
+
+  const startedAt = Date.now();
+  const safeRegion = String(region || 'us-central1').replace(/[^a-z0-9-]/gi, '') || 'us-central1';
+  const safeBqLoc = String(bqLocation || 'US').replace(/[^a-zA-Z0-9-]/g, '') || 'US';
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
+    }
+
+    if (action === 'APPLY_LOG_EXCLUSION') {
+      const cleanName = String(exclusionName || 'cloudpulse-drop-noisy-debug-healthchecks').replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 64);
+      const cleanFilter = String(exclusionFilter || 'severity="DEBUG"').trim();
+      const sinkUrl = `https://logging.googleapis.com/v2/projects/${encodeURIComponent(projectId)}/sinks/_Default`;
+      const currentSink = await gcpFetch(sinkUrl, token, projectId, { timeout: 10000 });
+      const exclusions = Array.isArray(currentSink?.exclusions) ? [...currentSink.exclusions] : [];
+      const existingIdx = exclusions.findIndex((e) => e.name === cleanName);
+      const newExclusion = {
+        name: cleanName,
+        description: 'Managed by CloudPulse 2026 Autonomous FinOps Autopilot to cut noisy log ingestion spend ($0.50/GiB)',
+        filter: cleanFilter,
+        disabled: false,
+      };
+      if (existingIdx >= 0) exclusions[existingIdx] = newExclusion;
+      else exclusions.push(newExclusion);
+
+      const patched = await gcpFetch(
+        `${sinkUrl}?updateMask=exclusions`,
+        token,
+        projectId,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: { ...currentSink, exclusions },
+          timeout: 12000,
+        }
+      );
+      return res.json({
+        ok: true,
+        action: 'APPLY_LOG_EXCLUSION',
+        sinkName: patched?.name || '_Default',
+        exclusionName: cleanName,
+        exclusionFilter: cleanFilter,
+        totalExclusions: Array.isArray(patched?.exclusions) ? patched.exclusions.length : exclusions.length,
+        durationMs: Date.now() - startedAt,
+      });
+    }
+
+    // Parallel 5-Engine Live Discovery
+    const [bqJobsRes, sparkClustersRes, sparkBatchesRes, logSinksRes, computeVmsRes, computeDisksRes, alloyRes, sqlRes] =
+      await Promise.all([
+        gcpFetch(
+          `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/queries`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              query: `SELECT COUNT(*) AS jobs_7d, COALESCE(SUM(total_bytes_billed), 0) AS bytes_7d, COUNTIF(error_result IS NOT NULL) AS failed_7d FROM \`${projectId}\`.\`region-${safeBqLoc.toLowerCase()}\`.INFORMATION_SCHEMA.JOBS_BY_USER WHERE creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY) AND job_type = 'QUERY'`,
+              location: safeBqLoc,
+              useLegacySql: false,
+              timeoutMs: 12000,
+            },
+            timeout: 15000,
+          }
+        ).catch(() => null),
+        gcpFetch(
+          `https://dataproc.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/regions/${encodeURIComponent(safeRegion)}/clusters`,
+          token,
+          projectId,
+          { timeout: 8000 }
+        ).catch(() => ({ clusters: [] })),
+        gcpFetch(
+          `https://dataproc.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/${encodeURIComponent(safeRegion)}/batches?pageSize=20`,
+          token,
+          projectId,
+          { timeout: 8000 }
+        ).catch(() => ({ batches: [] })),
+        gcpFetch(
+          `https://logging.googleapis.com/v2/projects/${encodeURIComponent(projectId)}/sinks`,
+          token,
+          projectId,
+          { timeout: 8000 }
+        ).catch(() => ({ sinks: [] })),
+        gcpFetch(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/aggregated/instances?maxResults=50`,
+          token,
+          projectId,
+          { timeout: 8000 }
+        ).catch(() => ({ items: {} })),
+        gcpFetch(
+          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/aggregated/disks?maxResults=50`,
+          token,
+          projectId,
+          { timeout: 8000 }
+        ).catch(() => ({ items: {} })),
+        gcpFetch(
+          `https://alloydb.googleapis.com/v1beta/projects/${encodeURIComponent(projectId)}/locations/-/clusters`,
+          token,
+          projectId,
+          { timeout: 8000 }
+        ).catch(() => ({ clusters: [] })),
+        gcpFetch(
+          `https://sqladmin.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/instances`,
+          token,
+          projectId,
+          { timeout: 8000 }
+        ).catch(() => ({ items: [] })),
+      ]);
+
+    // 1. BigQuery metrics
+    const bqRow = bqJobsRes?.rows?.[0]?.f || [];
+    const bqJobs7d = Number(bqRow[0]?.v || 0);
+    const bqBytes7d = Number(bqRow[1]?.v || 0);
+    const bqFailed7d = Number(bqRow[2]?.v || 0);
+    const bqMonthlyEstUsd = Number((((bqBytes7d / 1099511627776) * 6.25) * (30 / 7)).toFixed(2));
+    const bqPotentialSaveUsd = Number((bqMonthlyEstUsd * 0.45).toFixed(2));
+
+    // 2. Spark / Dataproc metrics
+    const sparkClusters = Array.isArray(sparkClustersRes?.clusters) ? sparkClustersRes.clusters : [];
+    const runningClusters = sparkClusters.filter((c) => c?.status?.state === 'RUNNING');
+    const sparkBatches = Array.isArray(sparkBatchesRes?.batches) ? sparkBatchesRes.batches : [];
+    const failedBatches = sparkBatches.filter((b) => b?.state === 'FAILED');
+    const sparkPotentialSaveUsd = runningClusters.length * 145;
+
+    // 3. Cloud Logging _Default Sink
+    const sinks = Array.isArray(logSinksRes?.sinks) ? logSinksRes.sinks : [];
+    const defaultSink = sinks.find((s) => s.name === '_Default');
+    const defaultExclusions = Array.isArray(defaultSink?.exclusions) ? defaultSink.exclusions.filter((e) => !e.disabled) : [];
+    const loggingHasExclusions = defaultExclusions.length > 0;
+    const loggingPotentialSaveUsd = loggingHasExclusions ? 0 : 35;
+
+    // 4. Compute VMs & Unattached Disks
+    const allVms = [];
+    Object.values(computeVmsRes?.items || {}).forEach((z) => {
+      if (Array.isArray(z?.instances)) allVms.push(...z.instances);
+    });
+    const runningNonSpotVms = allVms.filter(
+      (v) => v.status === 'RUNNING' && v?.scheduling?.provisioningModel !== 'SPOT'
+    );
+    const allDisks = [];
+    Object.values(computeDisksRes?.items || {}).forEach((z) => {
+      if (Array.isArray(z?.disks)) allDisks.push(...z.disks);
+    });
+    const unattachedDisks = allDisks.filter((d) => !Array.isArray(d.users) || d.users.length === 0);
+    const unattachedGb = unattachedDisks.reduce((sum, d) => sum + Number(d.sizeGb || 0), 0);
+    const computePotentialSaveUsd = Number((unattachedGb * 0.1 + runningNonSpotVms.length * 24).toFixed(2));
+
+    // 5. AlloyDB & Cloud SQL
+    const alloyClusters = Array.isArray(alloyRes?.clusters) ? alloyRes.clusters : [];
+    const sqlInstances = Array.isArray(sqlRes?.items) ? sqlRes.items : [];
+    const runnableSql = sqlInstances.filter((i) => i.state === 'RUNNABLE');
+    const dbPotentialSaveUsd = Number((runnableSql.length * 38).toFixed(2));
+
+    const actions = [];
+    if (!loggingHasExclusions) {
+      actions.push({
+        id: 'LOG_DEFAULT_EXCLUSION',
+        engine: 'Cloud Logging',
+        severity: 'HIGH',
+        title: 'Add _Default Sink Exclusion Filter for Noisy DEBUG & Health-Check Logs',
+        reason: `_Default sink currently has 0 active exclusions (every GiB past 50 GiB/mo bills $0.50/GiB).`,
+        estMonthlySavingsUsd: 35,
+        canApplyLive: true,
+        gcloudCmd: `gcloud logging sinks update _Default --project=${projectId} --add-exclusion=name=cloudpulse-drop-noisy-debug,filter='severity="DEBUG" OR httpRequest.userAgent:"GoogleHC"'`,
+        terraformHcl: `resource "google_logging_project_sink" "default_finops" {\n  project = "${projectId}"\n  name    = "_Default"\n  exclusions {\n    name   = "cloudpulse-drop-noisy-debug"\n    filter = "severity=\\"DEBUG\\" OR httpRequest.userAgent:\\"GoogleHC\\""\n  }\n}`,
+      });
+    }
+    if (unattachedDisks.length > 0) {
+      actions.push({
+        id: 'COMPUTE_ORPHAN_DISKS',
+        engine: 'Compute Engine',
+        severity: 'HIGH',
+        title: `Delete ${unattachedDisks.length} Unattached Persistent Disk(s) (${unattachedGb} GB Orphaned)`,
+        reason: `Unattached disks bill $0.04–$0.17/GB-mo continuously even when no VM is running.`,
+        estMonthlySavingsUsd: Number((unattachedGb * 0.1).toFixed(2)),
+        canApplyLive: false,
+        gcloudCmd: `gcloud compute disks list --project=${projectId} --filter="-users:*" --format="table(name,zone,sizeGb,type)"`,
+        terraformHcl: `# Remove unattached disk resources in Terraform state after snapshotting`,
+      });
+    }
+    if (runningClusters.length > 0) {
+      actions.push({
+        id: 'SPARK_IDLE_CLUSTERS',
+        engine: 'Managed Spark',
+        severity: 'HIGH',
+        title: `Migrate ${runningClusters.length} Always-On Dataproc Cluster(s) to Serverless Spark Lightning`,
+        reason: `Always-on GCE Dataproc clusters bill 24/7; Dataproc Serverless bills per-second DCU-Hours with $0.00 idle cost.`,
+        estMonthlySavingsUsd: sparkPotentialSaveUsd,
+        canApplyLive: false,
+        gcloudCmd: `gcloud dataproc clusters list --region=${safeRegion} --project=${projectId}`,
+        terraformHcl: `# Set lifecycle_config.idle_delete_ttl = "1800s" on google_dataproc_cluster`,
+      });
+    }
+    if (runningNonSpotVms.length > 0) {
+      actions.push({
+        id: 'COMPUTE_SPOT_RIGHTSIZE',
+        engine: 'Compute Engine',
+        severity: 'MEDIUM',
+        title: `Shift ${runningNonSpotVms.length} Non-Spot Running VM(s) to Spot VMs (-68%) or Night-Park`,
+        reason: `Dev/batch VMs running On-Demand can save 60–91% via Spot provisioning or automated off-hours stop.`,
+        estMonthlySavingsUsd: Number((runningNonSpotVms.length * 24).toFixed(2)),
+        canApplyLive: false,
+        gcloudCmd: `gcloud compute instances list --project=${projectId} --filter="status=RUNNING"`,
+        terraformHcl: `scheduling {\n  provisioning_model = "SPOT"\n  preemptible        = true\n}`,
+      });
+    }
+    if (runnableSql.length > 0) {
+      actions.push({
+        id: 'DB_SCALE_TO_ZERO',
+        engine: 'AlloyDB / Cloud SQL',
+        severity: 'MEDIUM',
+        title: `Evaluate ${runnableSql.length} Always-On Cloud SQL Instance(s) for AlloyDB Express Scale-to-Zero`,
+        reason: `Non-production PostgreSQL workloads can run on AlloyDB Express PG 18 (scale-to-zero) or stop overnight.`,
+        estMonthlySavingsUsd: dbPotentialSaveUsd,
+        canApplyLive: false,
+        gcloudCmd: `gcloud sql instances list --project=${projectId}`,
+        terraformHcl: `# Enable activation_policy = "NEVER" for parked dev Cloud SQL instances`,
+      });
+    }
+    actions.push({
+      id: 'BQ_PHYSICAL_STORAGE_PARTITION',
+      engine: 'BigQuery',
+      severity: bqMonthlyEstUsd > 10 ? 'HIGH' : 'LOW',
+      title: `Enforce Partition Filters & Physical Billing on BigQuery (${bqJobs7d} Jobs / 7d · ${bqFailed7d} Errors)`,
+      reason: `Physical compressed storage billing (5:1 Capacitor ratio) + require_partition_filter eliminates accidental full-table scans.`,
+      estMonthlySavingsUsd: Math.max(bqPotentialSaveUsd, 5),
+      canApplyLive: false,
+      gcloudCmd: `bq ls --project_id=${projectId}`,
+      terraformHcl: `resource "google_bigquery_dataset" "finops_dataset" {\n  storage_billing_model = "PHYSICAL"\n}`,
+    });
+
+    const totalMonthlySavingsUsd = Number(
+      actions.reduce((acc, a) => acc + Number(a.estMonthlySavingsUsd || 0), 0).toFixed(2)
+    );
+
+    const engines = {
+      bigquery: { label: 'BigQuery', count: `${bqJobs7d} jobs/7d`, wasteSignal: `${bqFailed7d} failed · $${bqMonthlyEstUsd}/mo`, estSavingsUsd: bqPotentialSaveUsd },
+      spark: { label: 'Managed Spark', count: `${runningClusters.length} clusters · ${sparkBatches.length} batches`, wasteSignal: `${failedBatches.length} failed batches`, estSavingsUsd: sparkPotentialSaveUsd },
+      logging: { label: 'Cloud Logging', count: `${defaultExclusions.length} _Default exclusions`, wasteSignal: loggingHasExclusions ? 'Protected' : 'Unfiltered _Default sink', estSavingsUsd: loggingPotentialSaveUsd },
+      compute: { label: 'Compute & Disks', count: `${allVms.length} VMs · ${unattachedDisks.length} orphan disks`, wasteSignal: `${unattachedGb} GB unattached`, estSavingsUsd: computePotentialSaveUsd },
+      databases: { label: 'AlloyDB & SQL', count: `${alloyClusters.length} AlloyDB · ${runnableSql.length} SQL`, wasteSignal: `${runnableSql.length} always-on SQL`, estSavingsUsd: dbPotentialSaveUsd },
+    };
+
+    let geminiPlan = null;
+    if (withGemini) {
+      const cleanModel = String(geminiModel || 'gemini-4-neon').trim();
+      const prompt = `You are a Principal Google Cloud FinOps Architect. Based strictly on this live 5-engine telemetry for project "${projectId}", write a crisp 3-bullet executive cost-kill action plan with estimated monthly savings:\nEngines: ${JSON.stringify(engines)}\nActions: ${JSON.stringify(actions.map((a) => ({ title: a.title, savings: a.estMonthlySavingsUsd })))}`;
+      const urls = [
+        `https://aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/global/publishers/google/models/${encodeURIComponent(cleanModel)}:generateContent`,
+        `https://us-central1-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/us-central1/publishers/google/models/${encodeURIComponent(cleanModel)}:generateContent`,
+      ];
+      for (const u of urls) {
+        try {
+          const gRes = await gcpFetch(u, token, projectId, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              contents: [{ role: 'user', parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.2, maxOutputTokens: 360 },
+            },
+            timeout: 20000,
+          });
+          const text = gRes?.candidates?.[0]?.content?.parts?.map((p) => p?.text || '').join('').trim();
+          if (text) {
+            geminiPlan = { modelUsed: cleanModel, text };
+            break;
+          }
+        } catch {
+          // next endpoint
+        }
+      }
+    }
+
+    return res.json({
+      ok: true,
+      action: 'SCAN',
+      projectId,
+      region: safeRegion,
+      totalMonthlySavingsUsd,
+      totalAnnualSavingsUsd: Number((totalMonthlySavingsUsd * 12).toFixed(2)),
+      engines,
+      actions,
+      geminiPlan,
+      durationMs: Date.now() - startedAt,
+    });
+  } catch (err) {
+    return res.status(err?.status || 500).json({
+      error: err?.message || 'Autonomous FinOps Autopilot scan failed.',
+    });
+  }
+});
+
 // 9a-bq-observability-doctor. POST /api/project/:projectId/bigquery/observability-doctor
 // Live BigQuery INFORMATION_SCHEMA.JOBS_BY_PROJECT (with least-privilege JOBS_BY_USER fallback) + Gemini 4 Root-Cause Triage
 app.post('/api/project/:projectId/bigquery/observability-doctor', async (req, res) => {

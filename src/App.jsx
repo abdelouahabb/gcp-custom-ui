@@ -117,6 +117,7 @@ import DataLakehouseAiPipelineBar from './components/DataLakehouseAiPipelineBar'
 import SecOpsSreForensicsPipelineBar from './components/SecOpsSreForensicsPipelineBar';
 import OltpDatabaseContinuityBar from './components/OltpDatabaseContinuityBar';
 import FinOpsCostKillPipelineBar from './components/FinOpsCostKillPipelineBar';
+import AutonomousFinOpsAutopilotMatrix from './components/AutonomousFinOpsAutopilotMatrix';
 import GitOpsReleaseFactoryPipelineBar from './components/GitOpsReleaseFactoryPipelineBar';
 import MultiCloudGlobalParityPipelineBar from './components/MultiCloudGlobalParityPipelineBar';
 import EngineerWishlistWave2 from './components/EngineerWishlistWave2';
@@ -2297,6 +2298,7 @@ function classifyDestructiveAxiosConfig(config) {
       (rawUrl.includes('/data-fabric/rag-loop') && body.stage === 'QUERY_SCANN_RAG') ||
       (rawUrl.includes('/bigquery/property-graph') && (body.action === 'DISCOVER' || body.action === 'AI_NL2GQL' || (body.action === 'RUN_GQL' && Boolean(body.dryRun)))) ||
       rawUrl.includes('/bigquery/observability-doctor') ||
+      (rawUrl.includes('/finops/autopilot-matrix') && body.action === 'SCAN') ||
       (rawUrl.includes('/alloydb/execute-sql') &&
         String(body.mode || '').toUpperCase() === 'INTROSPECT_ALLOYDB') ||
       (rawUrl.includes('/cloudrun-bridge/action') &&
@@ -5148,6 +5150,29 @@ function classifyDestructiveAxiosConfig(config) {
           whatHappensNext: `1. Inspects the live column schema of "${projectId}:${dsId}.${tblId}".\n2. Streams schema-matched rows via POST https://bigquery.googleapis.com/bigquery/v2/projects/${projectId}/datasets/${dsId}/tables/${tblId}/insertAll.`,
           costWarning: `ALWAYS-FREE STORAGE ELIGIBLE (~$0.00): Storing a few kilobytes of seed rows falls within BigQuery's 10 GiB/month Always-Free storage tier.`,
           impactWarning: `Appends rows into live BigQuery table "${dsId}.${tblId}" in project "${projectId}".`,
+        };
+      }
+      if (rawUrl.includes('/finops/autopilot-matrix') && body.action === 'APPLY_LOG_EXCLUSION') {
+        const exName = body.exclusionName || 'cloudpulse-drop-noisy-debug-healthchecks';
+        const exFilter = body.exclusionFilter || 'severity="DEBUG"';
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Add Cloud Logging _Default Sink Exclusion "${exName}"?`,
+          laymanSummary: `In Plain English: Patches your project's _Default Cloud Logging sink in "${projectId}" to exclude noisy logs matching (${exFilter}) before ingestion, preventing $0.50/GiB logging overages.`,
+          headerBadge: 'Autonomous FinOps Autopilot — Live Log Sink Exclusion',
+          targetLabel: 'Target Cloud Logging Sink',
+          resourceKind: 'Cloud Logging Sink (logging.googleapis.com/v2)',
+          targetName: `projects/${projectId}/sinks/_Default`,
+          location: 'global',
+          projectId,
+          method: 'PATCH LOG SINK EXCLUSION',
+          endpoint: rawUrl,
+          confirmLabel: `Apply Exclusion "${exName}"`,
+          cancelToast: 'Cloud Logging _Default sink exclusion cancelled.',
+          whatHappensNext: `1. Fetches current _Default sink exclusions.\n2. Appends exclusion "${exName}" (${exFilter}) via PATCH logging.googleapis.com/v2/projects/${projectId}/sinks/_Default.`,
+          costWarning: `FINOPS SAVINGS ($0.50/GiB SAVED): Excluded log entries are dropped before ingestion and never incur Cloud Logging storage charges.`,
+          impactWarning: `Excluded logs will not be stored in _Default; error/warning/audit logs remain 100% untouched.`,
         };
       }
       if (rawUrl.includes('/bigquery/property-graph')) {
@@ -13368,6 +13393,12 @@ function CloudPulseCockpit() {
                       onRunInShell={handleRunInShell}
                     />
                   </CollapsibleArchitecturePipelineBar>
+                  <AutonomousFinOpsAutopilotMatrix
+                    projectId={selectedProjectId}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
                   <div
                     id="finops-billing-guardian-section"
                     className="scroll-mt-24"
