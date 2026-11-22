@@ -2599,9 +2599,10 @@ GROUP BY 1 ORDER BY turns DESC;`;
                     Complete Exit Guarantee: Because AlloyDB speaks standard PostgreSQL WAL logical decoding, you can continuously replicate OUT to stock open-source PostgreSQL anywhere.
                   </div>
                 </div>
-                <div className="p-2 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
-                  <MermaidArchitectureDiagram code={drMermaidCode} />
-                </div>
+                <MermaidArchitectureDiagram
+                  code={drMermaidCode}
+                  title="AlloyDB Zero-Lock-In & Multi-Region DR Topology"
+                />
               </div>
             )}
 

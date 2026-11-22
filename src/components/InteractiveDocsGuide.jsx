@@ -2302,11 +2302,11 @@ const DOC_SECTIONS = [
     problemSolved:
       'Compute Engine operators need an instant way on every VM card to check whether installed OS packages are exposed to the latest CVEs (when google-osconfig-agent is installed) and remediate them immediately via apt upgrade or a Zero-SSH OS Config Patch Job.',
     howItWorks: [
-      'Live OS Config Vulnerability & Inventory Comparison (POST /api/project/:id/vms/:vmName/cve-scan): Queries osconfig.googleapis.com/v1 vulnerabilityReport + inventory?view=FULL to compare installed packages against live CVE advisories (CRITICAL/HIGH/MEDIUM/LOW, CVSSv3, installed -> fixed versions), with automatic SSH apt list --upgradable fallback and 1-click OS Config Agent install if not yet active.',
+      'Live OS Config + OSV.dev Vulnerability & Inventory Comparison (POST /api/project/:id/vms/:vmName/cve-scan): Queries osconfig.googleapis.com/v1 vulnerabilityReport + inventory?view=FULL and cross-checks installed OS packages live against https://api.osv.dev/v1/querybatch (CRITICAL/HIGH/MEDIUM/LOW, CVSSv3, installed -> fixed versions) in a sortable CVE table, with automatic SSH apt list --upgradable fallback and 1-click OS Config Agent install if not yet active.',
       'Dual 1-Click Remediation (POST /api/project/:id/vms/:vmName/cve-patch): Remediate directly via live sudo apt-get update && apt-get install --only-upgrade -y over SSH/IAP (streaming the live apt transcript) OR launch a Zero-SSH Google Cloud OS Config Patch Job (patchJobs:execute), then auto re-scan.',
     ],
     apisUsed: [
-      'POST /api/project/:id/vms/:vmName/cve-scan (osconfig.googleapis.com/v1 vulnerabilityReport + inventory?view=FULL + SSH apt fallback)',
+      'POST /api/project/:id/vms/:vmName/cve-scan (osconfig.googleapis.com/v1 vulnerabilityReport + inventory?view=FULL + https://api.osv.dev/v1/querybatch + SSH apt fallback)',
       'POST /api/project/:id/vms/:vmName/cve-patch (osconfig.googleapis.com/v1 patchJobs:execute OR gcloud compute ssh apt-get upgrade)',
     ],
     billingImpact:
@@ -2325,11 +2325,11 @@ const DOC_SECTIONS = [
     problemSolved:
       'Security findings from VM Manager CVEs, Container Analysis, Web Security Scanner, IAM misconfigurations, and Toxic Combinations live in Security Command Center v2. This mission control unifies live SCC v2 triage, zero-day visibility, attack-surface graphing, Gemini 3.8 Cyber remediation, and BigQuery export in one workspace.',
     howItWorks: [
-      'Live SCC v2 Discovery (POST /api/project/:id/scc/vulnerabilities): Queries securitycenter.googleapis.com/v2/projects/:id/sources/-/locations/:loc/findings with class filters (VULNERABILITY, MISCONFIGURATION, THREAT, TOXIC_COMBINATION), surfaces CRITICAL/HIGH/MEDIUM/LOW + 0-Day/In-Wild KPIs, and renders a live Mermaid Attack-Surface Graph.',
-      'Actionable Triage & Remediation: Sortable/searchable findings matrix with 1-click Gemini 3.8 Flash Cyber / Gemini 4 remediation playbooks (gcloud + Terraform), 1-click live Mute/Unmute (:setMute), Resolve (:setState INACTIVE), and 1-click Export to BigQuery (:export).',
+      'Live SCC v2 + 4-Engine Zero-Org Standalone Mode (POST /api/project/:id/scc/vulnerabilities): Queries securitycenter.googleapis.com/v2 (falling back to v1, and automatically activating 4-Engine Zero-Org Standalone Mode on projects without a GCP Organization by aggregating OS Config VM CVEs, Artifact Registry Container Analysis, VPC 0.0.0.0/0 Firewalls, and GCS Public Access / IAM bindings at $0.00). Surfaces CRITICAL/HIGH/MEDIUM/LOW + 0-Day/In-Wild KPIs and a deduplicated 3-Layer Attack-Path Topology (collapsed by default to free workspace).',
+      'Actionable Triage & Vertex AI Remediation: Sortable/searchable findings matrix with 1-click Vertex AI (gemini-4-neon) remediation playbooks (with 1-click Run gcloud in Shell & Open VM Patcher deep-links), 1-click live Mute/Unmute (:setMute), Resolve (:setState INACTIVE), and 1-click Export to BigQuery (:export).',
     ],
     apisUsed: [
-      'POST /api/project/:id/scc/vulnerabilities (securitycenter.googleapis.com/v2 findings.list, :setMute, :setState, :export + Vertex AI Gemini 3.8 Cyber / Gemini 4)',
+      'POST /api/project/:id/scc/vulnerabilities (securitycenter.googleapis.com/v2 -> v1 -> 4-Engine Zero-Org [osconfig, containeranalysis, compute/firewalls, storage, cloudresourcemanager IAM] + Vertex AI gemini-4-neon)',
     ],
     billingImpact:
       'SCC v2 reads, Mute/Resolve updates, and BigQuery exports (within 10 GiB Always-Free) incur $0.00 extra API cost; mutating actions are gated by bespoke confirmation modals.',

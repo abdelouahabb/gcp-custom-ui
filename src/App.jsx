@@ -13206,6 +13206,8 @@ function CloudPulseCockpit() {
                     projectId={selectedProjectId}
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
+                    onNavigateTab={handleNavigateStudioTab}
+                    onRunInShell={handleRunInShell}
                   />
                   <SreWarRoomPerimeterStudio
                     projectId={selectedProjectId}

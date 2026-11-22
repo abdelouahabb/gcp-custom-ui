@@ -390,9 +390,10 @@ LIMIT 15`,
               </span>
             </div>
             {bootstrapReceipt.mermaidPreview && (
-              <div className="p-2 rounded-lg bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
-                <MermaidArchitectureDiagram code={bootstrapReceipt.mermaidPreview} />
-              </div>
+              <MermaidArchitectureDiagram
+                code={bootstrapReceipt.mermaidPreview}
+                title="Bootstrapped Property Graph Schema Topology"
+              />
             )}
           </div>
         )}
@@ -544,12 +545,10 @@ LIMIT 15`,
             </div>
 
             {gqlResult.mermaidGraph && (
-              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
-                <div className="text-[10.5px] font-mono font-bold text-amber-600 dark:text-amber-400 mb-2">
-                  Live GQL Traversal Topology Graph
-                </div>
-                <MermaidArchitectureDiagram code={gqlResult.mermaidGraph} />
-              </div>
+              <MermaidArchitectureDiagram
+                code={gqlResult.mermaidGraph}
+                title="Live GQL Traversal Topology Graph"
+              />
             )}
 
             {Array.isArray(gqlResult.rows) && gqlResult.rows.length > 0 && (
@@ -644,9 +643,10 @@ LIMIT 15`,
             )}
 
             {hybridResult.mermaidGraph && (
-              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
-                <MermaidArchitectureDiagram code={hybridResult.mermaidGraph} />
-              </div>
+              <MermaidArchitectureDiagram
+                code={hybridResult.mermaidGraph}
+                title="Hybrid Vector + Property Graph Fusion Topology"
+              />
             )}
           </div>
         )}

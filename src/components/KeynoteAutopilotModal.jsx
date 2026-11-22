@@ -76,10 +76,11 @@ const KEYNOTE_STOPS = [
     id: 'INCIDENT_SOVEREIGN',
     durationMin: 1.5,
     studioTab: 'SRE_WAR_ROOM',
-    title: '6. Agentic Incident War-Room & Sovereign DORA/GDPR Blueprint',
-    headline: 'Gemini 4 3-Stream Root-Cause Commander + Live Sovereign CMEK/GDPR Dossier',
+    title: '6. Agentic War-Room, 10X SCC v2 / Zero-Org Vulnerability Control & Sovereign Blueprint',
+    headline: 'Gemini 4 Incident Commander + 4-Engine Zero-Org Attack-Path Topology + Sovereign DORA/GDPR Dossier',
     talkingPoints: [
       'Correlate live Cloud Logging errors, failed BigQuery jobs, and Cloud Run revision drift into a single Gemini 4 SITREP.',
+      'Run 10X Security Command Center v2 / 4-Engine Zero-Org Vulnerability Mission Control (OS Config VM CVEs + Artifact Registry + VPC 0.0.0.0/0 + GCS/IAM), expand the 3-Layer Attack-Path Topology, and click AI Fix (Vertex AI gemini-4-neon).',
       'Switch to Sovereign Studio to export the board-ready DORA/GDPR Dossier (.md) and Terraform CMEK bundle (.tf).',
     ],
     objectionKiller: 'Q: "Does this pass European CISO review?" → A: Live 5-control CMEK/PAP/UBLA/IAM/Residency audit with zero hardcoded secrets.',
