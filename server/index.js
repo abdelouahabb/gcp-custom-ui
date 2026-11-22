@@ -6265,11 +6265,12 @@ async function installGceAgentsOnSingleVm({
   };
 }
 
-// GCE Live CVE Vulnerability Scanner (OS Config Agent vulnerabilityReport + inventory, with live SSH apt-get -s upgrade fallback)
+// GCE Live CVE Vulnerability Scanner (OS Config Agent vulnerabilityReport + inventory, with live SSH apt package comparison fallback)
 app.post('/api/project/:projectId/vms/:vmName/cve-scan', async (req, res) => {
   const { projectId, vmName } = req.params;
-  const { zone = 'us-central1-a', allowSshFallback = true } = req.body || {};
+  const { zone: rawZone = 'us-central1-a', allowSshFallback = true } = req.body || {};
   const startedAt = Date.now();
+  let zone = String(rawZone || 'us-central1-a').split('/').pop().trim();
 
   if (
     !/^[a-z0-9][-a-z0-9._]*$/i.test(projectId) ||
@@ -6284,10 +6285,37 @@ app.post('/api/project/:projectId/vms/:vmName/cve-scan', async (req, res) => {
     if (!token) return res.status(401).json({ error: 'Not authenticated.' });
 
     const encProj = encodeURIComponent(projectId);
-    const encZone = encodeURIComponent(zone);
     const encVm = encodeURIComponent(vmName);
 
-    const [vulnRes, invRes, vmRes] = await Promise.all([
+    // Verify VM zone (auto-discover real zone if caller passed a region like us-central1)
+    let vmRes = await gcpFetch(
+      `https://compute.googleapis.com/compute/v1/projects/${encProj}/zones/${encodeURIComponent(zone)}/instances/${encVm}`,
+      token,
+      projectId,
+      { timeout: 8000 }
+    ).catch(() => null);
+
+    if (!vmRes) {
+      const agg = await gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encProj}/aggregated/instances?filter=name%3D${encVm}`,
+        token,
+        projectId,
+        { timeout: 8000 }
+      ).catch(() => null);
+      for (const zObj of Object.values(agg?.items || {})) {
+        const hit = (zObj?.instances || []).find((i) => i.name === vmName);
+        if (hit) {
+          vmRes = hit;
+          const discoveredZ = String(hit.zone || '').split('/').pop();
+          if (discoveredZ) zone = discoveredZ;
+          break;
+        }
+      }
+    }
+
+    const encZone = encodeURIComponent(zone);
+
+    const [vulnRes, invRes] = await Promise.all([
       gcpFetch(
         `https://osconfig.googleapis.com/v1/projects/${encProj}/locations/${encZone}/instances/${encVm}/vulnerabilityReport`,
         token,
@@ -6300,12 +6328,6 @@ app.post('/api/project/:projectId/vms/:vmName/cve-scan', async (req, res) => {
         projectId,
         { timeout: 10000 }
       ).catch((e) => ({ __err: e })),
-      gcpFetch(
-        `https://compute.googleapis.com/compute/v1/projects/${encProj}/zones/${encZone}/instances/${encVm}`,
-        token,
-        projectId,
-        { timeout: 8000 }
-      ).catch(() => null),
     ]);
 
     const vmStatus = vmRes?.status || 'UNKNOWN';
@@ -6383,11 +6405,12 @@ app.post('/api/project/:projectId/vms/:vmName/cve-scan', async (req, res) => {
     // Live SSH apt package comparison fallback when OS Config Agent hasn't reported yet
     let sshAptPackages = [];
     let sshCheckNote = null;
-    if (!hasOsConfigVuln && allowSshFallback && vmStatus === 'RUNNING') {
+    if (!hasOsConfigVuln && allowSshFallback && (vmStatus === 'RUNNING' || vmStatus === 'UNKNOWN')) {
       const checkCmd =
         'OSCONFIG=$(systemctl is-active google-osconfig-agent 2>/dev/null || echo inactive); ' +
+        'OSNAME=$(. /etc/os-release 2>/dev/null && echo "$PRETTY_NAME" || uname -sr); ' +
         'INSTALLED=$(dpkg-query -f "${Package}\\n" -W 2>/dev/null | wc -l || echo 0); ' +
-        'echo "OSCONFIG=$OSCONFIG"; echo "INSTALLED=$INSTALLED"; ' +
+        'echo "OSCONFIG=$OSCONFIG"; echo "OSNAME=$OSNAME"; echo "INSTALLED=$INSTALLED"; ' +
         'apt list --upgradable 2>/dev/null | tail -n +2 | head -n 40';
 
       const runSsh = (useIap) =>
@@ -6423,6 +6446,10 @@ app.post('/api/project/:projectId/vms/:vmName/cve-scan', async (req, res) => {
         const lines = out.split('\n').map((l) => l.trim()).filter(Boolean);
         const instLine = lines.find((l) => l.startsWith('INSTALLED='));
         if (instLine) installedPackageCount = Number(instLine.split('=')[1]) || installedPackageCount;
+        const osNameLine = lines.find((l) => l.startsWith('OSNAME='));
+        if (osNameLine && !osInfo) {
+          osInfo = { hostname: vmName, longName: osNameLine.slice('OSNAME='.length).trim() || 'Linux', osconfigAgentVersion: 'ssh-checked' };
+        }
         const osLine = lines.find((l) => l.startsWith('OSCONFIG='));
         const osAgentSvc = osLine ? osLine.split('=')[1] : 'inactive';
         const pkgLines = lines.filter((l) => l.includes('/') && l.includes('[upgradable from:'));

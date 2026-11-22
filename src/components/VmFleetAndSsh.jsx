@@ -1568,17 +1568,18 @@ export default function VmFleetAndSsh({
       setOpenCveVm('');
       return;
     }
+    const resolvedZone = String(vm.zone || vm.region || 'us-central1-a').split('/').pop();
     setOpenCveVm(vm.name);
     setCveScanBusyVm(vm.name);
     try {
       const { data } = await axios.post(
         `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(vm.name)}/cve-scan`,
-        { zone: vm.region || vm.zone || 'us-central1-a', allowSshFallback: true }
+        { zone: resolvedZone, allowSshFallback: true }
       );
       setCveReportByVm((prev) => ({ ...prev, [vm.name]: data }));
       if (onShowToast) {
         onShowToast(
-          `CVE scan on ${vm.name}: ${data.severityCounts?.TOTAL || 0} finding(s) (${data.severityCounts?.CRITICAL || 0} CRITICAL, ${data.severityCounts?.HIGH || 0} HIGH) · ${data.installedPackageCount || 0} installed packages checked.`,
+          `CVE scan on ${vm.name} (${data.zone || resolvedZone}): ${data.severityCounts?.TOTAL || 0} finding(s) (${data.severityCounts?.CRITICAL || 0} CRITICAL, ${data.severityCounts?.HIGH || 0} HIGH) · ${data.installedPackageCount || 0} installed packages checked.`,
           'info'
         );
       }
@@ -1593,12 +1594,13 @@ export default function VmFleetAndSsh({
 
   const handlePatchVmCves = async (vm, mode = 'APT_UPGRADE_SSH', packages = []) => {
     if (!vm?.name || !projectId || cvePatchBusyVm) return;
+    const resolvedZone = String(vm.zone || vm.region || 'us-central1-a').split('/').pop();
     setCvePatchBusyVm(`${vm.name}:${mode}`);
     try {
       const { data } = await axios.post(
         `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(vm.name)}/cve-patch`,
         {
-          zone: vm.region || vm.zone || 'us-central1-a',
+          zone: resolvedZone,
           mode,
           packages,
         }
@@ -3779,8 +3781,13 @@ export default function VmFleetAndSsh({
                                       </span>
                                     </div>
                                     <div className="text-zinc-500">
-                                      {rep.osInfo?.longName || 'Linux Guest'} · {rep.installedPackageCount || 0} installed packages compared
+                                      {rep.osInfo?.longName || 'Linux Guest'} · {rep.installedPackageCount || 0} installed packages compared · zone {rep.zone}
                                     </div>
+                                    {(rep.sshCheckNote || rep.osConfigError) && rep.agentStatus !== 'ACTIVE_OSCONFIG' && (
+                                      <div className="text-[10px] text-amber-700 dark:text-amber-300">
+                                        {rep.sshCheckNote || rep.osConfigError}
+                                      </div>
+                                    )}
                                   </div>
                                   {rep.agentStatus !== 'ACTIVE_OSCONFIG' && (
                                     <button
