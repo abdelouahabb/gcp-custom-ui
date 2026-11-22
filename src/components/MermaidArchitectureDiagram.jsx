@@ -12,6 +12,8 @@ import {
   RotateCcw,
   Maximize2,
   Minimize2,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 /**
@@ -292,9 +294,11 @@ export default function MermaidArchitectureDiagram({
   chart = '',
   title = 'Live C4 Mermaid Architecture Diagram (Reverse-Compiled)',
   defaultMode = 'VISUAL', // 'VISUAL' | 'SPLIT' | 'CODE'
+  defaultExpanded = false,
   onCopy,
 }) {
   const effectiveCode = code || chart || '';
+  const [isExpanded, setIsExpanded] = useState(Boolean(defaultExpanded));
   const [viewMode, setViewMode] = useState(defaultMode);
   const [hoveredNodeId, setHoveredNodeId] = useState(null);
   const [zoom, setZoom] = useState(1);
@@ -618,25 +622,41 @@ export default function MermaidArchitectureDiagram({
   return (
     <div
       className={
-        isFullscreen
+        isFullscreen && isExpanded
           ? 'fixed inset-3 z-[9999] bg-white dark:bg-[#131314] rounded-2xl border-2 border-blue-500/60 p-5 space-y-4 shadow-2xl overflow-y-auto flex flex-col'
-          : 'w-full bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5 space-y-4 shadow-sm'
+          : isExpanded
+            ? 'w-full bg-white dark:bg-[#202124] rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 sm:p-5 space-y-4 shadow-sm'
+            : 'w-full bg-white dark:bg-[#202124] rounded-xl border border-zinc-200 dark:border-zinc-800 px-3.5 py-2.5 shadow-sm'
       }
     >
-      {/* Top Toolbar: Title + View Mode Switcher + Zoom + Fullscreen + Export SVG + Copy Mermaid */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-3">
-        <div className="flex items-center gap-2 min-w-0">
+      {/* Top Toolbar: Title + Collapse/Expand + View Mode Switcher + Zoom + Fullscreen + Export SVG + Copy Mermaid */}
+      <div
+        className={`flex flex-wrap items-center justify-between gap-2 ${
+          isExpanded ? 'border-b border-zinc-200 dark:border-zinc-800 pb-3' : ''
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => {
+            if (isExpanded && isFullscreen) setIsFullscreen(false);
+            setIsExpanded((v) => !v);
+          }}
+          className="flex items-center gap-2 min-w-0 text-left cursor-pointer group"
+          title={isExpanded ? 'Click to collapse graph' : 'Click to expand graph'}
+        >
           <Share2 className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-          <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white truncate">
+          <span className="text-xs font-mono font-extrabold text-zinc-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
             {title}
           </span>
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25">
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 shrink-0">
             {parsed.layers.length} Layers · {parsed.nodes.length} Nodes ·{' '}
             {parsed.edges.length} Flows
           </span>
-        </div>
+        </button>
 
         <div className="flex flex-wrap items-center gap-1.5">
+          {isExpanded && (
+            <>
           {/* View Mode Switcher */}
           <div className="inline-flex rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 p-0.5">
             <button
@@ -786,12 +806,12 @@ export default function MermaidArchitectureDiagram({
             type="button"
             onClick={handleCopyCode}
             title="Copy Mermaid flowchart code to clipboard"
-            className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer transition-colors"
+            className="px-2.5 py-1 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer transition-colors"
           >
             {copied ? (
               <>
-                <Check className="w-3 h-3" />
-                <span>Copied Mermaid</span>
+                <Check className="w-3 h-3 text-emerald-500" />
+                <span>Copied</span>
               </>
             ) : (
               <>
@@ -800,11 +820,39 @@ export default function MermaidArchitectureDiagram({
               </>
             )}
           </button>
+            </>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              if (isExpanded && isFullscreen) setIsFullscreen(false);
+              setIsExpanded((v) => !v);
+            }}
+            title={isExpanded ? 'Collapse diagram to free workspace' : 'Expand interactive Mermaid diagram'}
+            className={`px-2.5 py-1 rounded-md text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer transition-colors ${
+              isExpanded
+                ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/40 hover:bg-amber-500/25'
+                : 'bg-blue-600 hover:bg-blue-500 text-white'
+            }`}
+          >
+            {isExpanded ? (
+              <>
+                <ChevronUp className="w-3 h-3" />
+                <span>Collapse Graph</span>
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-3 h-3" />
+                <span>Show Graph</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
 
       {/* Rendered Browser SVG Visualization (Camera Zoom + 2D Drag Pan + Draggable Nodes) */}
-      {viewMode !== 'CODE' && (
+      {isExpanded && viewMode !== 'CODE' && (
         <div
           className={`w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-950 overflow-hidden p-3 ${
             isFullscreen ? 'flex-1 flex flex-col justify-between' : ''
@@ -1151,7 +1199,7 @@ export default function MermaidArchitectureDiagram({
       )}
 
       {/* Raw Mermaid Code Block (shown in SPLIT or CODE mode) */}
-      {viewMode !== 'VISUAL' && (
+      {isExpanded && viewMode !== 'VISUAL' && (
         <pre className="p-3 rounded-xl bg-zinc-950 text-emerald-400 border border-zinc-800 text-[10.5px] font-mono overflow-x-auto max-h-48">
           {effectiveCode}
         </pre>

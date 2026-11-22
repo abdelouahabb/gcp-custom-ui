@@ -167,9 +167,10 @@ export default function AgenticIncidentCommanderPanel({
           </div>
 
           {report.mermaidCausalGraph && (
-            <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
-              <MermaidArchitectureDiagram code={report.mermaidCausalGraph} />
-            </div>
+            <MermaidArchitectureDiagram
+              code={report.mermaidCausalGraph}
+              title="Live Causal Incident Topology"
+            />
           )}
 
           {report.sitrep?.text && (

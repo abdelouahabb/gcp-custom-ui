@@ -505,9 +505,10 @@ export default function DataFabricMeshBridge({
 
         {/* Live Auto-Generated End-to-End Fabric Topology */}
         {mesh?.mermaidCode && (
-          <div className="p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
-            <MermaidArchitectureDiagram code={mesh.mermaidCode} />
-          </div>
+          <MermaidArchitectureDiagram
+            code={mesh.mermaidCode}
+            title="Live 6-Engine Data Fabric Topology"
+          />
         )}
       </div>
 
