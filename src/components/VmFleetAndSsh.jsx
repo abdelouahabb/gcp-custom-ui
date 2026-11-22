@@ -1561,6 +1561,7 @@ export default function VmFleetAndSsh({
   const [cvePatchBusyVm, setCvePatchBusyVm] = useState('');
   const [cveReportByVm, setCveReportByVm] = useState({});
   const [cvePatchReceiptByVm, setCvePatchReceiptByVm] = useState({});
+  const [cveFilterText, setCveFilterText] = useState('');
 
   const handleScanVmCves = async (vm, toggleDrawer = true) => {
     if (!vm?.name || !projectId) return;
@@ -3781,7 +3782,12 @@ export default function VmFleetAndSsh({
                                       </span>
                                     </div>
                                     <div className="text-zinc-500">
-                                      {rep.osInfo?.longName || 'Linux Guest'} · {rep.installedPackageCount || 0} installed packages compared · zone {rep.zone}
+                                      {rep.osInfo?.longName || 'Linux Guest'} · {rep.installedPackageCount || 0} installed packages · zone {rep.zone}
+                                      {rep.osvPackagesScanned > 0 && (
+                                        <span className="ml-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
+                                          · OSV.dev checked {rep.osvPackagesScanned} pkgs (+{rep.osvFindingsCount || 0} findings)
+                                        </span>
+                                      )}
                                     </div>
                                     {(rep.sshCheckNote || rep.osConfigError) && rep.agentStatus !== 'ACTIVE_OSCONFIG' && (
                                       <div className="text-[10px] text-amber-700 dark:text-amber-300">
@@ -3865,40 +3871,72 @@ export default function VmFleetAndSsh({
                                   </button>
                                 </div>
 
-                                {/* Live CVE List */}
+                                {/* Live CVE List (OS Config + OSV.dev Merged with Package Filter) */}
                                 {Array.isArray(rep.vulnerabilities) && rep.vulnerabilities.length > 0 ? (
-                                  <div className="max-h-44 overflow-auto border border-zinc-200 dark:border-zinc-800 rounded-lg">
-                                    <table className="w-full text-left text-[10.5px] font-mono">
-                                      <thead className="bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 sticky top-0">
-                                        <tr>
-                                          <th className="px-2 py-1">CVE</th>
-                                          <th className="px-2 py-1">Sev</th>
-                                          <th className="px-2 py-1">Package</th>
-                                          <th className="px-2 py-1">Installed → Fix</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                                        {rep.vulnerabilities.slice(0, 20).map((v, idx) => (
-                                          <tr key={`${v.cveId}-${v.packageName}-${idx}`}>
-                                            <td className="px-2 py-1">
-                                              <a
-                                                href={v.referenceUrl}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="text-blue-600 dark:text-blue-400 hover:underline font-bold"
-                                              >
-                                                {v.cveId}
-                                              </a>
-                                            </td>
-                                            <td className="px-2 py-1 font-bold">{v.severity}</td>
-                                            <td className="px-2 py-1">{v.packageName}</td>
-                                            <td className="px-2 py-1 text-zinc-500 truncate max-w-[140px]" title={`${v.installedVersion} -> ${v.fixedVersion}`}>
-                                              {v.installedVersion} → {v.fixedVersion}
-                                            </td>
+                                  <div className="space-y-1.5">
+                                    <input
+                                      type="text"
+                                      value={cveFilterText}
+                                      onChange={(e) => setCveFilterText(e.target.value)}
+                                      placeholder="Filter CVEs by package or ID (e.g. nginx, openssl, kernel, CVE-2025)..."
+                                      className="w-full px-2.5 py-1 rounded-md bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 font-mono text-[10.5px] text-zinc-900 dark:text-zinc-100"
+                                    />
+                                    <div className="max-h-48 overflow-auto border border-zinc-200 dark:border-zinc-800 rounded-lg">
+                                      <table className="w-full text-left text-[10.5px] font-mono">
+                                        <thead className="bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 sticky top-0">
+                                          <tr>
+                                            <th className="px-2 py-1">CVE</th>
+                                            <th className="px-2 py-1">Source</th>
+                                            <th className="px-2 py-1">Sev</th>
+                                            <th className="px-2 py-1">Package</th>
+                                            <th className="px-2 py-1">Installed → Fix</th>
                                           </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                                          {rep.vulnerabilities
+                                            .filter((v) => {
+                                              const q = cveFilterText.trim().toLowerCase();
+                                              if (!q) return true;
+                                              return (
+                                                String(v.cveId || '').toLowerCase().includes(q) ||
+                                                String(v.packageName || '').toLowerCase().includes(q) ||
+                                                String(v.source || '').toLowerCase().includes(q)
+                                              );
+                                            })
+                                            .slice(0, 35)
+                                            .map((v, idx) => (
+                                              <tr key={`${v.cveId}-${v.packageName}-${idx}`}>
+                                                <td className="px-2 py-1 whitespace-nowrap">
+                                                  <a
+                                                    href={v.referenceUrl}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="text-blue-600 dark:text-blue-400 hover:underline font-bold"
+                                                  >
+                                                    {v.cveId}
+                                                  </a>
+                                                </td>
+                                                <td className="px-2 py-1 whitespace-nowrap">
+                                                  <span
+                                                    className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                                      v.source === 'OSV_DEV'
+                                                        ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300'
+                                                        : 'bg-amber-500/15 text-amber-800 dark:text-amber-200'
+                                                    }`}
+                                                  >
+                                                    {v.source === 'OSV_DEV' ? 'OSV.dev' : 'OS Config'}
+                                                  </span>
+                                                </td>
+                                                <td className="px-2 py-1 font-bold">{v.severity}</td>
+                                                <td className="px-2 py-1 font-bold">{v.packageName}</td>
+                                                <td className="px-2 py-1 text-zinc-500 truncate max-w-[140px]" title={`${v.installedVersion} -> ${v.fixedVersion}`}>
+                                                  {v.installedVersion} → {v.fixedVersion}
+                                                </td>
+                                              </tr>
+                                            ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
                                   </div>
                                 ) : (
                                   <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 font-mono text-[10.5px] text-emerald-700 dark:text-emerald-300">

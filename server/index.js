@@ -6341,6 +6341,7 @@ app.post('/api/project/:projectId/vms/:vmName/cve-scan', async (req, res) => {
 
     let osInfo = null;
     let installedPackageCount = 0;
+    const installedPackagesList = [];
     if (hasOsConfigInv) {
       const oi = invRes.osInfo || {};
       osInfo = {
@@ -6353,7 +6354,18 @@ app.post('/api/project/:projectId/vms/:vmName/cve-scan', async (req, res) => {
         updateTime: invRes.updateTime || null,
       };
       const itemsObj = invRes.items || {};
-      installedPackageCount = Object.values(itemsObj).filter((it) => Boolean(it?.installedPackage)).length;
+      for (const it of Object.values(itemsObj)) {
+        const pkg = it?.installedPackage;
+        if (!pkg) continue;
+        installedPackageCount++;
+        const apt = pkg.aptPackage || pkg.yumPackage || pkg.zypperPackage || pkg.googetPackage;
+        if (apt?.packageName && apt?.version) {
+          installedPackagesList.push({
+            name: String(apt.packageName),
+            version: String(apt.version),
+          });
+        }
+      }
     }
 
     const vulnerabilities = [];
@@ -6378,6 +6390,7 @@ app.post('/api/project/:projectId/vms/:vmName/cve-scan', async (req, res) => {
             installedVersion: '—',
             fixedVersion: 'available',
             packageType: 'apt',
+            source: 'OS_CONFIG',
             description: desc,
             referenceUrl: refUrl,
           });
@@ -6393,14 +6406,145 @@ app.post('/api/project/:projectId/vms/:vmName/cve-scan', async (req, res) => {
               installedVersion: pkg.installedVersion || '—',
               fixedVersion: pkg.fixedVersion || 'latest',
               packageType: pkg.packageType || 'apt',
+              source: 'OS_CONFIG',
               description: desc,
               referenceUrl: refUrl,
             });
           }
         }
       }
-      vulnerabilities.sort((a, b) => b.cvssV3Score - a.cvssV3Score);
     }
+
+    // Central OSV.dev (NVD + GHSA + Upstream + Distro) Batch Cross-Check across installed server/app packages (nginx, openssl, docker, postgres, node, python, etc.)
+    let osvPackagesScanned = 0;
+    let osvFindingsCount = 0;
+    let osvEcosystemUsed = null;
+    if (installedPackagesList.length > 0) {
+      const shortLower = String(osInfo?.shortName || '').toLowerCase();
+      const verStr = String(osInfo?.version || '').trim();
+      const longLower = String(osInfo?.longName || '').toLowerCase();
+      if (shortLower.includes('ubuntu') || longLower.includes('ubuntu')) {
+        const majorMinor = (verStr.match(/^\d+\.\d+/) || ['22.04'])[0];
+        const isLts = ['18.04', '20.04', '22.04', '24.04', '26.04'].includes(majorMinor);
+        osvEcosystemUsed = isLts ? `Ubuntu:${majorMinor}:LTS` : `Ubuntu:${majorMinor}`;
+      } else if (shortLower.includes('debian') || longLower.includes('debian')) {
+        const maj = (verStr.match(/^\d+/) || ['12'])[0];
+        osvEcosystemUsed = `Debian:${maj}`;
+      } else if (shortLower.includes('rocky') || longLower.includes('rocky')) {
+        const maj = (verStr.match(/^\d+/) || ['9'])[0];
+        osvEcosystemUsed = `Rocky Linux:${maj}`;
+      } else if (shortLower.includes('alma') || longLower.includes('alma')) {
+        const maj = (verStr.match(/^\d+/) || ['9'])[0];
+        osvEcosystemUsed = `AlmaLinux:${maj}`;
+      } else {
+        osvEcosystemUsed = 'Ubuntu:22.04:LTS';
+      }
+
+      const priorityRe = /^(nginx|apache2|haproxy|caddy|openssl|libssl|openssh|docker|containerd|postgres|mysql|mariadb|redis|mongo|node|npm|python3|php|openjdk|curl|libcurl|wget|sudo|systemd|libc6|zlib|git|bash|tar|gzip|envoy|traefik|bind9|dnsmasq|chrony|bind)/i;
+      const prioritized = [
+        ...installedPackagesList.filter((p) => priorityRe.test(p.name)),
+        ...installedPackagesList.filter((p) => !priorityRe.test(p.name)),
+      ];
+      const uniqueBatch = [];
+      const seenPkg = new Set();
+      for (const p of prioritized) {
+        if (seenPkg.has(p.name)) continue;
+        seenPkg.add(p.name);
+        uniqueBatch.push(p);
+        if (uniqueBatch.length >= 120) break;
+      }
+      osvPackagesScanned = uniqueBatch.length;
+
+      try {
+        const osvBatchRes = await fetch('https://api.osv.dev/v1/querybatch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            queries: uniqueBatch.map((p) => ({
+              package: { name: p.name, ecosystem: osvEcosystemUsed },
+              version: p.version,
+            })),
+          }),
+          signal: AbortSignal.timeout(8000),
+        });
+        if (osvBatchRes.ok) {
+          const batchJson = await osvBatchRes.json();
+          const results = Array.isArray(batchJson?.results) ? batchJson.results : [];
+          const existingKeys = new Set(
+            vulnerabilities.map((v) => `${v.cveId.toUpperCase()}|${v.packageName.toLowerCase()}`)
+          );
+          const pendingEnrich = [];
+          results.forEach((r, idx) => {
+            const pkg = uniqueBatch[idx];
+            const vulns = Array.isArray(r?.vulns) ? r.vulns : [];
+            for (const v of vulns.slice(0, 6)) {
+              const rawId = String(v.id || '');
+              const normalizedCve = rawId.replace(/^(UBUNTU-|DEBIAN-|DSA-|USN-)/i, '');
+              const key = `${normalizedCve.toUpperCase()}|${pkg.name.toLowerCase()}`;
+              if (existingKeys.has(key)) continue;
+              existingKeys.add(key);
+              pendingEnrich.push({ rawId, normalizedCve, pkg });
+            }
+          });
+
+          // Enrich top 18 OSV hits with full severity/summary/fixedVersion in parallel
+          const toFetch = pendingEnrich.slice(0, 18);
+          const detailsArr = await Promise.allSettled(
+            toFetch.map(async (item) => {
+              const dRes = await fetch(`https://api.osv.dev/v1/vulns/${encodeURIComponent(item.rawId)}`, {
+                signal: AbortSignal.timeout(4000),
+              });
+              if (!dRes.ok) return null;
+              return dRes.json();
+            })
+          );
+
+          toFetch.forEach((item, i) => {
+            const detail = detailsArr[i]?.status === 'fulfilled' ? detailsArr[i].value : null;
+            const cveAlias =
+              (Array.isArray(detail?.aliases) ? detail.aliases.find((a) => /^CVE-/i.test(a)) : null) ||
+              item.normalizedCve ||
+              item.rawId;
+            const rawSev = String(
+              detail?.database_specific?.severity ||
+                detail?.ecosystem_specific?.severity ||
+                'MEDIUM'
+            ).toUpperCase();
+            const severity = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].includes(rawSev) ? rawSev : 'MEDIUM';
+            const cvssScore =
+              severity === 'CRITICAL' ? 9.1 : severity === 'HIGH' ? 7.5 : severity === 'MEDIUM' ? 5.3 : 3.1;
+            let fixedVer = 'check apt';
+            for (const aff of Array.isArray(detail?.affected) ? detail.affected : []) {
+              for (const rng of Array.isArray(aff?.ranges) ? aff.ranges : []) {
+                const fx = (rng?.events || []).find((ev) => ev?.fixed)?.fixed;
+                if (fx) {
+                  fixedVer = String(fx);
+                  break;
+                }
+              }
+            }
+            if (/^[a-z0-9][a-z0-9.+_-]*$/i.test(item.pkg.name)) upgradableSet.add(item.pkg.name);
+            vulnerabilities.push({
+              cveId: cveAlias,
+              severity,
+              cvssV3Score: cvssScore,
+              packageName: item.pkg.name,
+              installedVersion: item.pkg.version,
+              fixedVersion: fixedVer,
+              packageType: 'apt',
+              source: 'OSV_DEV',
+              description: String(detail?.summary || detail?.details || `OSV advisory ${item.rawId}`).slice(0, 240),
+              referenceUrl: `https://osv.dev/vulnerability/${encodeURIComponent(item.rawId)}`,
+            });
+            osvFindingsCount++;
+          });
+        }
+      } catch {
+        // non-fatal OSV network timeout
+      }
+    }
+
+    vulnerabilities.sort((a, b) => b.cvssV3Score - a.cvssV3Score);
 
     // Live SSH apt package comparison fallback when OS Config Agent hasn't reported yet
     let sshAptPackages = [];
@@ -6505,9 +6649,12 @@ app.post('/api/project/:projectId/vms/:vmName/cve-scan', async (req, res) => {
       sshCheckNote,
       osInfo,
       installedPackageCount,
+      osvPackagesScanned,
+      osvFindingsCount,
+      osvEcosystemUsed,
       severityCounts,
       upgradablePackages: Array.from(upgradableSet),
-      vulnerabilities: finalVulns.slice(0, 50),
+      vulnerabilities: finalVulns.slice(0, 60),
       updateTime: vulnRes?.updateTime || osInfo?.updateTime || new Date().toISOString(),
       durationMs: Date.now() - startedAt,
     });
