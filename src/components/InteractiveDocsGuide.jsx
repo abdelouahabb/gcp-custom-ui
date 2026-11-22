@@ -2194,7 +2194,7 @@ const DOC_SECTIONS = [
     badgeColor:
       'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
     icon: Database,
-    targetTab: 'DATA_ENGINEERING_STUDIO',
+    targetTab: 'DATA_ENGINEER_STUDIO',
     problemSolved:
       'Data engineers juggle Cloud Storage, AlloyDB, Cloud SQL, Managed Spark 3.5 Lightning, BigLake Iceberg, and BigQuery AI in separate silos—and rarely see a live, zero-mock RAG pipeline run end-to-end or compile & deploy directly into production Cloud Workflows / Composer / Dataform orchestration.',
     howItWorks: [
@@ -2221,7 +2221,7 @@ const DOC_SECTIONS = [
     badgeColor:
       'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
     icon: Database,
-    targetTab: 'DATA_ENGINEERING_STUDIO',
+    targetTab: 'DATA_ENGINEER_STUDIO',
     problemSolved:
       'Running multi-hop fraud ring detection, supply-chain traversal, and entity relationship analytics in BigQuery normally requires hand-writing complex recursive CTEs or non-portable Cypher. This workbench brings native BigQuery Property Graphs (GoogleSQL GQL) with live discovery, 1-click graph bootstrap, Gemini 4 NL2GQL, and automatic Mermaid topology rendering.',
     howItWorks: [

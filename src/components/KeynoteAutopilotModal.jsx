@@ -26,7 +26,8 @@ const KEYNOTE_STOPS = [
   {
     id: 'DATA_FABRIC_RAG',
     durationMin: 2,
-    studioTab: 'DATA_ENGINEERING_STUDIO',
+    studioTab: 'DATA_ENGINEER_STUDIO',
+    subTab: 'DATA_FABRIC_MESH',
     title: '2. 6-Engine Data Fabric Mesh & Live 4-Stage RAG Loop',
     headline: 'GCS Document → BigQuery Gemini 4 + 768-d Embed → AlloyDB Omni SCaNN (<5ms Search)',
     talkingPoints: [
@@ -38,7 +39,8 @@ const KEYNOTE_STOPS = [
   {
     id: 'BQ_GQL_HYBRID',
     durationMin: 2,
-    studioTab: 'DATA_ENGINEERING_STUDIO',
+    studioTab: 'DATA_ENGINEER_STUDIO',
+    subTab: 'BQ_PROPERTY_GRAPH',
     title: '3. BigQuery Property Graph (GQL) + Hybrid Vector Fusion',
     headline: 'Native GoogleSQL GQL Multi-Hop Fraud Detection + Semantic Vector-to-Graph Fusion',
     talkingPoints: [
@@ -242,17 +244,31 @@ export default function KeynoteAutopilotModal({
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                onNavigateTab?.(stop.studioTab);
-                onClose?.();
-              }}
-              className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
-            >
-              <Play className="w-3.5 h-3.5" />
-              Jump to Live Studio →
-            </button>
+            <div className="flex items-center gap-2">
+              {stop.id === 'INCIDENT_SOVEREIGN' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onNavigateTab?.('SOVEREIGN_STUDIO');
+                    onClose?.();
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-bold text-zinc-800 dark:text-zinc-200 cursor-pointer"
+                >
+                  Open Sovereign Studio →
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  onNavigateTab?.(stop.studioTab, stop.subTab || null);
+                  onClose?.();
+                }}
+                className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+              >
+                <Play className="w-3.5 h-3.5" />
+                Jump to Live Studio →
+              </button>
+            </div>
           </div>
         </div>
       </div>
