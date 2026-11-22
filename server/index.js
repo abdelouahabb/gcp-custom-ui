@@ -13892,7 +13892,8 @@ app.post('/api/project/:projectId/scc/vulnerabilities', async (req, res) => {
       }
     }
 
-    // If SCC is not activated on this project (404), synthesize live fallback vulnerability findings from OS Config Vulnerability Reports across active VMs!
+    // If SCC is not activated on this standalone project (no GCP Organization), run our 4-Engine Zero-Org Security Command Center Scanner in parallel:
+    // 1) OS Config VM CVEs, 2) Artifact Registry Container Analysis CVEs, 3) GCE 0.0.0.0/0 Firewall Exposure, 4) GCS PAP & IAM Misconfigurations
     let fallbackSourceNote = null;
     const rawResults = Array.isArray(sccRes?.listFindingsResults) ? sccRes.listFindingsResults : [];
     const findings = rawResults.map((item) => {
@@ -13933,12 +13934,45 @@ app.post('/api/project/:projectId/scc/vulnerabilities', async (req, res) => {
 
     if (sccStatus !== 'ACTIVE' && findings.length === 0) {
       try {
-        const vmAgg = await gcpFetch(
-          `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/aggregated/instances?maxResults=25`,
-          token,
-          projectId,
-          { timeout: 8000 }
-        ).catch(() => ({ items: {} }));
+        const [vmAgg, caRes, fwRes, bucketsRes, iamRes] = await Promise.all([
+          gcpFetch(
+            `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/aggregated/instances?maxResults=25`,
+            token,
+            projectId,
+            { timeout: 8000 }
+          ).catch(() => ({ items: {} })),
+          gcpFetch(
+            `https://containeranalysis.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/occurrences?filter=${encodeURIComponent('kind="VULNERABILITY"')}&pageSize=30`,
+            token,
+            projectId,
+            { timeout: 8000 }
+          ).catch(() => ({ occurrences: [] })),
+          gcpFetch(
+            `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/global/firewalls?maxResults=50`,
+            token,
+            projectId,
+            { timeout: 8000 }
+          ).catch(() => ({ items: [] })),
+          gcpFetch(
+            `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(projectId)}&maxResults=40`,
+            token,
+            projectId,
+            { timeout: 8000 }
+          ).catch(() => ({ items: [] })),
+          gcpFetch(
+            `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(projectId)}:getIamPolicy`,
+            token,
+            projectId,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: { options: { requestedPolicyVersion: 3 } },
+              timeout: 8000,
+            }
+          ).catch(() => ({ bindings: [] })),
+        ]);
+
+        // Engine 1: OS Config VM Vulnerability Reports
         const vms = [];
         Object.values(vmAgg?.items || {}).forEach((z) => {
           if (Array.isArray(z?.instances)) vms.push(...z.instances);
@@ -13983,13 +14017,140 @@ app.post('/api/project/:projectId/scc/vulnerabilities', async (req, res) => {
           })
         );
         for (const r of vulnChecks) {
-          if (r.status === 'fulfilled' && Array.isArray(r.value)) {
-            findings.push(...r.value);
+          if (r.status === 'fulfilled' && Array.isArray(r.value)) findings.push(...r.value);
+        }
+
+        // Engine 2: Artifact Registry Container Analysis Image CVEs
+        const occs = Array.isArray(caRes?.occurrences) ? caRes.occurrences : [];
+        for (const occ of occs.slice(0, 20)) {
+          const v = occ?.vulnerability || {};
+          const imgName = String(occ?.resourceUri || '').split('/').pop() || 'container-image';
+          const cveId = String(occ?.noteName || '').split('/').pop() || null;
+          findings.push({
+            name: occ.name || `ca/${imgName}/${cveId}`,
+            canonicalName: occ.name || `ca/${imgName}/${cveId}`,
+            category: `CONTAINER_CVE (${v.packageIssue?.[0]?.affectedPackage || 'image'})`,
+            findingClass: 'VULNERABILITY',
+            severity: String(v.effectiveSeverity || v.severity || 'MEDIUM').toUpperCase(),
+            state: 'ACTIVE',
+            mute: 'UNMUTED',
+            cveId: /^CVE-/i.test(cveId || '') ? cveId : null,
+            cvssV3Score: Number(v.cvssScore || 0),
+            zeroDay: false,
+            observedInTheWild: false,
+            exploitationActivity: null,
+            resourceName: occ.resourceUri || '',
+            resourceShort: imgName.slice(0, 32),
+            resourceType: 'Artifact Registry Image',
+            nextSteps: 'Rebuild container image with patched base layer and re-push to Artifact Registry.',
+            description: String(v.shortDescription || v.longDescription || 'Container image vulnerability').slice(0, 240),
+            externalUri: cveId && /^CVE-/i.test(cveId) ? `https://nvd.nist.gov/vuln/detail/${encodeURIComponent(cveId)}` : null,
+            eventTime: occ.updateTime || occ.createTime || '',
+          });
+        }
+
+        // Engine 3: GCE Firewall 0.0.0.0/0 Exposure (SSH/RDP/All-Ports)
+        const firewalls = Array.isArray(fwRes?.items) ? fwRes.items : [];
+        for (const fw of firewalls) {
+          if (fw.disabled || fw.direction !== 'INGRESS') continue;
+          const openWorld = Array.isArray(fw.sourceRanges) && fw.sourceRanges.includes('0.0.0.0/0');
+          if (!openWorld) continue;
+          const allowed = Array.isArray(fw.allowed) ? fw.allowed : [];
+          const hasAdminPort = allowed.some(
+            (a) =>
+              a.IPProtocol === 'all' ||
+              !Array.isArray(a.ports) ||
+              a.ports.some((p) => ['22', '3389', '5432', '3306', '0-65535'].includes(String(p)))
+          );
+          if (!hasAdminPort) continue;
+          findings.push({
+            name: `fw/${fw.name}`,
+            canonicalName: `fw/${fw.name}`,
+            category: 'OPEN_FIREWALL_0_0_0_0',
+            findingClass: 'MISCONFIGURATION',
+            severity: 'HIGH',
+            state: 'ACTIVE',
+            mute: 'UNMUTED',
+            cveId: null,
+            cvssV3Score: 7.5,
+            zeroDay: false,
+            observedInTheWild: false,
+            exploitationActivity: null,
+            resourceName: fw.selfLink || fw.name,
+            resourceShort: fw.name,
+            resourceType: 'VPC Firewall',
+            nextSteps: 'Restrict sourceRanges from 0.0.0.0/0 to Cloud IAP range (35.235.240.0/20) or corporate CIDR.',
+            description: `Ingress firewall rule "${fw.name}" allows 0.0.0.0/0 access to sensitive admin/database ports.`,
+            externalUri: null,
+            eventTime: fw.creationTimestamp || '',
+          });
+        }
+
+        // Engine 4: GCS Missing PAP / UBLA + IAM Public Bindings
+        const buckets = Array.isArray(bucketsRes?.items) ? bucketsRes.items : [];
+        for (const b of buckets) {
+          if (b?.iamConfiguration?.publicAccessPrevention !== 'enforced') {
+            findings.push({
+              name: `gcs-pap/${b.name}`,
+              canonicalName: `gcs-pap/${b.name}`,
+              category: 'BUCKET_PUBLIC_ACCESS_PREVENTION_NOT_ENFORCED',
+              findingClass: 'MISCONFIGURATION',
+              severity: 'MEDIUM',
+              state: 'ACTIVE',
+              mute: 'UNMUTED',
+              cveId: null,
+              cvssV3Score: 5.3,
+              zeroDay: false,
+              observedInTheWild: false,
+              exploitationActivity: null,
+              resourceName: `gs://${b.name}`,
+              resourceShort: b.name,
+              resourceType: 'Cloud Storage Bucket',
+              nextSteps: `gcloud storage buckets update gs://${b.name} --public-access-prevention`,
+              description: `Bucket gs://${b.name} does not have Public Access Prevention enforced.`,
+              externalUri: null,
+              eventTime: b.updated || '',
+            });
           }
         }
-        if (findings.length > 0) {
-          fallbackSourceNote = `SCC v2/v1 is not activated on "${projectId}" yet — automatically pulled ${findings.length} live CVE finding(s) directly from VM Manager OS Config across ${vms.length} VM(s).`;
+        const bindings = Array.isArray(iamRes?.bindings) ? iamRes.bindings : [];
+        for (const b of bindings) {
+          const pub = (b.members || []).filter((m) => m === 'allUsers' || m === 'allAuthenticatedUsers');
+          if (pub.length > 0) {
+            findings.push({
+              name: `iam-pub/${b.role}`,
+              canonicalName: `iam-pub/${b.role}`,
+              category: 'PUBLIC_IAM_PRINCIPAL_BINDING',
+              findingClass: 'TOXIC_COMBINATION',
+              severity: 'CRITICAL',
+              state: 'ACTIVE',
+              mute: 'UNMUTED',
+              cveId: null,
+              cvssV3Score: 9.1,
+              zeroDay: false,
+              observedInTheWild: false,
+              exploitationActivity: null,
+              resourceName: `projects/${projectId}`,
+              resourceShort: b.role,
+              resourceType: 'Project IAM Policy',
+              nextSteps: `Remove ${pub.join(', ')} from ${b.role} immediately.`,
+              description: `Role ${b.role} is granted to public principal(s): ${pub.join(', ')}.`,
+              externalUri: null,
+              eventTime: new Date().toISOString(),
+            });
+          }
         }
+
+        // Apply findingClass filter on synthesized standalone findings
+        const filteredStandalone =
+          findingClass && findingClass !== 'ALL'
+            ? findings.filter((f) => f.findingClass === findingClass)
+            : findings;
+        findings.length = 0;
+        findings.push(...filteredStandalone);
+
+        sccStatus = 'STANDALONE_ZERO_ORG_MODE';
+        fallbackSourceNote = `Zero-Org Standalone Security Engine active (no GCP Organization required): scanned ${vms.length} VM(s) via OS Config, ${occs.length} Container Analysis CVEs, ${firewalls.length} VPC firewalls, ${buckets.length} GCS buckets & IAM policy.`;
       } catch {
         // non-fatal fallback
       }
