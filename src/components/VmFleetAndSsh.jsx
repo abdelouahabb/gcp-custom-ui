@@ -1562,6 +1562,17 @@ export default function VmFleetAndSsh({
   const [cveReportByVm, setCveReportByVm] = useState({});
   const [cvePatchReceiptByVm, setCvePatchReceiptByVm] = useState({});
   const [cveFilterText, setCveFilterText] = useState('');
+  const [cveSortField, setCveSortField] = useState('severity');
+  const [cveSortDir, setCveSortDir] = useState('desc');
+
+  const toggleCveSort = (field) => {
+    if (cveSortField === field) {
+      setCveSortDir((d) => (d === 'desc' ? 'asc' : 'desc'));
+    } else {
+      setCveSortField(field);
+      setCveSortDir(field === 'severity' ? 'desc' : 'asc');
+    }
+  };
 
   const handleScanVmCves = async (vm, toggleDrawer = true) => {
     if (!vm?.name || !projectId) return;
@@ -3691,11 +3702,11 @@ export default function VmFleetAndSsh({
                         type="button"
                         disabled={isDeleting || cveScanBusyVm === vm.name}
                         onClick={() => handleScanVmCves(vm, true)}
-                        title="Check latest CVEs via google-osconfig-agent (OS Config Vulnerability Report + installed package comparison) and fix via 1-click apt upgrade or Zero-SSH Patch Job"
+                        title="Check latest CVEs via google-osconfig-agent (OS Config Vulnerability Report + OSV.dev installed package comparison) and fix via 1-click apt upgrade or Zero-SSH Patch Job"
                         className={`w-full h-9 inline-flex items-center justify-between gap-1.5 rounded-lg px-2.5 text-[11px] font-bold transition-all cursor-pointer disabled:opacity-40 ${
                           openCveVm === vm.name
                             ? 'bg-amber-500 text-zinc-950 border-2 border-amber-500 shadow-sm'
-                            : 'bg-white dark:bg-zinc-900/90 text-amber-700 dark:text-amber-300 border-2 border-amber-500/45 hover:border-amber-500 hover:bg-amber-500/10'
+                            : 'bg-white dark:bg-zinc-900/90 text-blue-600 dark:text-blue-300 border-2 border-blue-500/45 hover:border-blue-500 hover:bg-blue-500/10'
                         }`}
                       >
                         <span className="inline-flex items-center gap-1.5 min-w-0">
@@ -3710,12 +3721,12 @@ export default function VmFleetAndSsh({
                           className={`text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0 ${
                             openCveVm === vm.name
                               ? 'bg-black/15 text-zinc-950'
-                              : 'bg-amber-500/15 text-amber-800 dark:text-amber-200 border border-amber-500/30'
+                              : 'bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-500/30'
                           }`}
                         >
                           {cveReportByVm[vm.name]
                             ? `${cveReportByVm[vm.name].severityCounts?.TOTAL || 0} CVE`
-                            : 'SCAN'}
+                            : 'OFF'}
                         </span>
                       </button>
                     </div>
@@ -3885,26 +3896,61 @@ export default function VmFleetAndSsh({
                                       <table className="w-full text-left text-[10.5px] font-mono">
                                         <thead className="bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 sticky top-0">
                                           <tr>
-                                            <th className="px-2 py-1">CVE</th>
-                                            <th className="px-2 py-1">Source</th>
-                                            <th className="px-2 py-1">Sev</th>
-                                            <th className="px-2 py-1">Package</th>
-                                            <th className="px-2 py-1">Installed → Fix</th>
+                                            {[
+                                              { id: 'cveId', label: 'CVE' },
+                                              { id: 'source', label: 'Source' },
+                                              { id: 'severity', label: 'Sev' },
+                                              { id: 'packageName', label: 'Package' },
+                                              { id: 'fixedVersion', label: 'Installed → Fix' },
+                                            ].map((col) => (
+                                              <th key={col.id} className="px-2 py-1">
+                                                <button
+                                                  type="button"
+                                                  onClick={() => toggleCveSort(col.id)}
+                                                  className="inline-flex items-center gap-1 font-bold hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
+                                                >
+                                                  <span>{col.label}</span>
+                                                  {cveSortField === col.id && (
+                                                    <span className="text-amber-500">
+                                                      {cveSortDir === 'asc' ? '↑' : '↓'}
+                                                    </span>
+                                                  )}
+                                                </button>
+                                              </th>
+                                            ))}
                                           </tr>
                                         </thead>
                                         <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                                          {rep.vulnerabilities
-                                            .filter((v) => {
-                                              const q = cveFilterText.trim().toLowerCase();
-                                              if (!q) return true;
-                                              return (
-                                                String(v.cveId || '').toLowerCase().includes(q) ||
-                                                String(v.packageName || '').toLowerCase().includes(q) ||
-                                                String(v.source || '').toLowerCase().includes(q)
-                                              );
-                                            })
-                                            .slice(0, 35)
-                                            .map((v, idx) => (
+                                          {(() => {
+                                            const sevRank = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+                                            return rep.vulnerabilities
+                                              .filter((v) => {
+                                                const q = cveFilterText.trim().toLowerCase();
+                                                if (!q) return true;
+                                                return (
+                                                  String(v.cveId || '').toLowerCase().includes(q) ||
+                                                  String(v.packageName || '').toLowerCase().includes(q) ||
+                                                  String(v.source || '').toLowerCase().includes(q)
+                                                );
+                                              })
+                                              .slice()
+                                              .sort((a, b) => {
+                                                let cmp = 0;
+                                                if (cveSortField === 'severity') {
+                                                  cmp =
+                                                    (sevRank[a.severity] || 0) - (sevRank[b.severity] || 0) ||
+                                                    Number(a.cvssV3Score || 0) - Number(b.cvssV3Score || 0);
+                                                } else {
+                                                  cmp = String(a[cveSortField] || '').localeCompare(
+                                                    String(b[cveSortField] || ''),
+                                                    undefined,
+                                                    { numeric: true, sensitivity: 'base' }
+                                                  );
+                                                }
+                                                return cveSortDir === 'asc' ? cmp : -cmp;
+                                              })
+                                              .slice(0, 40)
+                                              .map((v, idx) => (
                                               <tr key={`${v.cveId}-${v.packageName}-${idx}`}>
                                                 <td className="px-2 py-1 whitespace-nowrap">
                                                   <a
@@ -3933,7 +3979,8 @@ export default function VmFleetAndSsh({
                                                   {v.installedVersion} → {v.fixedVersion}
                                                 </td>
                                               </tr>
-                                            ))}
+                                            ));
+                                          })()}
                                         </tbody>
                                       </table>
                                     </div>

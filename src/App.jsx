@@ -5130,6 +5130,187 @@ function classifyDestructiveAxiosConfig(config) {
       }
     }
 
+    // 3G-12B. GCE CVE Patch, FinOps _Default Log Exclusion, Data Fabric Orchestrator & 4-Stage RAG Loop (top-level, outside /bigquery/!)
+    if (rawUrl.includes('/cve-patch')) {
+      const vmMatch = rawUrl.match(/\/vms\/([^/]+)\/cve-patch/);
+      const vmName = vmMatch ? decodeURIComponent(vmMatch[1]) : 'vm-instance';
+      const zone = body.zone || 'us-central1-a';
+      const mode = body.mode || 'APT_UPGRADE_SSH';
+      const pkgs = Array.isArray(body.packages) ? body.packages : [];
+      const isOsConfig = mode === 'OSCONFIG_PATCH_JOB';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: isOsConfig
+          ? `Run Zero-SSH OS Config Patch Job on "${vmName}" (${zone})?`
+          : `Run Live "apt-get upgrade" on GCE VM "${vmName}" (${zone})?`,
+        laymanSummary: isOsConfig
+          ? `In Plain English: Submits a live Google Cloud VM Manager Patch Job (osconfig.googleapis.com/v1) via google-osconfig-agent to upgrade vulnerable apt packages on "${vmName}".`
+          : `In Plain English: Connects to "${vmName}" (${zone}) over SSH/IAP and runs "sudo apt-get update && sudo apt-get upgrade -y"${pkgs.length > 0 ? ` targeting ${pkgs.length} vulnerable package(s): ${pkgs.slice(0, 8).join(', ')}${pkgs.length > 8 ? '...' : ''}` : ''} to remediate detected CVEs.`,
+        headerBadge: isOsConfig
+          ? 'GCE VM Manager — Zero-SSH OS Config Patch Job'
+          : 'GCE Live CVE Remediation — apt-get upgrade',
+        targetLabel: 'Target Compute Engine VM',
+        resourceKind: isOsConfig
+          ? 'OS Config Patch Job (osconfig.googleapis.com/v1)'
+          : 'GCE Guest OS Packages (apt-get upgrade via SSH/IAP)',
+        targetName: `${vmName} (${zone})`,
+        location: zone,
+        projectId,
+        method: isOsConfig ? 'EXECUTE OS CONFIG PATCH' : 'RUN APT UPGRADE',
+        endpoint: rawUrl,
+        confirmLabel: isOsConfig ? `Launch Patch Job on "${vmName}"` : `Run apt upgrade on "${vmName}"`,
+        cancelToast: `CVE remediation on "${vmName}" cancelled.`,
+        whatHappensNext: isOsConfig
+          ? `1. Calls POST osconfig.googleapis.com/v1/projects/${projectId}/patchJobs:execute with apt.type=UPGRADE.\n2. google-osconfig-agent upgrades vulnerable packages cleanly without SSH.`
+          : `1. Connects to ${vmName} via gcloud compute ssh (auto-falls back to Cloud IAP).\n2. Executes non-interactive apt-get update && apt-get upgrade.\n3. Streams the real apt transcript back to the CVE panel and re-scans CVEs.`,
+        costWarning: `ZERO EXTRA CLOUD COST ($0.00): OS package upgrades via apt or OS Config Patch Jobs are included at no extra charge.`,
+        impactWarning: `Upgrades installed Linux packages on "${vmName}" (${zone}). Services using upgraded libraries may briefly restart.`,
+      };
+    }
+
+    if (rawUrl.includes('/finops/autopilot-matrix') && body.action === 'APPLY_LOG_EXCLUSION') {
+      const exName = body.exclusionName || 'cloudpulse-drop-noisy-debug-healthchecks';
+      const exFilter = body.exclusionFilter || 'severity="DEBUG"';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Add Cloud Logging _Default Sink Exclusion "${exName}"?`,
+        laymanSummary: `In Plain English: Patches your project's _Default Cloud Logging sink in "${projectId}" to exclude noisy logs matching (${exFilter}) before ingestion, preventing $0.50/GiB logging overages.`,
+        headerBadge: 'Autonomous FinOps Autopilot — Live Log Sink Exclusion',
+        targetLabel: 'Target Cloud Logging Sink',
+        resourceKind: 'Cloud Logging Sink (logging.googleapis.com/v2)',
+        targetName: `projects/${projectId}/sinks/_Default`,
+        location: 'global',
+        projectId,
+        method: 'PATCH LOG SINK EXCLUSION',
+        endpoint: rawUrl,
+        confirmLabel: `Apply Exclusion "${exName}"`,
+        cancelToast: 'Cloud Logging _Default sink exclusion cancelled.',
+        whatHappensNext: `1. Fetches current _Default sink exclusions.\n2. Appends exclusion "${exName}" (${exFilter}) via PATCH logging.googleapis.com/v2/projects/${projectId}/sinks/_Default.`,
+        costWarning: `FINOPS SAVINGS ($0.50/GiB SAVED): Excluded log entries are dropped before ingestion and never incur Cloud Logging storage charges.`,
+        impactWarning: `Excluded logs will not be stored in _Default; error/warning/audit logs remain 100% untouched.`,
+      };
+    }
+
+    if (rawUrl.includes('/data-fabric/orchestrate')) {
+      const wfAction = String(body.action || '');
+      const wfName = body.workflowName || 'cloudpulse-fabric-workflow';
+      const wfRegion = body.region || 'us-central1';
+      if (wfAction === 'DEPLOY_WORKFLOW') {
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Deploy Cloud Workflow "${wfName}" to ${wfRegion}?`,
+          laymanSummary: `In Plain English: Creates or updates a serverless Google Cloud Workflow named "${wfName}" in ${wfRegion} (${projectId}) using the compiled YAML pipeline.`,
+          headerBadge: 'Data Fabric Auto-Orchestrator — Live Cloud Workflows Deploy',
+          targetLabel: 'Target Cloud Workflow',
+          resourceKind: 'Cloud Workflow (workflows.googleapis.com/v1)',
+          targetName: `${projectId}/${wfRegion}/${wfName}`,
+          location: wfRegion,
+          projectId,
+          method: 'DEPLOY WORKFLOW',
+          endpoint: rawUrl,
+          confirmLabel: `Deploy Workflow "${wfName}"`,
+          cancelToast: 'Cloud Workflow deployment cancelled.',
+          whatHappensNext: `1. Calls workflows.googleapis.com/v1 to create (or PATCH if existing) "${wfName}" in ${wfRegion}.\n2. Returns the live Cloud Console URL so you can inspect or trigger executions.`,
+          costWarning: `FREE TIER ELIGIBLE: Cloud Workflows includes 5,000 free internal steps/month ($0.01 per 1,000 steps thereafter); idle deployed workflows cost $0.00/mo.`,
+          impactWarning: `Creates or updates Cloud Workflow "${wfName}" in project "${projectId}".`,
+        };
+      }
+      if (wfAction === 'EXECUTE_WORKFLOW') {
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Trigger Live Execution of Cloud Workflow "${wfName}"?`,
+          laymanSummary: `In Plain English: Starts a live serverless execution of "${wfName}" in ${wfRegion} (${projectId}) via workflowexecutions.googleapis.com/v1.`,
+          headerBadge: 'Data Fabric Auto-Orchestrator — Live Execution Trigger',
+          targetLabel: 'Target Cloud Workflow Execution',
+          resourceKind: 'Cloud Workflow Execution (workflowexecutions.googleapis.com/v1)',
+          targetName: `${projectId}/${wfRegion}/${wfName}`,
+          location: wfRegion,
+          projectId,
+          method: 'EXECUTE WORKFLOW',
+          endpoint: rawUrl,
+          confirmLabel: `Run "${wfName}" Now`,
+          cancelToast: 'Workflow execution cancelled.',
+          whatHappensNext: `1. Submits a new execution to workflowexecutions.googleapis.com/v1.\n2. Runs the live GCS + BigQuery steps serverlessly on Google Cloud.`,
+          costWarning: `NEGLIGIBLE COST (~$0.00): Covered by Cloud Workflows' 5,000 free steps/month tier.`,
+          impactWarning: `Triggers live execution of "${wfName}" in project "${projectId}".`,
+        };
+      }
+    }
+
+    if (rawUrl.includes('/data-fabric/rag-loop')) {
+      const stage = String(body.stage || '');
+      if (stage === 'UPLOAD_GCS_DOC') {
+        const b = body.bucketName || 'target-bucket';
+        const f = body.docFilename || 'cloudpulse-rag-brief.md';
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Upload RAG Source Document to gs://${b}/docs/${f}?`,
+          laymanSummary: `In Plain English: Uploads your document to gs://${b}/docs/${f} via the live Cloud Storage JSON API so BigQuery Gemini 4 and AlloyDB SCaNN can index it.`,
+          headerBadge: 'Live RAG Loop — Stage 1 (Cloud Storage)',
+          targetLabel: 'Target GCS Object',
+          resourceKind: 'Cloud Storage Object (storage.googleapis.com/upload/storage/v1)',
+          targetName: `gs://${b}/docs/${f}`,
+          location: body.region || 'us-central1',
+          projectId,
+          method: 'UPLOAD GCS OBJECT',
+          endpoint: rawUrl,
+          confirmLabel: `Upload to gs://${b}/docs/${f}`,
+          cancelToast: 'Stage 1 GCS upload cancelled.',
+          whatHappensNext: `1. Streams your Markdown document directly to gs://${b}/docs/${f}.\n2. Returns the live GCS generation and md5Hash for Stage 2.`,
+          costWarning: `NEGLIGIBLE COST (~$0.00): Storing a few KB in Cloud Storage is well within the 5 GB Always-Free tier.`,
+          impactWarning: `Creates or overwrites gs://${b}/docs/${f}.`,
+        };
+      }
+      if (stage === 'RUN_BQ_GEMINI4') {
+        const ds = body.datasetId || 'target_dataset';
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Enrich with ${body.geminiModel || 'gemini-4-neon'} & Persist in BigQuery (${ds}.cloudpulse_rag_gold)?`,
+          laymanSummary: `In Plain English: Calls Vertex AI ${body.geminiModel || 'gemini-4-neon'} + text-embedding-005 (768-d) on your document and writes the enriched row into BigQuery table ${projectId}.${ds}.cloudpulse_rag_gold.`,
+          headerBadge: 'Live RAG Loop — Stage 2 (BigQuery + Gemini 4)',
+          targetLabel: 'Target BigQuery Table & Vertex AI Models',
+          resourceKind: 'BigQuery Table + Vertex AI (bigquery.googleapis.com + aiplatform.googleapis.com)',
+          targetName: `${projectId}.${ds}.cloudpulse_rag_gold`,
+          location: body.region || 'us-central1',
+          projectId,
+          method: 'ENRICH & WRITE BIGQUERY',
+          endpoint: rawUrl,
+          confirmLabel: `Run Gemini 4 + Write to BigQuery`,
+          cancelToast: 'Stage 2 BigQuery + Gemini 4 enrichment cancelled.',
+          whatHappensNext: `1. Generates a 2-sentence executive summary with ${body.geminiModel || 'gemini-4-neon'}.\n2. Generates a live 768-d vector with text-embedding-005.\n3. Upserts the row into ${projectId}.${ds}.cloudpulse_rag_gold.`,
+          costWarning: `LOW ON-DEMAND COST (<$0.001): Single-document Vertex AI inference + BigQuery Always-Free 1 TiB/mo query tier.`,
+          impactWarning: `Creates/updates table ${projectId}.${ds}.cloudpulse_rag_gold.`,
+        };
+      }
+      if (stage === 'LOAD_ALLOYDB_SCANN') {
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Index 768-d Vector into Local AlloyDB Omni SCaNN?`,
+          laymanSummary: `In Plain English: Connects to your running local AlloyDB Omni Docker container, creates public.cloudpulse_rag_docs + the Google SCaNN cosine index (idx_cloudpulse_rag_scann), and upserts your live 768-d vector.`,
+          headerBadge: 'Live RAG Loop — Stage 3 (AlloyDB Omni SCaNN)',
+          targetLabel: 'Local AlloyDB Omni Container',
+          resourceKind: 'PostgreSQL / AlloyDB SCaNN Index (127.0.0.1)',
+          targetName: `public.cloudpulse_rag_docs (idx_cloudpulse_rag_scann)`,
+          location: '127.0.0.1 (Local Docker)',
+          projectId,
+          method: 'UPSERT & BUILD SCANN INDEX',
+          endpoint: rawUrl,
+          confirmLabel: `Load & Build SCaNN Index`,
+          cancelToast: 'Stage 3 AlloyDB SCaNN indexing cancelled.',
+          whatHappensNext: `1. Auto-discovers your running alloydb-omni-dev port & credentials.\n2. Enables vector + alloydb_scann extensions and builds idx_cloudpulse_rag_scann.\n3. Upserts the live 768-d vector for sub-5ms semantic search.`,
+          costWarning: `ZERO CLOUD COST ($0.00): Runs 100% locally in your AlloyDB Omni Docker container.`,
+          impactWarning: `Creates/updates public.cloudpulse_rag_docs in local AlloyDB Omni.`,
+        };
+      }
+    }
+
     // 3G-13. BigQuery Dataset Billing Model Patch, Table Creation, Row Seeding & Live SQL Execution
     if (rawUrl.includes('/bigquery/')) {
       const bqSeedMatch = rawUrl.match(
@@ -5156,66 +5337,6 @@ function classifyDestructiveAxiosConfig(config) {
           whatHappensNext: `1. Inspects the live column schema of "${projectId}:${dsId}.${tblId}".\n2. Streams schema-matched rows via POST https://bigquery.googleapis.com/bigquery/v2/projects/${projectId}/datasets/${dsId}/tables/${tblId}/insertAll.`,
           costWarning: `ALWAYS-FREE STORAGE ELIGIBLE (~$0.00): Storing a few kilobytes of seed rows falls within BigQuery's 10 GiB/month Always-Free storage tier.`,
           impactWarning: `Appends rows into live BigQuery table "${dsId}.${tblId}" in project "${projectId}".`,
-        };
-      }
-      if (rawUrl.includes('/cve-patch')) {
-        const vmMatch = rawUrl.match(/\/vms\/([^/]+)\/cve-patch/);
-        const vmName = vmMatch ? decodeURIComponent(vmMatch[1]) : 'vm-instance';
-        const zone = body.zone || 'us-central1-a';
-        const mode = body.mode || 'APT_UPGRADE_SSH';
-        const pkgs = Array.isArray(body.packages) ? body.packages : [];
-        const isOsConfig = mode === 'OSCONFIG_PATCH_JOB';
-        return {
-          gateType: 'ONE_TAP_CLOUD_ACTION',
-          releaseTrack: 'GA',
-          title: isOsConfig
-            ? `Run Zero-SSH OS Config Patch Job on "${vmName}" (${zone})?`
-            : `Run Live "apt-get upgrade" on GCE VM "${vmName}" (${zone})?`,
-          laymanSummary: isOsConfig
-            ? `In Plain English: Submits a live Google Cloud VM Manager Patch Job (osconfig.googleapis.com/v1) via google-osconfig-agent to upgrade vulnerable apt packages on "${vmName}".`
-            : `In Plain English: Connects to "${vmName}" (${zone}) over SSH/IAP and runs "sudo apt-get update && sudo apt-get upgrade -y"${pkgs.length > 0 ? ` targeting ${pkgs.length} vulnerable package(s)` : ''} to remediate detected CVEs.`,
-          headerBadge: isOsConfig
-            ? 'GCE VM Manager — Zero-SSH OS Config Patch Job'
-            : 'GCE Live CVE Remediation — apt-get upgrade',
-          targetLabel: 'Target Compute Engine VM',
-          resourceKind: isOsConfig
-            ? 'OS Config Patch Job (osconfig.googleapis.com/v1)'
-            : 'GCE Guest OS Packages (apt-get upgrade via SSH/IAP)',
-          targetName: `${vmName} (${zone})`,
-          location: zone,
-          projectId,
-          method: isOsConfig ? 'EXECUTE OS CONFIG PATCH' : 'RUN APT UPGRADE',
-          endpoint: rawUrl,
-          confirmLabel: isOsConfig ? `Launch Patch Job on "${vmName}"` : `Run apt upgrade on "${vmName}"`,
-          cancelToast: `CVE remediation on "${vmName}" cancelled.`,
-          whatHappensNext: isOsConfig
-            ? `1. Calls POST osconfig.googleapis.com/v1/projects/${projectId}/patchJobs:execute with apt.type=UPGRADE.\n2. google-osconfig-agent upgrades vulnerable packages cleanly without SSH.`
-            : `1. Connects to ${vmName} via gcloud compute ssh (auto-falls back to Cloud IAP).\n2. Executes non-interactive apt-get update && apt-get upgrade.\n3. Streams the real apt transcript back to the CVE panel.`,
-          costWarning: `ZERO EXTRA CLOUD COST ($0.00): OS package upgrades via apt or OS Config Patch Jobs are included at no extra charge.`,
-          impactWarning: `Upgrades installed Linux packages on "${vmName}" (${zone}). Services using upgraded libraries may briefly restart.`,
-        };
-      }
-      if (rawUrl.includes('/finops/autopilot-matrix') && body.action === 'APPLY_LOG_EXCLUSION') {
-        const exName = body.exclusionName || 'cloudpulse-drop-noisy-debug-healthchecks';
-        const exFilter = body.exclusionFilter || 'severity="DEBUG"';
-        return {
-          gateType: 'ONE_TAP_CLOUD_ACTION',
-          releaseTrack: 'GA',
-          title: `Add Cloud Logging _Default Sink Exclusion "${exName}"?`,
-          laymanSummary: `In Plain English: Patches your project's _Default Cloud Logging sink in "${projectId}" to exclude noisy logs matching (${exFilter}) before ingestion, preventing $0.50/GiB logging overages.`,
-          headerBadge: 'Autonomous FinOps Autopilot — Live Log Sink Exclusion',
-          targetLabel: 'Target Cloud Logging Sink',
-          resourceKind: 'Cloud Logging Sink (logging.googleapis.com/v2)',
-          targetName: `projects/${projectId}/sinks/_Default`,
-          location: 'global',
-          projectId,
-          method: 'PATCH LOG SINK EXCLUSION',
-          endpoint: rawUrl,
-          confirmLabel: `Apply Exclusion "${exName}"`,
-          cancelToast: 'Cloud Logging _Default sink exclusion cancelled.',
-          whatHappensNext: `1. Fetches current _Default sink exclusions.\n2. Appends exclusion "${exName}" (${exFilter}) via PATCH logging.googleapis.com/v2/projects/${projectId}/sinks/_Default.`,
-          costWarning: `FINOPS SAVINGS ($0.50/GiB SAVED): Excluded log entries are dropped before ingestion and never incur Cloud Logging storage charges.`,
-          impactWarning: `Excluded logs will not be stored in _Default; error/warning/audit logs remain 100% untouched.`,
         };
       }
       if (rawUrl.includes('/bigquery/property-graph')) {
@@ -5262,122 +5383,6 @@ function classifyDestructiveAxiosConfig(config) {
             whatHappensNext: `1. Submits your standalone GoogleSQL GQL query to BigQuery Dremel.\n2. Auto-renders a Mermaid traversal graph and tabular results.`,
             costWarning: `ALWAYS-FREE TIER ELIGIBLE: Covered by BigQuery's 1 TiB/month Always-Free query tier.`,
             impactWarning: `Executes a read-only GQL traversal on ${projectId}.${ds}.${gName}.`,
-          };
-        }
-      }
-      if (rawUrl.includes('/data-fabric/orchestrate')) {
-        const wfAction = String(body.action || '');
-        const wfName = body.workflowName || 'cloudpulse-fabric-workflow';
-        const wfRegion = body.region || 'us-central1';
-        if (wfAction === 'DEPLOY_WORKFLOW') {
-          return {
-            gateType: 'ONE_TAP_CLOUD_ACTION',
-            releaseTrack: 'GA',
-            title: `Deploy Cloud Workflow "${wfName}" to ${wfRegion}?`,
-            laymanSummary: `In Plain English: Creates or updates a serverless Google Cloud Workflow named "${wfName}" in ${wfRegion} (${projectId}) using the compiled YAML pipeline.`,
-            headerBadge: 'Data Fabric Auto-Orchestrator — Live Cloud Workflows Deploy',
-            targetLabel: 'Target Cloud Workflow',
-            resourceKind: 'Cloud Workflow (workflows.googleapis.com/v1)',
-            targetName: `${projectId}/${wfRegion}/${wfName}`,
-            location: wfRegion,
-            projectId,
-            method: 'DEPLOY WORKFLOW',
-            endpoint: rawUrl,
-            confirmLabel: `Deploy Workflow "${wfName}"`,
-            cancelToast: 'Cloud Workflow deployment cancelled.',
-            whatHappensNext: `1. Calls workflows.googleapis.com/v1 to create (or PATCH if existing) "${wfName}" in ${wfRegion}.\n2. Returns the live Cloud Console URL so you can inspect or trigger executions.`,
-            costWarning: `FREE TIER ELIGIBLE: Cloud Workflows includes 5,000 free internal steps/month ($0.01 per 1,000 steps thereafter); idle deployed workflows cost $0.00/mo.`,
-            impactWarning: `Creates or updates Cloud Workflow "${wfName}" in project "${projectId}".`,
-          };
-        }
-        if (wfAction === 'EXECUTE_WORKFLOW') {
-          return {
-            gateType: 'ONE_TAP_CLOUD_ACTION',
-            releaseTrack: 'GA',
-            title: `Trigger Live Execution of Cloud Workflow "${wfName}"?`,
-            laymanSummary: `In Plain English: Starts a live serverless execution of "${wfName}" in ${wfRegion} (${projectId}) via workflowexecutions.googleapis.com/v1.`,
-            headerBadge: 'Data Fabric Auto-Orchestrator — Live Execution Trigger',
-            targetLabel: 'Target Cloud Workflow Execution',
-            resourceKind: 'Cloud Workflow Execution (workflowexecutions.googleapis.com/v1)',
-            targetName: `${projectId}/${wfRegion}/${wfName}`,
-            location: wfRegion,
-            projectId,
-            method: 'EXECUTE WORKFLOW',
-            endpoint: rawUrl,
-            confirmLabel: `Run "${wfName}" Now`,
-            cancelToast: 'Workflow execution cancelled.',
-            whatHappensNext: `1. Submits a new execution to workflowexecutions.googleapis.com/v1.\n2. Runs the live GCS + BigQuery steps serverlessly on Google Cloud.`,
-            costWarning: `NEGLIGIBLE COST (~$0.00): Covered by Cloud Workflows' 5,000 free steps/month tier.`,
-            impactWarning: `Triggers live execution of "${wfName}" in project "${projectId}".`,
-          };
-        }
-      }
-      if (rawUrl.includes('/data-fabric/rag-loop')) {
-        const stage = String(body.stage || '');
-        if (stage === 'UPLOAD_GCS_DOC') {
-          const b = body.bucketName || 'target-bucket';
-          const f = body.docFilename || 'cloudpulse-rag-brief.md';
-          return {
-            gateType: 'ONE_TAP_CLOUD_ACTION',
-            releaseTrack: 'GA',
-            title: `Upload RAG Source Document to gs://${b}/docs/${f}?`,
-            laymanSummary: `In Plain English: Uploads your document to gs://${b}/docs/${f} via the live Cloud Storage JSON API so BigQuery Gemini 4 and AlloyDB SCaNN can index it.`,
-            headerBadge: 'Live RAG Loop — Stage 1 (Cloud Storage)',
-            targetLabel: 'Target GCS Object',
-            resourceKind: 'Cloud Storage Object (storage.googleapis.com/upload/storage/v1)',
-            targetName: `gs://${b}/docs/${f}`,
-            location: body.region || 'us-central1',
-            projectId,
-            method: 'UPLOAD GCS OBJECT',
-            endpoint: rawUrl,
-            confirmLabel: `Upload to gs://${b}/docs/${f}`,
-            cancelToast: 'Stage 1 GCS upload cancelled.',
-            whatHappensNext: `1. Streams your Markdown document directly to gs://${b}/docs/${f}.\n2. Returns the live GCS generation and md5Hash for Stage 2.`,
-            costWarning: `NEGLIGIBLE COST (~$0.00): Storing a few KB in Cloud Storage is well within the 5 GB Always-Free tier.`,
-            impactWarning: `Creates or overwrites gs://${b}/docs/${f}.`,
-          };
-        }
-        if (stage === 'RUN_BQ_GEMINI4') {
-          const ds = body.datasetId || 'target_dataset';
-          return {
-            gateType: 'ONE_TAP_CLOUD_ACTION',
-            releaseTrack: 'GA',
-            title: `Enrich with ${body.geminiModel || 'gemini-4-neon'} & Persist in BigQuery (${ds}.cloudpulse_rag_gold)?`,
-            laymanSummary: `In Plain English: Calls Vertex AI ${body.geminiModel || 'gemini-4-neon'} + text-embedding-005 (768-d) on your document and writes the enriched row into BigQuery table ${projectId}.${ds}.cloudpulse_rag_gold.`,
-            headerBadge: 'Live RAG Loop — Stage 2 (BigQuery + Gemini 4)',
-            targetLabel: 'Target BigQuery Table & Vertex AI Models',
-            resourceKind: 'BigQuery Table + Vertex AI (bigquery.googleapis.com + aiplatform.googleapis.com)',
-            targetName: `${projectId}.${ds}.cloudpulse_rag_gold`,
-            location: body.region || 'us-central1',
-            projectId,
-            method: 'ENRICH & WRITE BIGQUERY',
-            endpoint: rawUrl,
-            confirmLabel: `Run Gemini 4 + Write to BigQuery`,
-            cancelToast: 'Stage 2 BigQuery + Gemini 4 enrichment cancelled.',
-            whatHappensNext: `1. Generates a 2-sentence executive summary with ${body.geminiModel || 'gemini-4-neon'}.\n2. Generates a live 768-d vector with text-embedding-005.\n3. Upserts the row into ${projectId}.${ds}.cloudpulse_rag_gold.`,
-            costWarning: `LOW ON-DEMAND COST (<$0.001): Single-document Vertex AI inference + BigQuery Always-Free 1 TiB/mo query tier.`,
-            impactWarning: `Creates/updates table ${projectId}.${ds}.cloudpulse_rag_gold.`,
-          };
-        }
-        if (stage === 'LOAD_ALLOYDB_SCANN') {
-          return {
-            gateType: 'ONE_TAP_CLOUD_ACTION',
-            releaseTrack: 'GA',
-            title: `Index 768-d Vector into Local AlloyDB Omni SCaNN?`,
-            laymanSummary: `In Plain English: Connects to your running local AlloyDB Omni Docker container, creates public.cloudpulse_rag_docs + the Google SCaNN cosine index (idx_cloudpulse_rag_scann), and upserts your live 768-d vector.`,
-            headerBadge: 'Live RAG Loop — Stage 3 (AlloyDB Omni SCaNN)',
-            targetLabel: 'Local AlloyDB Omni Container',
-            resourceKind: 'PostgreSQL / AlloyDB SCaNN Index (127.0.0.1)',
-            targetName: `public.cloudpulse_rag_docs (idx_cloudpulse_rag_scann)`,
-            location: '127.0.0.1 (Local Docker)',
-            projectId,
-            method: 'UPSERT & BUILD SCANN INDEX',
-            endpoint: rawUrl,
-            confirmLabel: `Load & Build SCaNN Index`,
-            cancelToast: 'Stage 3 AlloyDB SCaNN indexing cancelled.',
-            whatHappensNext: `1. Auto-discovers your running alloydb-omni-dev port & credentials.\n2. Enables vector + alloydb_scann extensions and builds idx_cloudpulse_rag_scann.\n3. Upserts the live 768-d vector for sub-5ms semantic search.`,
-            costWarning: `ZERO CLOUD COST ($0.00): Runs 100% locally in your AlloyDB Omni Docker container.`,
-            impactWarning: `Creates/updates public.cloudpulse_rag_docs in local AlloyDB Omni.`,
           };
         }
       }
