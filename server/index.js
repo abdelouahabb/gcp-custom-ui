@@ -6265,6 +6265,357 @@ async function installGceAgentsOnSingleVm({
   };
 }
 
+// GCE Live CVE Vulnerability Scanner (OS Config Agent vulnerabilityReport + inventory, with live SSH apt-get -s upgrade fallback)
+app.post('/api/project/:projectId/vms/:vmName/cve-scan', async (req, res) => {
+  const { projectId, vmName } = req.params;
+  const { zone = 'us-central1-a', allowSshFallback = true } = req.body || {};
+  const startedAt = Date.now();
+
+  if (
+    !/^[a-z0-9][-a-z0-9._]*$/i.test(projectId) ||
+    !/^[a-z0-9][-a-z0-9]*$/i.test(vmName) ||
+    !/^[a-z0-9][-a-z0-9]*$/i.test(zone)
+  ) {
+    return res.status(400).json({ error: 'Invalid projectId, vmName, or zone.' });
+  }
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    const encProj = encodeURIComponent(projectId);
+    const encZone = encodeURIComponent(zone);
+    const encVm = encodeURIComponent(vmName);
+
+    const [vulnRes, invRes, vmRes] = await Promise.all([
+      gcpFetch(
+        `https://osconfig.googleapis.com/v1/projects/${encProj}/locations/${encZone}/instances/${encVm}/vulnerabilityReport`,
+        token,
+        projectId,
+        { timeout: 10000 }
+      ).catch((e) => ({ __err: e })),
+      gcpFetch(
+        `https://osconfig.googleapis.com/v1/projects/${encProj}/locations/${encZone}/instances/${encVm}/inventory?view=FULL`,
+        token,
+        projectId,
+        { timeout: 10000 }
+      ).catch((e) => ({ __err: e })),
+      gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encProj}/zones/${encZone}/instances/${encVm}`,
+        token,
+        projectId,
+        { timeout: 8000 }
+      ).catch(() => null),
+    ]);
+
+    const vmStatus = vmRes?.status || 'UNKNOWN';
+    const metaItems = Array.isArray(vmRes?.metadata?.items) ? vmRes.metadata.items : [];
+    const osConfigMetadataEnabled = metaItems.some(
+      (i) => i.key === 'enable-osconfig' && String(i.value || '').toUpperCase() === 'TRUE'
+    );
+
+    const hasOsConfigVuln = Boolean(vulnRes && !vulnRes.__err);
+    const hasOsConfigInv = Boolean(invRes && !invRes.__err);
+
+    let osInfo = null;
+    let installedPackageCount = 0;
+    if (hasOsConfigInv) {
+      const oi = invRes.osInfo || {};
+      osInfo = {
+        hostname: oi.hostname || vmName,
+        longName: oi.longName || oi.shortName || 'Linux',
+        shortName: oi.shortName || 'linux',
+        version: oi.version || '',
+        kernelVersion: oi.kernelVersion || '',
+        osconfigAgentVersion: oi.osconfigAgentVersion || 'installed',
+        updateTime: invRes.updateTime || null,
+      };
+      const itemsObj = invRes.items || {};
+      installedPackageCount = Object.values(itemsObj).filter((it) => Boolean(it?.installedPackage)).length;
+    }
+
+    const vulnerabilities = [];
+    const upgradableSet = new Set();
+
+    if (hasOsConfigVuln) {
+      const rawVulns = Array.isArray(vulnRes.vulnerabilities) ? vulnRes.vulnerabilities : [];
+      for (const v of rawVulns) {
+        const d = v.details || {};
+        const cveId = d.cve || 'CVE-UNKNOWN';
+        const severity = String(d.severity || 'MEDIUM').toUpperCase();
+        const cvssV3Score = Number(d?.cvssV3?.baseScore ?? d.cvssV2Score ?? 0);
+        const desc = String(d.description || '').slice(0, 260);
+        const refUrl = d?.references?.[0]?.url || `https://nvd.nist.gov/vuln/detail/${encodeURIComponent(cveId)}`;
+        const affected = Array.isArray(d.affectedPackages) ? d.affectedPackages : [];
+        if (affected.length === 0) {
+          vulnerabilities.push({
+            cveId,
+            severity,
+            cvssV3Score,
+            packageName: 'os-package',
+            installedVersion: '—',
+            fixedVersion: 'available',
+            packageType: 'apt',
+            description: desc,
+            referenceUrl: refUrl,
+          });
+        } else {
+          for (const pkg of affected) {
+            const pName = pkg.packageName || 'unknown';
+            if (pName && /^[a-z0-9][a-z0-9.+_-]*$/i.test(pName)) upgradableSet.add(pName);
+            vulnerabilities.push({
+              cveId,
+              severity,
+              cvssV3Score,
+              packageName: pName,
+              installedVersion: pkg.installedVersion || '—',
+              fixedVersion: pkg.fixedVersion || 'latest',
+              packageType: pkg.packageType || 'apt',
+              description: desc,
+              referenceUrl: refUrl,
+            });
+          }
+        }
+      }
+      vulnerabilities.sort((a, b) => b.cvssV3Score - a.cvssV3Score);
+    }
+
+    // Live SSH apt package comparison fallback when OS Config Agent hasn't reported yet
+    let sshAptPackages = [];
+    let sshCheckNote = null;
+    if (!hasOsConfigVuln && allowSshFallback && vmStatus === 'RUNNING') {
+      const checkCmd =
+        'OSCONFIG=$(systemctl is-active google-osconfig-agent 2>/dev/null || echo inactive); ' +
+        'INSTALLED=$(dpkg-query -f "${Package}\\n" -W 2>/dev/null | wc -l || echo 0); ' +
+        'echo "OSCONFIG=$OSCONFIG"; echo "INSTALLED=$INSTALLED"; ' +
+        'apt list --upgradable 2>/dev/null | tail -n +2 | head -n 40';
+
+      const runSsh = (useIap) =>
+        new Promise((resolve, reject) => {
+          execFile(
+            'gcloud',
+            [
+              'compute',
+              'ssh',
+              vmName,
+              `--zone=${zone}`,
+              `--project=${projectId}`,
+              ...(useIap ? ['--tunnel-through-iap'] : []),
+              `--command=${checkCmd}`,
+              '--quiet',
+              '--ssh-flag=-o ConnectTimeout=8 -o StrictHostKeyChecking=no',
+            ],
+            { env: ATTRIBUTION_ENV, timeout: 25000, maxBuffer: 4 * 1024 * 1024 },
+            (err, stdout, stderr) => {
+              if (err) return reject(err);
+              resolve(String(stdout || ''));
+            }
+          );
+        });
+
+      try {
+        let out = '';
+        try {
+          out = await runSsh(false);
+        } catch {
+          out = await runSsh(true);
+        }
+        const lines = out.split('\n').map((l) => l.trim()).filter(Boolean);
+        const instLine = lines.find((l) => l.startsWith('INSTALLED='));
+        if (instLine) installedPackageCount = Number(instLine.split('=')[1]) || installedPackageCount;
+        const osLine = lines.find((l) => l.startsWith('OSCONFIG='));
+        const osAgentSvc = osLine ? osLine.split('=')[1] : 'inactive';
+        const pkgLines = lines.filter((l) => l.includes('/') && l.includes('[upgradable from:'));
+        for (const pl of pkgLines) {
+          const pkgName = pl.split('/')[0].trim();
+          const verMatch = pl.match(/\s([^\s]+)\s+\S+\s+\[upgradable from:\s*([^\]]+)\]/);
+          const candidateVer = verMatch ? verMatch[1] : 'latest';
+          const currentVer = verMatch ? verMatch[2] : 'installed';
+          const isSecurity = /security/i.test(pl);
+          if (pkgName && /^[a-z0-9][a-z0-9.+_-]*$/i.test(pkgName)) upgradableSet.add(pkgName);
+          sshAptPackages.push({
+            cveId: isSecurity ? 'SECURITY-ADVISORY' : 'APT-UPGRADE',
+            severity: isSecurity ? 'HIGH' : 'MEDIUM',
+            cvssV3Score: isSecurity ? 7.5 : 4.0,
+            packageName: pkgName,
+            installedVersion: currentVer,
+            fixedVersion: candidateVer,
+            packageType: 'apt',
+            description: pl.slice(0, 200),
+            referenceUrl: `https://security-tracker.debian.org/tracker/source-package/${encodeURIComponent(pkgName)}`,
+          });
+        }
+        sshCheckNote = `Live SSH apt package comparison succeeded (google-osconfig-agent: ${osAgentSvc}; ${installedPackageCount} installed packages inspected).`;
+      } catch {
+        sshCheckNote = 'OS Config Vulnerability Report not yet populated and live SSH fallback was unreachable.';
+      }
+    }
+
+    const finalVulns = hasOsConfigVuln ? vulnerabilities : sshAptPackages;
+    const severityCounts = {
+      CRITICAL: finalVulns.filter((v) => v.severity === 'CRITICAL').length,
+      HIGH: finalVulns.filter((v) => v.severity === 'HIGH').length,
+      MEDIUM: finalVulns.filter((v) => v.severity === 'MEDIUM').length,
+      LOW: finalVulns.filter((v) => v.severity === 'LOW').length,
+      TOTAL: finalVulns.length,
+    };
+
+    const agentStatus = hasOsConfigVuln
+      ? 'ACTIVE_OSCONFIG'
+      : sshAptPackages.length > 0 || (sshCheckNote && sshCheckNote.includes('succeeded'))
+      ? 'SSH_APT_CHECK'
+      : 'AGENT_NOT_INSTALLED';
+
+    return res.json({
+      ok: true,
+      projectId,
+      vmName,
+      zone,
+      vmStatus,
+      agentStatus,
+      osConfigMetadataEnabled,
+      osConfigError: !hasOsConfigVuln ? vulnRes?.__err?.message || null : null,
+      sshCheckNote,
+      osInfo,
+      installedPackageCount,
+      severityCounts,
+      upgradablePackages: Array.from(upgradableSet),
+      vulnerabilities: finalVulns.slice(0, 50),
+      updateTime: vulnRes?.updateTime || osInfo?.updateTime || new Date().toISOString(),
+      durationMs: Date.now() - startedAt,
+    });
+  } catch (err) {
+    return res.status(err?.status || 500).json({
+      error: err?.message || `Failed to scan CVEs on VM ${vmName}.`,
+    });
+  }
+});
+
+// GCE Live CVE Remediation: either live `sudo apt-get update && apt-get upgrade -y` (SSH/IAP) or Zero-SSH OS Config Patch Job
+app.post('/api/project/:projectId/vms/:vmName/cve-patch', async (req, res) => {
+  const { projectId, vmName } = req.params;
+  const {
+    zone = 'us-central1-a',
+    mode = 'APT_UPGRADE_SSH', // APT_UPGRADE_SSH | OSCONFIG_PATCH_JOB
+    packages = [],
+  } = req.body || {};
+  const startedAt = Date.now();
+
+  if (
+    !/^[a-z0-9][-a-z0-9._]*$/i.test(projectId) ||
+    !/^[a-z0-9][-a-z0-9]*$/i.test(vmName) ||
+    !/^[a-z0-9][-a-z0-9]*$/i.test(zone)
+  ) {
+    return res.status(400).json({ error: 'Invalid projectId, vmName, or zone.' });
+  }
+
+  const safePackages = (Array.isArray(packages) ? packages : [])
+    .map((p) => String(p || '').trim())
+    .filter((p) => /^[a-z0-9][a-z0-9.+_-]*$/i.test(p))
+    .slice(0, 40);
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+
+    if (mode === 'OSCONFIG_PATCH_JOB') {
+      const patchBody = {
+        description: `CloudPulse 2026 CVE Remediation Patch Job on ${vmName} (${zone})`,
+        instanceFilter: {
+          instances: [`zones/${zone}/instances/${vmName}`],
+        },
+        patchConfig: {
+          rebootConfig: 'DEFAULT',
+          apt: {
+            type: 'UPGRADE',
+            ...(safePackages.length > 0 ? { exclusivePackages: safePackages } : {}),
+          },
+        },
+        duration: '1800s',
+      };
+      const jobRes = await gcpFetch(
+        `https://osconfig.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/patchJobs:execute`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: patchBody,
+          timeout: 15000,
+        }
+      );
+      const patchJobId = String(jobRes?.name || '').split('/').pop() || '';
+      return res.json({
+        ok: true,
+        mode: 'OSCONFIG_PATCH_JOB',
+        vmName,
+        zone,
+        patchJobId,
+        state: jobRes?.state || 'STARTED',
+        consoleUrl: `https://console.cloud.google.com/compute/patchDeployments?project=${encodeURIComponent(projectId)}`,
+        output: `Submitted live OS Config Patch Job "${patchJobId}" (${jobRes?.state || 'STARTED'}) targeting zones/${zone}/instances/${vmName} with apt.type=UPGRADE${safePackages.length > 0 ? ` (${safePackages.join(', ')})` : ' (all upgradable packages)'}.`,
+        durationMs: Date.now() - startedAt,
+      });
+    }
+
+    // Mode: APT_UPGRADE_SSH (Live apt-get update && apt-get upgrade -y via gcloud compute ssh with IAP fallback)
+    const upgradeCmd =
+      safePackages.length > 0
+        ? `sudo DEBIAN_FRONTEND=noninteractive apt-get update -y && sudo DEBIAN_FRONTEND=noninteractive apt-get install --only-upgrade -y ${safePackages.join(' ')}`
+        : 'sudo DEBIAN_FRONTEND=noninteractive apt-get update -y && sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y';
+
+    const runSshPatch = (useIap) =>
+      new Promise((resolve, reject) => {
+        execFile(
+          'gcloud',
+          [
+            'compute',
+            'ssh',
+            vmName,
+            `--zone=${zone}`,
+            `--project=${projectId}`,
+            ...(useIap ? ['--tunnel-through-iap'] : []),
+            `--command=${upgradeCmd}`,
+            '--quiet',
+            '--ssh-flag=-o ConnectTimeout=10 -o StrictHostKeyChecking=no',
+          ],
+          { env: ATTRIBUTION_ENV, timeout: 120000, maxBuffer: 8 * 1024 * 1024 },
+          (err, stdout, stderr) => {
+            if (err) {
+              err.stdout = stdout;
+              err.stderr = stderr;
+              return reject(err);
+            }
+            resolve({ stdout: String(stdout || ''), stderr: String(stderr || ''), usedIap: useIap });
+          }
+        );
+      });
+
+    let sshRes;
+    try {
+      sshRes = await runSshPatch(false);
+    } catch {
+      sshRes = await runSshPatch(true);
+    }
+    const combinedOutput = [sshRes.stdout, sshRes.stderr].filter(Boolean).join('\n').trim();
+    return res.json({
+      ok: true,
+      mode: 'APT_UPGRADE_SSH',
+      vmName,
+      zone,
+      usedIap: sshRes.usedIap,
+      commandExecuted: upgradeCmd,
+      output: combinedOutput.slice(-4000) || 'apt-get upgrade completed with exit code 0.',
+      durationMs: Date.now() - startedAt,
+    });
+  } catch (err) {
+    return res.status(err?.status || 500).json({
+      error: err?.message || `Failed to patch CVEs on VM ${vmName}.`,
+      output: [err?.stdout, err?.stderr].filter(Boolean).join('\n').slice(-2000) || undefined,
+    });
+  }
+});
+
 app.post(
   '/api/project/:projectId/vms/:vmName/install-agent',
   async (req, res) => {

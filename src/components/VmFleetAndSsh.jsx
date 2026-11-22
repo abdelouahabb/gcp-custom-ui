@@ -17,6 +17,7 @@ import {
   Trash2,
   Zap,
   ShieldCheck,
+  ShieldAlert,
   Sliders,
   Lock,
   Unlock,
@@ -1551,6 +1552,76 @@ export default function VmFleetAndSsh({
       }
     } finally {
       setScheduleBusyVm('');
+    }
+  };
+
+  // Live GCE CVE Vulnerability Scanner & 1-Click apt upgrade / OS Config Patcher state
+  const [openCveVm, setOpenCveVm] = useState('');
+  const [cveScanBusyVm, setCveScanBusyVm] = useState('');
+  const [cvePatchBusyVm, setCvePatchBusyVm] = useState('');
+  const [cveReportByVm, setCveReportByVm] = useState({});
+  const [cvePatchReceiptByVm, setCvePatchReceiptByVm] = useState({});
+
+  const handleScanVmCves = async (vm, toggleDrawer = true) => {
+    if (!vm?.name || !projectId) return;
+    if (toggleDrawer && openCveVm === vm.name && cveReportByVm[vm.name]) {
+      setOpenCveVm('');
+      return;
+    }
+    setOpenCveVm(vm.name);
+    setCveScanBusyVm(vm.name);
+    try {
+      const { data } = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(vm.name)}/cve-scan`,
+        { zone: vm.region || vm.zone || 'us-central1-a', allowSshFallback: true }
+      );
+      setCveReportByVm((prev) => ({ ...prev, [vm.name]: data }));
+      if (onShowToast) {
+        onShowToast(
+          `CVE scan on ${vm.name}: ${data.severityCounts?.TOTAL || 0} finding(s) (${data.severityCounts?.CRITICAL || 0} CRITICAL, ${data.severityCounts?.HIGH || 0} HIGH) · ${data.installedPackageCount || 0} installed packages checked.`,
+          'info'
+        );
+      }
+    } catch (err) {
+      if (onShowError) {
+        onShowError(err.response?.data?.error || err.message || `Failed to scan CVEs on ${vm.name}.`);
+      }
+    } finally {
+      setCveScanBusyVm('');
+    }
+  };
+
+  const handlePatchVmCves = async (vm, mode = 'APT_UPGRADE_SSH', packages = []) => {
+    if (!vm?.name || !projectId || cvePatchBusyVm) return;
+    setCvePatchBusyVm(`${vm.name}:${mode}`);
+    try {
+      const { data } = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(vm.name)}/cve-patch`,
+        {
+          zone: vm.region || vm.zone || 'us-central1-a',
+          mode,
+          packages,
+        }
+      );
+      setCvePatchReceiptByVm((prev) => ({ ...prev, [vm.name]: data }));
+      if (onShowToast) {
+        onShowToast(
+          mode === 'OSCONFIG_PATCH_JOB'
+            ? `OS Config Patch Job ${data.patchJobId} started on ${vm.name}!`
+            : `Live apt-get upgrade completed on ${vm.name} (${data.durationMs}ms)!`,
+          'success'
+        );
+      }
+      if (mode === 'APT_UPGRADE_SSH') {
+        handleScanVmCves(vm, false);
+      }
+    } catch (err) {
+      if (err?.code === 'CLOUDPULSE_DESTRUCTIVE_CANCELLED') return;
+      if (onShowError) {
+        onShowError(err.response?.data?.error || err.message || `Failed to patch CVEs on ${vm.name}.`);
+      }
+    } finally {
+      setCvePatchBusyVm('');
     }
   };
 
@@ -3612,7 +3683,234 @@ export default function VmFleetAndSsh({
                           {openCloudRunBridgeVm === vm.name ? '● ON' : 'OFF'}
                         </span>
                       </button>
+
+                      <button
+                        type="button"
+                        disabled={isDeleting || cveScanBusyVm === vm.name}
+                        onClick={() => handleScanVmCves(vm, true)}
+                        title="Check latest CVEs via google-osconfig-agent (OS Config Vulnerability Report + installed package comparison) and fix via 1-click apt upgrade or Zero-SSH Patch Job"
+                        className={`w-full h-9 inline-flex items-center justify-between gap-1.5 rounded-lg px-2.5 text-[11px] font-bold transition-all cursor-pointer disabled:opacity-40 ${
+                          openCveVm === vm.name
+                            ? 'bg-amber-500 text-zinc-950 border-2 border-amber-500 shadow-sm'
+                            : 'bg-white dark:bg-zinc-900/90 text-amber-700 dark:text-amber-300 border-2 border-amber-500/45 hover:border-amber-500 hover:bg-amber-500/10'
+                        }`}
+                      >
+                        <span className="inline-flex items-center gap-1.5 min-w-0">
+                          {cveScanBusyVm === vm.name ? (
+                            <RefreshCw className="w-3.5 h-3.5 shrink-0 animate-spin" />
+                          ) : (
+                            <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span className="truncate">CVE Audit &amp; apt fix</span>
+                        </span>
+                        <span
+                          className={`text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0 ${
+                            openCveVm === vm.name
+                              ? 'bg-black/15 text-zinc-950'
+                              : 'bg-amber-500/15 text-amber-800 dark:text-amber-200 border border-amber-500/30'
+                          }`}
+                        >
+                          {cveReportByVm[vm.name]
+                            ? `${cveReportByVm[vm.name].severityCounts?.TOTAL || 0} CVE`
+                            : 'SCAN'}
+                        </span>
+                      </button>
                     </div>
+
+                    {/* Inline Live GCE CVE Vulnerability Scanner & 1-Click apt upgrade Panel */}
+                    {openCveVm === vm.name && (
+                      <div className="mt-2.5 p-3 rounded-xl border border-amber-500/40 bg-amber-500/[0.04] dark:bg-zinc-950/80 space-y-2.5 text-xs">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="font-extrabold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                            <ShieldAlert className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                            <span>Live CVE &amp; Installed Package Audit ({vm.name})</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              disabled={cveScanBusyVm === vm.name}
+                              onClick={() => handleScanVmCves(vm, false)}
+                              className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-[10.5px] font-mono font-bold text-zinc-800 dark:text-zinc-200 inline-flex items-center gap-1 cursor-pointer"
+                            >
+                              <RefreshCw className={`w-3 h-3 ${cveScanBusyVm === vm.name ? 'animate-spin' : ''}`} />
+                              Re-Scan
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setOpenCveVm('')}
+                              className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-[10.5px] font-mono text-zinc-600 dark:text-zinc-400 cursor-pointer"
+                            >
+                              Close
+                            </button>
+                          </div>
+                        </div>
+
+                        {cveScanBusyVm === vm.name && !cveReportByVm[vm.name] ? (
+                          <div className="py-3 font-mono text-[11px] text-amber-700 dark:text-amber-300 flex items-center gap-2">
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            <span>Querying OS Config Vulnerability Report &amp; comparing installed packages...</span>
+                          </div>
+                        ) : cveReportByVm[vm.name] ? (
+                          (() => {
+                            const rep = cveReportByVm[vm.name];
+                            const sc = rep.severityCounts || { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0, TOTAL: 0 };
+                            const receipt = cvePatchReceiptByVm[vm.name];
+                            return (
+                              <div className="space-y-2.5">
+                                {/* Agent & OS Status Strip */}
+                                <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 font-mono text-[10.5px]">
+                                  <div className="space-y-0.5">
+                                    <div className="font-bold text-zinc-900 dark:text-zinc-100">
+                                      Agent:{' '}
+                                      <span
+                                        className={
+                                          rep.agentStatus === 'ACTIVE_OSCONFIG'
+                                            ? 'text-emerald-600 dark:text-emerald-400'
+                                            : rep.agentStatus === 'SSH_APT_CHECK'
+                                            ? 'text-amber-600 dark:text-amber-400'
+                                            : 'text-red-500'
+                                        }
+                                      >
+                                        {rep.agentStatus === 'ACTIVE_OSCONFIG'
+                                          ? `google-osconfig-agent ACTIVE (${rep.osInfo?.osconfigAgentVersion || 'v1'})`
+                                          : rep.agentStatus === 'SSH_APT_CHECK'
+                                          ? 'Live SSH apt package check (OS Config syncing)'
+                                          : 'OS Config Agent Not Detected'}
+                                      </span>
+                                    </div>
+                                    <div className="text-zinc-500">
+                                      {rep.osInfo?.longName || 'Linux Guest'} · {rep.installedPackageCount || 0} installed packages compared
+                                    </div>
+                                  </div>
+                                  {rep.agentStatus !== 'ACTIVE_OSCONFIG' && (
+                                    <button
+                                      type="button"
+                                      disabled={Boolean(installingVmAgent)}
+                                      onClick={() => handleInstallGceAgentOnVm(vm, ['OS_CONFIG_AGENT', 'OPS_AGENT'], true)}
+                                      className="px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-[10.5px] cursor-pointer"
+                                    >
+                                      Install OS Config Agent
+                                    </button>
+                                  )}
+                                </div>
+
+                                {/* Severity KPI Strip */}
+                                <div className="grid grid-cols-4 gap-1.5 text-center font-mono text-[10.5px]">
+                                  <div className="p-1.5 rounded bg-red-500/15 border border-red-500/30 text-red-700 dark:text-red-300 font-bold">
+                                    CRIT: {sc.CRITICAL}
+                                  </div>
+                                  <div className="p-1.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 font-bold">
+                                    HIGH: {sc.HIGH}
+                                  </div>
+                                  <div className="p-1.5 rounded bg-blue-500/15 border border-blue-500/30 text-blue-700 dark:text-blue-300 font-bold">
+                                    MED: {sc.MEDIUM}
+                                  </div>
+                                  <div className="p-1.5 rounded bg-zinc-500/15 border border-zinc-500/30 text-zinc-700 dark:text-zinc-300 font-bold">
+                                    LOW: {sc.LOW}
+                                  </div>
+                                </div>
+
+                                {/* 1-Click Fix Buttons */}
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <button
+                                    type="button"
+                                    disabled={Boolean(cvePatchBusyVm) || vm.status !== 'RUNNING'}
+                                    onClick={() =>
+                                      handlePatchVmCves(
+                                        vm,
+                                        'APT_UPGRADE_SSH',
+                                        rep.upgradablePackages?.length > 0 ? rep.upgradablePackages : []
+                                      )
+                                    }
+                                    className="flex-1 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-[11px] font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                                  >
+                                    {cvePatchBusyVm === `${vm.name}:APT_UPGRADE_SSH` ? (
+                                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                      <Terminal className="w-3.5 h-3.5" />
+                                    )}
+                                    <span>
+                                      {cvePatchBusyVm === `${vm.name}:APT_UPGRADE_SSH`
+                                        ? 'Running apt-get upgrade...'
+                                        : rep.upgradablePackages?.length > 0
+                                        ? `Fix ${rep.upgradablePackages.length} Pkg(s) via apt upgrade`
+                                        : 'Run Live apt-get upgrade -y'}
+                                    </span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={Boolean(cvePatchBusyVm)}
+                                    onClick={() =>
+                                      handlePatchVmCves(
+                                        vm,
+                                        'OSCONFIG_PATCH_JOB',
+                                        rep.upgradablePackages?.length > 0 ? rep.upgradablePackages : []
+                                      )
+                                    }
+                                    className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                                  >
+                                    {cvePatchBusyVm === `${vm.name}:OSCONFIG_PATCH_JOB` ? (
+                                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                      <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
+                                    )}
+                                    <span>Zero-SSH Patch Job</span>
+                                  </button>
+                                </div>
+
+                                {/* Live CVE List */}
+                                {Array.isArray(rep.vulnerabilities) && rep.vulnerabilities.length > 0 ? (
+                                  <div className="max-h-44 overflow-auto border border-zinc-200 dark:border-zinc-800 rounded-lg">
+                                    <table className="w-full text-left text-[10.5px] font-mono">
+                                      <thead className="bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 sticky top-0">
+                                        <tr>
+                                          <th className="px-2 py-1">CVE</th>
+                                          <th className="px-2 py-1">Sev</th>
+                                          <th className="px-2 py-1">Package</th>
+                                          <th className="px-2 py-1">Installed → Fix</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                                        {rep.vulnerabilities.slice(0, 20).map((v, idx) => (
+                                          <tr key={`${v.cveId}-${v.packageName}-${idx}`}>
+                                            <td className="px-2 py-1">
+                                              <a
+                                                href={v.referenceUrl}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="text-blue-600 dark:text-blue-400 hover:underline font-bold"
+                                              >
+                                                {v.cveId}
+                                              </a>
+                                            </td>
+                                            <td className="px-2 py-1 font-bold">{v.severity}</td>
+                                            <td className="px-2 py-1">{v.packageName}</td>
+                                            <td className="px-2 py-1 text-zinc-500 truncate max-w-[140px]" title={`${v.installedVersion} -> ${v.fixedVersion}`}>
+                                              {v.installedVersion} → {v.fixedVersion}
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                ) : (
+                                  <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 font-mono text-[10.5px] text-emerald-700 dark:text-emerald-300">
+                                    No open CVEs or upgradable security packages reported for {vm.name}.
+                                  </div>
+                                )}
+
+                                {/* Live Patch Execution Output */}
+                                {receipt?.output && (
+                                  <pre className="p-2.5 rounded-lg bg-zinc-950 text-emerald-300 font-mono text-[10px] max-h-36 overflow-auto whitespace-pre-wrap">
+                                    {receipt.output}
+                                  </pre>
+                                )}
+                              </div>
+                            );
+                          })()
+                        ) : null}
+                      </div>
+                    )}
                   </div>
 
                   {/* PILLAR 2: 1-CLICK PERSISTENT DISK SNAPSHOT & CLONE VM TIME-MACHINE */}

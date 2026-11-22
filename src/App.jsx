@@ -2304,6 +2304,7 @@ function classifyDestructiveAxiosConfig(config) {
       (rawUrl.includes('/finops/autopilot-matrix') && body.action === 'SCAN') ||
       rawUrl.includes('/sre/agentic-commander') ||
       rawUrl.includes('/sovereign/compliance-blueprint') ||
+      rawUrl.includes('/cve-scan') ||
       (rawUrl.includes('/alloydb/execute-sql') &&
         String(body.mode || '').toUpperCase() === 'INTROSPECT_ALLOYDB') ||
       (rawUrl.includes('/cloudrun-bridge/action') &&
@@ -5155,6 +5156,43 @@ function classifyDestructiveAxiosConfig(config) {
           whatHappensNext: `1. Inspects the live column schema of "${projectId}:${dsId}.${tblId}".\n2. Streams schema-matched rows via POST https://bigquery.googleapis.com/bigquery/v2/projects/${projectId}/datasets/${dsId}/tables/${tblId}/insertAll.`,
           costWarning: `ALWAYS-FREE STORAGE ELIGIBLE (~$0.00): Storing a few kilobytes of seed rows falls within BigQuery's 10 GiB/month Always-Free storage tier.`,
           impactWarning: `Appends rows into live BigQuery table "${dsId}.${tblId}" in project "${projectId}".`,
+        };
+      }
+      if (rawUrl.includes('/cve-patch')) {
+        const vmMatch = rawUrl.match(/\/vms\/([^/]+)\/cve-patch/);
+        const vmName = vmMatch ? decodeURIComponent(vmMatch[1]) : 'vm-instance';
+        const zone = body.zone || 'us-central1-a';
+        const mode = body.mode || 'APT_UPGRADE_SSH';
+        const pkgs = Array.isArray(body.packages) ? body.packages : [];
+        const isOsConfig = mode === 'OSCONFIG_PATCH_JOB';
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: isOsConfig
+            ? `Run Zero-SSH OS Config Patch Job on "${vmName}" (${zone})?`
+            : `Run Live "apt-get upgrade" on GCE VM "${vmName}" (${zone})?`,
+          laymanSummary: isOsConfig
+            ? `In Plain English: Submits a live Google Cloud VM Manager Patch Job (osconfig.googleapis.com/v1) via google-osconfig-agent to upgrade vulnerable apt packages on "${vmName}".`
+            : `In Plain English: Connects to "${vmName}" (${zone}) over SSH/IAP and runs "sudo apt-get update && sudo apt-get upgrade -y"${pkgs.length > 0 ? ` targeting ${pkgs.length} vulnerable package(s)` : ''} to remediate detected CVEs.`,
+          headerBadge: isOsConfig
+            ? 'GCE VM Manager — Zero-SSH OS Config Patch Job'
+            : 'GCE Live CVE Remediation — apt-get upgrade',
+          targetLabel: 'Target Compute Engine VM',
+          resourceKind: isOsConfig
+            ? 'OS Config Patch Job (osconfig.googleapis.com/v1)'
+            : 'GCE Guest OS Packages (apt-get upgrade via SSH/IAP)',
+          targetName: `${vmName} (${zone})`,
+          location: zone,
+          projectId,
+          method: isOsConfig ? 'EXECUTE OS CONFIG PATCH' : 'RUN APT UPGRADE',
+          endpoint: rawUrl,
+          confirmLabel: isOsConfig ? `Launch Patch Job on "${vmName}"` : `Run apt upgrade on "${vmName}"`,
+          cancelToast: `CVE remediation on "${vmName}" cancelled.`,
+          whatHappensNext: isOsConfig
+            ? `1. Calls POST osconfig.googleapis.com/v1/projects/${projectId}/patchJobs:execute with apt.type=UPGRADE.\n2. google-osconfig-agent upgrades vulnerable packages cleanly without SSH.`
+            : `1. Connects to ${vmName} via gcloud compute ssh (auto-falls back to Cloud IAP).\n2. Executes non-interactive apt-get update && apt-get upgrade.\n3. Streams the real apt transcript back to the CVE panel.`,
+          costWarning: `ZERO EXTRA CLOUD COST ($0.00): OS package upgrades via apt or OS Config Patch Jobs are included at no extra charge.`,
+          impactWarning: `Upgrades installed Linux packages on "${vmName}" (${zone}). Services using upgraded libraries may briefly restart.`,
         };
       }
       if (rawUrl.includes('/finops/autopilot-matrix') && body.action === 'APPLY_LOG_EXCLUSION') {

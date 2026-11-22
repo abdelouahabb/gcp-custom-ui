@@ -2289,6 +2289,29 @@ const DOC_SECTIONS = [
     billingImpact:
       'All discovery scans, Terraform/Markdown dossier exports, and Keynote Autopilot cost $0.00; live _Default log sink exclusions actively reduce Cloud Logging spend ($0.50/GiB saved).',
   },
+  {
+    id: 'gce-live-cve-scanner-apt-upgrade',
+    wave: 'WAVE 33 GCE LIVE CVE VULNERABILITY SCANNER & 1-CLICK APT UPGRADE / OS CONFIG PATCHER',
+    title:
+      '61. GCE Live CVE Vulnerability Scanner & 1-Click apt upgrade / Zero-SSH OS Config Patcher (VmFleetAndSsh.jsx)',
+    badge: 'Compute Engine VM Fleet · google-osconfig-agent · vulnerabilityReport · apt upgrade · Zero-SSH Patch Job',
+    badgeColor:
+      'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
+    icon: Database,
+    targetTab: 'VM_SSH',
+    problemSolved:
+      'Compute Engine operators need an instant way on every VM card to check whether installed OS packages are exposed to the latest CVEs (when google-osconfig-agent is installed) and remediate them immediately via apt upgrade or a Zero-SSH OS Config Patch Job.',
+    howItWorks: [
+      'Live OS Config Vulnerability & Inventory Comparison (POST /api/project/:id/vms/:vmName/cve-scan): Queries osconfig.googleapis.com/v1 vulnerabilityReport + inventory?view=FULL to compare installed packages against live CVE advisories (CRITICAL/HIGH/MEDIUM/LOW, CVSSv3, installed -> fixed versions), with automatic SSH apt list --upgradable fallback and 1-click OS Config Agent install if not yet active.',
+      'Dual 1-Click Remediation (POST /api/project/:id/vms/:vmName/cve-patch): Remediate directly via live sudo apt-get update && apt-get install --only-upgrade -y over SSH/IAP (streaming the live apt transcript) OR launch a Zero-SSH Google Cloud OS Config Patch Job (patchJobs:execute), then auto re-scan.',
+    ],
+    apisUsed: [
+      'POST /api/project/:id/vms/:vmName/cve-scan (osconfig.googleapis.com/v1 vulnerabilityReport + inventory?view=FULL + SSH apt fallback)',
+      'POST /api/project/:id/vms/:vmName/cve-patch (osconfig.googleapis.com/v1 patchJobs:execute OR gcloud compute ssh apt-get upgrade)',
+    ],
+    billingImpact:
+      'OS Config vulnerability scanning, Patch Job execution, and live apt-get upgrades incur $0.00 extra GCP charges (gated by bespoke confirmation modals).',
+  },
 ];
 
 export default function InteractiveDocsGuide({
