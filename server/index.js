@@ -13686,6 +13686,298 @@ app.post('/api/project/:projectId/bigquery/grant-connection-sa-roles', async (re
   }
 });
 
+// 9a-scc-v2-mission-control. POST /api/project/:projectId/scc/vulnerabilities
+// Live Security Command Center API v2 (securitycenter.googleapis.com/v2) Vulnerability & Threat Mission Control
+// Actions: SCAN | SET_MUTE | SET_STATE | EXPORT_BQ | AI_REMEDIATE
+app.post('/api/project/:projectId/scc/vulnerabilities', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    action = 'SCAN', // SCAN | SET_MUTE | SET_STATE | EXPORT_BQ | AI_REMEDIATE
+    location = 'global',
+    findingClass = 'ALL', // ALL | VULNERABILITY | MISCONFIGURATION | THREAT | TOXIC_COMBINATION
+    findingName = '',
+    mute = 'MUTED',
+    state = 'INACTIVE',
+    datasetId = '',
+    findingPayload = null,
+    geminiModel = 'gemini-3.8-flash-cyber',
+  } = req.body || {};
+
+  const startedAt = Date.now();
+  const safeLocation = String(location || 'global').replace(/[^a-z0-9-]/gi, '') || 'global';
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
+
+    if (action === 'SET_MUTE') {
+      const cleanName = String(findingName || '').trim();
+      if (!cleanName || !cleanName.includes('/findings/')) {
+        return res.status(400).json({ error: 'Valid SCC v2 finding resource name is required.' });
+      }
+      const muteVal = mute === 'UNMUTED' ? 'UNMUTED' : 'MUTED';
+      const out = await gcpFetch(
+        `https://securitycenter.googleapis.com/v2/${cleanName}:setMute`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: { mute: muteVal },
+          timeout: 12000,
+        }
+      );
+      return res.json({
+        ok: true,
+        action: 'SET_MUTE',
+        findingName: cleanName,
+        mute: out?.mute || muteVal,
+        durationMs: Date.now() - startedAt,
+      });
+    }
+
+    if (action === 'SET_STATE') {
+      const cleanName = String(findingName || '').trim();
+      if (!cleanName || !cleanName.includes('/findings/')) {
+        return res.status(400).json({ error: 'Valid SCC v2 finding resource name is required.' });
+      }
+      const stateVal = state === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE';
+      const out = await gcpFetch(
+        `https://securitycenter.googleapis.com/v2/${cleanName}:setState`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: { state: stateVal },
+          timeout: 12000,
+        }
+      );
+      return res.json({
+        ok: true,
+        action: 'SET_STATE',
+        findingName: cleanName,
+        state: out?.state || stateVal,
+        durationMs: Date.now() - startedAt,
+      });
+    }
+
+    if (action === 'EXPORT_BQ') {
+      const safeDs = String(datasetId || '').trim();
+      if (!safeDs || !/^[a-zA-Z0-9_]+$/.test(safeDs)) {
+        return res.status(400).json({ error: 'Provide a valid BigQuery dataset ID for SCC v2 export.' });
+      }
+      const exportRes = await gcpFetch(
+        `https://securitycenter.googleapis.com/v2/projects/${encodeURIComponent(
+          projectId
+        )}/sources/-/locations/${encodeURIComponent(safeLocation)}/findings:export`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            filter: 'state="ACTIVE"',
+            bigQueryDestination: {
+              dataset: `projects/${projectId}/datasets/${safeDs}`,
+            },
+          },
+          timeout: 15000,
+        }
+      );
+      return res.json({
+        ok: true,
+        action: 'EXPORT_BQ',
+        dataset: `${projectId}.${safeDs}`,
+        operationName: exportRes?.name || null,
+        durationMs: Date.now() - startedAt,
+      });
+    }
+
+    if (action === 'AI_REMEDIATE') {
+      const cleanModel = String(geminiModel || 'gemini-3.8-flash-cyber').trim();
+      const prompt = `You are a Principal Google Cloud Security Command Center (SCC v2) Engineer. For this live SCC v2 finding in project "${projectId}", provide:\n1. Root Cause & Attack Path Risk (2 sentences)\n2. Exact gcloud CLI remediation command\n3. Minimal Terraform HCL hardening snippet\n\nFinding:\n${JSON.stringify(findingPayload || {}, null, 2).slice(0, 3500)}`;
+      const modelOrder = Array.from(new Set([cleanModel, 'gemini-4-neon', 'gemini-4-carbon']));
+      let text = '';
+      let used = cleanModel;
+      for (const m of modelOrder) {
+        const urls = [
+          `https://aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/global/publishers/google/models/${encodeURIComponent(m)}:generateContent`,
+          `https://us-central1-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/us-central1/publishers/google/models/${encodeURIComponent(m)}:generateContent`,
+        ];
+        for (const u of urls) {
+          try {
+            const gRes = await gcpFetch(u, token, projectId, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: {
+                contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                generationConfig: { temperature: 0.15, maxOutputTokens: 520 },
+              },
+              timeout: 20000,
+            });
+            const t = gRes?.candidates?.[0]?.content?.parts?.map((p) => p?.text || '').join('').trim();
+            if (t) {
+              text = t;
+              used = m;
+              break;
+            }
+          } catch {
+            // try next endpoint/model
+          }
+        }
+        if (text) break;
+      }
+      if (!text) {
+        return res.status(502).json({ error: 'Gemini 4 remediation synthesis did not return a response.' });
+      }
+      return res.json({
+        ok: true,
+        action: 'AI_REMEDIATE',
+        modelUsed: used,
+        remediation: text,
+        durationMs: Date.now() - startedAt,
+      });
+    }
+
+    // Default Action: SCAN live Security Command Center v2 findings
+    const filterParts = ['state="ACTIVE"'];
+    if (findingClass && findingClass !== 'ALL') {
+      const safeClass = String(findingClass).replace(/[^A-Z_]/g, '');
+      if (safeClass) filterParts.push(`finding_class="${safeClass}"`);
+    }
+    const filterEncoded = encodeURIComponent(filterParts.join(' AND '));
+
+    let sccRes = null;
+    let sccError = null;
+    let sccStatus = 'ACTIVE';
+    try {
+      sccRes = await gcpFetch(
+        `https://securitycenter.googleapis.com/v2/projects/${encodeURIComponent(
+          projectId
+        )}/sources/-/locations/${encodeURIComponent(safeLocation)}/findings?filter=${filterEncoded}&pageSize=80`,
+        token,
+        projectId,
+        { timeout: 12000 }
+      );
+    } catch (e1) {
+      try {
+        sccRes = await gcpFetch(
+          `https://securitycenter.googleapis.com/v2/projects/${encodeURIComponent(
+            projectId
+          )}/sources/-/findings?filter=${filterEncoded}&pageSize=80`,
+          token,
+          projectId,
+          { timeout: 12000 }
+        );
+      } catch (e2) {
+        sccError = e2?.message || e1?.message || 'Security Command Center v2 API unavailable.';
+        sccStatus = /disabled|not enabled|SERVICE_DISABLED/i.test(sccError)
+          ? 'NOT_ENABLED'
+          : /403|PERMISSION_DENIED|not activated/i.test(sccError)
+          ? 'NO_PERMISSION_OR_INACTIVE'
+          : 'ERROR';
+      }
+    }
+
+    const rawResults = Array.isArray(sccRes?.listFindingsResults) ? sccRes.listFindingsResults : [];
+    const findings = rawResults.map((item) => {
+      const f = item?.finding || {};
+      const r = item?.resource || {};
+      const cve = f?.vulnerability?.cve || {};
+      const cvss = Number(cve?.cvssv3?.baseScore ?? 0);
+      const resourceShort =
+        r.displayName ||
+        String(f.resourceName || '').split('/').pop() ||
+        'gcp-resource';
+      const resourceType =
+        String(r.type || '').split('/').pop() ||
+        String(f.resourceName || '').split('/')[2] ||
+        'GCP Resource';
+      return {
+        name: f.name || '',
+        canonicalName: f.canonicalName || f.name || '',
+        category: f.category || 'FINDING',
+        findingClass: f.findingClass || 'VULNERABILITY',
+        severity: String(f.severity || 'MEDIUM').toUpperCase(),
+        state: f.state || 'ACTIVE',
+        mute: f.mute || 'UNMUTED',
+        cveId: cve.id || null,
+        cvssV3Score: cvss,
+        zeroDay: Boolean(cve.zeroDay),
+        observedInTheWild: Boolean(cve.observedInTheWild),
+        exploitationActivity: cve.exploitationActivity || null,
+        resourceName: f.resourceName || '',
+        resourceShort,
+        resourceType,
+        nextSteps: String(f.nextSteps || '').slice(0, 320),
+        description: String(f.description || '').slice(0, 320),
+        externalUri: f.externalUri || (cve.id ? `https://nvd.nist.gov/vuln/detail/${encodeURIComponent(cve.id)}` : null),
+        eventTime: f.eventTime || f.createTime || '',
+      };
+    });
+
+    const sevRank = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+    findings.sort(
+      (a, b) =>
+        (sevRank[b.severity] || 0) - (sevRank[a.severity] || 0) ||
+        b.cvssV3Score - a.cvssV3Score
+    );
+
+    const severityCounts = {
+      CRITICAL: findings.filter((f) => f.severity === 'CRITICAL').length,
+      HIGH: findings.filter((f) => f.severity === 'HIGH').length,
+      MEDIUM: findings.filter((f) => f.severity === 'MEDIUM').length,
+      LOW: findings.filter((f) => f.severity === 'LOW').length,
+      TOTAL: findings.length,
+    };
+    const classCounts = {
+      VULNERABILITY: findings.filter((f) => f.findingClass === 'VULNERABILITY').length,
+      MISCONFIGURATION: findings.filter((f) => f.findingClass === 'MISCONFIGURATION').length,
+      THREAT: findings.filter((f) => f.findingClass === 'THREAT').length,
+      TOXIC_COMBINATION: findings.filter((f) => f.findingClass === 'TOXIC_COMBINATION').length,
+    };
+    const zeroDayCount = findings.filter((f) => f.zeroDay || f.observedInTheWild).length;
+
+    // Single-line Mermaid Attack-Surface Graph
+    const mermaidLines = ['flowchart LR'];
+    if (findings.length > 0) {
+      const topByRes = findings.slice(0, 8);
+      topByRes.forEach((f, i) => {
+        const rLbl = String(f.resourceShort).replace(/["\r\n]/g, ' ').slice(0, 26);
+        const cLbl = String(f.cveId || f.category).replace(/["\r\n]/g, ' ').slice(0, 28);
+        mermaidLines.push(
+          `  R${i}["${rLbl} (${f.resourceType})"] -->|${f.severity}| F${i}["${cLbl}"]`
+        );
+      });
+    } else {
+      mermaidLines.push(
+        `  SCC["SCC v2 (${projectId})"] -->|${sccStatus}| CLEAN["0 Active Findings in Scope"]`
+      );
+    }
+
+    return res.json({
+      ok: true,
+      action: 'SCAN',
+      projectId,
+      location: safeLocation,
+      sccStatus,
+      sccError,
+      consoleUrl: `https://console.cloud.google.com/security/command-center/findings?project=${encodeURIComponent(projectId)}`,
+      severityCounts,
+      classCounts,
+      zeroDayCount,
+      findings,
+      mermaidGraph: mermaidLines.join('\n'),
+      durationMs: Date.now() - startedAt,
+    });
+  } catch (err) {
+    return res.status(err?.status || 500).json({
+      error: err?.message || 'Security Command Center v2 scan failed.',
+    });
+  }
+});
+
 // 9a-sovereign-blueprint. POST /api/project/:projectId/sovereign/compliance-blueprint
 // Live 5-Control Sovereign Cloud & DORA/GDPR Compliance Scanner + Dossier (.md) & Terraform (.tf) Compiler
 app.post('/api/project/:projectId/sovereign/compliance-blueprint', async (req, res) => {

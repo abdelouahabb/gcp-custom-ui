@@ -2312,6 +2312,28 @@ const DOC_SECTIONS = [
     billingImpact:
       'OS Config vulnerability scanning, Patch Job execution, and live apt-get upgrades incur $0.00 extra GCP charges (gated by bespoke confirmation modals).',
   },
+  {
+    id: 'scc-v2-vulnerability-mission-control',
+    wave: 'WAVE 34 SECURITY COMMAND CENTER v2 · VULNERABILITY & THREAT MISSION CONTROL + GEMINI 3.8 CYBER',
+    title:
+      '62. Security Command Center v2 Vulnerability & Threat Mission Control (SccVulnerabilityMissionControl.jsx)',
+    badge: 'SRE War-Room · securitycenter.googleapis.com/v2 · 0-Day Radar · Gemini 3.8 Cyber · BigQuery Export',
+    badgeColor:
+      'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
+    icon: Database,
+    targetTab: 'SRE_WAR_ROOM',
+    problemSolved:
+      'Security findings from VM Manager CVEs, Container Analysis, Web Security Scanner, IAM misconfigurations, and Toxic Combinations live in Security Command Center v2. This mission control unifies live SCC v2 triage, zero-day visibility, attack-surface graphing, Gemini 3.8 Cyber remediation, and BigQuery export in one workspace.',
+    howItWorks: [
+      'Live SCC v2 Discovery (POST /api/project/:id/scc/vulnerabilities): Queries securitycenter.googleapis.com/v2/projects/:id/sources/-/locations/:loc/findings with class filters (VULNERABILITY, MISCONFIGURATION, THREAT, TOXIC_COMBINATION), surfaces CRITICAL/HIGH/MEDIUM/LOW + 0-Day/In-Wild KPIs, and renders a live Mermaid Attack-Surface Graph.',
+      'Actionable Triage & Remediation: Sortable/searchable findings matrix with 1-click Gemini 3.8 Flash Cyber / Gemini 4 remediation playbooks (gcloud + Terraform), 1-click live Mute/Unmute (:setMute), Resolve (:setState INACTIVE), and 1-click Export to BigQuery (:export).',
+    ],
+    apisUsed: [
+      'POST /api/project/:id/scc/vulnerabilities (securitycenter.googleapis.com/v2 findings.list, :setMute, :setState, :export + Vertex AI Gemini 3.8 Cyber / Gemini 4)',
+    ],
+    billingImpact:
+      'SCC v2 reads, Mute/Resolve updates, and BigQuery exports (within 10 GiB Always-Free) incur $0.00 extra API cost; mutating actions are gated by bespoke confirmation modals.',
+  },
 ];
 
 export default function InteractiveDocsGuide({

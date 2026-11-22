@@ -121,6 +121,7 @@ import AutonomousFinOpsAutopilotMatrix from './components/AutonomousFinOpsAutopi
 import AgenticIncidentCommanderPanel from './components/AgenticIncidentCommanderPanel';
 import SovereignComplianceBlueprintCompiler from './components/SovereignComplianceBlueprintCompiler';
 import KeynoteAutopilotModal from './components/KeynoteAutopilotModal';
+import SccVulnerabilityMissionControl from './components/SccVulnerabilityMissionControl';
 import GitOpsReleaseFactoryPipelineBar from './components/GitOpsReleaseFactoryPipelineBar';
 import MultiCloudGlobalParityPipelineBar from './components/MultiCloudGlobalParityPipelineBar';
 import EngineerWishlistWave2 from './components/EngineerWishlistWave2';
@@ -2305,6 +2306,7 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/sre/agentic-commander') ||
       rawUrl.includes('/sovereign/compliance-blueprint') ||
       rawUrl.includes('/cve-scan') ||
+      (rawUrl.includes('/scc/vulnerabilities') && (body.action === 'SCAN' || body.action === 'AI_REMEDIATE')) ||
       (rawUrl.includes('/alloydb/execute-sql') &&
         String(body.mode || '').toUpperCase() === 'INTROSPECT_ALLOYDB') ||
       (rawUrl.includes('/cloudrun-bridge/action') &&
@@ -5130,7 +5132,76 @@ function classifyDestructiveAxiosConfig(config) {
       }
     }
 
-    // 3G-12B. GCE CVE Patch, FinOps _Default Log Exclusion, Data Fabric Orchestrator & 4-Stage RAG Loop (top-level, outside /bigquery/!)
+    // 3G-12B. GCE CVE Patch, SCC v2 Mutations, FinOps _Default Log Exclusion, Data Fabric Orchestrator & 4-Stage RAG Loop (top-level, outside /bigquery/!)
+    if (rawUrl.includes('/scc/vulnerabilities')) {
+      const sccAct = String(body.action || '');
+      const cat = body.category || 'SCC Finding';
+      if (sccAct === 'SET_MUTE') {
+        const nextMute = body.mute === 'UNMUTED' ? 'UNMUTED' : 'MUTED';
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `${nextMute === 'MUTED' ? 'Mute' : 'Unmute'} SCC v2 Finding "${cat}"?`,
+          laymanSummary: `In Plain English: Updates the mute state of Security Command Center v2 finding "${cat}" in "${projectId}" to ${nextMute}.`,
+          headerBadge: 'Security Command Center v2 — Finding Mute State',
+          targetLabel: 'Target SCC v2 Finding',
+          resourceKind: 'SCC v2 Finding (securitycenter.googleapis.com/v2)',
+          targetName: String(body.findingName || cat),
+          location: 'global',
+          projectId,
+          method: 'SCC SET MUTE',
+          endpoint: rawUrl,
+          confirmLabel: `${nextMute === 'MUTED' ? 'Mute' : 'Unmute'} Finding`,
+          cancelToast: 'SCC v2 mute update cancelled.',
+          whatHappensNext: `Calls POST securitycenter.googleapis.com/v2/${body.findingName || '...'}:setMute with mute=${nextMute}.`,
+          costWarning: `ZERO COST ($0.00): Updating finding mute state is free.`,
+          impactWarning: `Changes mute visibility of "${cat}" in Security Command Center.`,
+        };
+      }
+      if (sccAct === 'SET_STATE') {
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Mark SCC v2 Finding "${cat}" as INACTIVE?`,
+          laymanSummary: `In Plain English: Marks Security Command Center v2 finding "${cat}" in "${projectId}" as INACTIVE (resolved).`,
+          headerBadge: 'Security Command Center v2 — Resolve Finding',
+          targetLabel: 'Target SCC v2 Finding',
+          resourceKind: 'SCC v2 Finding (securitycenter.googleapis.com/v2)',
+          targetName: String(body.findingName || cat),
+          location: 'global',
+          projectId,
+          method: 'SCC SET STATE',
+          endpoint: rawUrl,
+          confirmLabel: `Mark INACTIVE`,
+          cancelToast: 'SCC v2 resolve cancelled.',
+          whatHappensNext: `Calls POST securitycenter.googleapis.com/v2/${body.findingName || '...'}:setState with state=INACTIVE.`,
+          costWarning: `ZERO COST ($0.00): Updating finding state is free.`,
+          impactWarning: `Resolves "${cat}" in Security Command Center (will automatically reopen if detected again).`,
+        };
+      }
+      if (sccAct === 'EXPORT_BQ') {
+        const ds = body.datasetId || 'target_dataset';
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Export Active SCC v2 Findings to BigQuery Dataset "${projectId}.${ds}"?`,
+          laymanSummary: `In Plain English: Launches a Security Command Center v2 BigQuery export job streaming active vulnerability & threat findings into "${projectId}.${ds}".`,
+          headerBadge: 'Security Command Center v2 — BigQuery Export',
+          targetLabel: 'Target BigQuery Dataset',
+          resourceKind: 'SCC v2 BigQuery Export (securitycenter.googleapis.com/v2)',
+          targetName: `${projectId}.${ds}`,
+          location: body.location || 'global',
+          projectId,
+          method: 'EXPORT SCC TO BIGQUERY',
+          endpoint: rawUrl,
+          confirmLabel: `Export to "${ds}"`,
+          cancelToast: 'SCC v2 BigQuery export cancelled.',
+          whatHappensNext: `Calls POST securitycenter.googleapis.com/v2/projects/${projectId}/sources/-/locations/${body.location || 'global'}/findings:export.`,
+          costWarning: `ALWAYS-FREE ELIGIBLE (~$0.00): Small findings tables fall within BigQuery's 10 GiB/month Always-Free storage tier.`,
+          impactWarning: `Writes active SCC v2 findings into BigQuery dataset "${projectId}.${ds}".`,
+        };
+      }
+    }
     if (rawUrl.includes('/cve-patch')) {
       const vmMatch = rawUrl.match(/\/vms\/([^/]+)\/cve-patch/);
       const vmName = vmMatch ? decodeURIComponent(vmMatch[1]) : 'vm-instance';
@@ -13103,6 +13174,11 @@ function CloudPulseCockpit() {
                   <AgenticIncidentCommanderPanel
                     projectId={selectedProjectId}
                     onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <SccVulnerabilityMissionControl
+                    projectId={selectedProjectId}
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
