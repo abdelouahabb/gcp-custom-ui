@@ -13795,9 +13795,9 @@ app.post('/api/project/:projectId/scc/vulnerabilities', async (req, res) => {
     }
 
     if (action === 'AI_REMEDIATE') {
-      const cleanModel = String(geminiModel || 'gemini-3.8-flash-cyber').trim();
+      const cleanModel = String(geminiModel || 'gemini-4-neon').trim();
       const prompt = `You are a Principal Google Cloud Security Command Center (SCC v2) Engineer. For this live SCC v2 finding in project "${projectId}", provide:\n1. Root Cause & Attack Path Risk (2 sentences)\n2. Exact gcloud CLI remediation command\n3. Minimal Terraform HCL hardening snippet\n\nFinding:\n${JSON.stringify(findingPayload || {}, null, 2).slice(0, 3500)}`;
-      const modelOrder = Array.from(new Set([cleanModel, 'gemini-4-neon', 'gemini-4-carbon']));
+      const modelOrder = Array.from(new Set([cleanModel, 'gemini-4-neon', 'gemini-4-carbon', 'gemini-3.8-flash-cyber']));
       let text = '';
       let used = cleanModel;
       let lastVertexErr = null;
