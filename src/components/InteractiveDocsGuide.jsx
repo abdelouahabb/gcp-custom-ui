@@ -2262,6 +2262,33 @@ const DOC_SECTIONS = [
     billingImpact:
       'Read-only metadata scan over partition-pruned INFORMATION_SCHEMA views (minimal bytes, covered by 1 TiB/month Always-Free tier); Gemini 4 triage is optional on click.',
   },
+  {
+    id: 'autonomous-finops-sre-hybrid-sovereign-keynote',
+    wave: 'WAVE 32 AUTONOMOUS FINOPS AUTOPILOT · AGENTIC WAR-ROOM · HYBRID VECTOR+GRAPH · SOVEREIGN DORA/GDPR · KEYNOTE (Alt+K)',
+    title:
+      '60. Autonomous 5-Engine FinOps Autopilot, Agentic Incident Commander, Hybrid Vector+Graph Fusion, Sovereign Blueprint Compiler & Keynote Autopilot',
+    badge: '5 Flagship Suites · FINOPS · SRE_WAR_ROOM · BQ_PROPERTY_GRAPH · SOVEREIGN_STUDIO · Alt+K Keynote',
+    badgeColor:
+      'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30',
+    icon: Database,
+    targetTab: 'FINOPS',
+    problemSolved:
+      'Unifies cross-engine FinOps cost-kill automation, multi-stream Gemini 4 incident correlation, hybrid semantic-vector-to-property-graph traversal, live DORA/GDPR sovereign compliance exports, and a platform-wide executive live demo director.',
+    howItWorks: [
+      'Autonomous 5-Engine FinOps Autopilot (FINOPS): Scans BigQuery, Managed Spark, Cloud Logging _Default sinks, Compute VMs/orphan disks, and AlloyDB/Cloud SQL in parallel; computes monthly/annual savings, generates a Gemini 4 CFO plan, exports Terraform .tf, and applies live _Default log exclusions in 1 click.',
+      'Live Agentic Incident War-Room (SRE_WAR_ROOM): Correlates live Cloud Logging errors, failed BigQuery jobs, and Cloud Run revision drift into a Mermaid causal graph + Gemini 4 SITREP with 1-click IAM & Cloud Run rollback remediations.',
+      'Hybrid Vector + Property Graph Fusion (BQ_PROPERTY_GRAPH): Generates live 768-d Vertex AI embeddings, retrieves semantic matches from local AlloyDB Omni SCaNN, and traverses 1..3 hop BigQuery GRAPH_TABLE paths into a fused Mermaid knowledge graph.',
+      'Sovereign Cloud & DORA/GDPR Blueprint Compiler (SOVEREIGN_STUDIO) + Keynote Autopilot (Alt+K): Audits 5 live sovereign controls (KMS CMEK, GCS PAP/UBLA, VPC Private Access, IAM Least-Privilege, BigQuery Residency) with .md/.tf export, plus a 6-stop timed Keynote Director accessible anywhere via Alt+K.',
+    ],
+    apisUsed: [
+      'POST /api/project/:id/finops/autopilot-matrix (bigquery, dataproc, logging.sinks._Default PATCH, compute, alloydb, sqladmin)',
+      'POST /api/project/:id/sre/agentic-commander (logging.entries:list, bigquery.jobs.list, run.v2.services, aiplatform Gemini 4)',
+      'POST /api/project/:id/bigquery/property-graph (action: HYBRID_VECTOR_GRAPH -> text-embedding-005 + AlloyDB SCaNN + GRAPH_TABLE)',
+      'POST /api/project/:id/sovereign/compliance-blueprint (cloudkms, storage, compute.subnetworks, cloudresourcemanager IAM, bigquery)',
+    ],
+    billingImpact:
+      'All discovery scans, Terraform/Markdown dossier exports, and Keynote Autopilot cost $0.00; live _Default log sink exclusions actively reduce Cloud Logging spend ($0.50/GiB saved).',
+  },
 ];
 
 export default function InteractiveDocsGuide({

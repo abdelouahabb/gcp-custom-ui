@@ -42,6 +42,35 @@ export default function BigQueryPropertyGraphWorkbench({
   const [generatingGql, setGeneratingGql] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Hybrid Vector + Property Graph Fusion state (text-embedding-005 + AlloyDB SCaNN -> BigQuery GRAPH_TABLE)
+  const [hybridConcept, setHybridConcept] = useState('offshore shell and crypto bridge high risk');
+  const [runningHybrid, setRunningHybrid] = useState(false);
+  const [hybridResult, setHybridResult] = useState(null);
+
+  const handleHybridVectorGraph = async () => {
+    if (!projectId || !selectedDataset || !hybridConcept.trim()) return;
+    setRunningHybrid(true);
+    try {
+      const { data } = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/bigquery/property-graph`,
+        {
+          action: 'HYBRID_VECTOR_GRAPH',
+          datasetId: selectedDataset,
+          graphName,
+          nlPrompt: hybridConcept,
+        }
+      );
+      setHybridResult(data);
+      onShowToast?.(
+        `Hybrid Vector + Graph Fusion complete (${data.queryEmbeddingDims}-d vector · ${data.alloyScannHits?.length || 0} SCaNN hits · ${data.totalRows} graph paths in ${data.durationMs}ms).`
+      );
+    } catch (err) {
+      onShowError?.(err?.response?.data?.error || err.message || 'Hybrid Vector + Graph Fusion failed.');
+    } finally {
+      setRunningHybrid(false);
+    }
+  };
+
   const buildTemplates = useCallback(
     (ds, gName) => {
       const fqn = `\`${projectId}.${ds || 'analytics_lakehouse'}.${gName || 'cloudpulse_entity_graph'}\``;
@@ -545,6 +574,78 @@ LIMIT 15`,
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Wave #3: Hybrid Vector + Property Graph Fusion (Vertex text-embedding-005 + AlloyDB SCaNN -> BigQuery GRAPH_TABLE) */}
+      <div className="p-4 rounded-xl border border-amber-500/35 bg-white dark:bg-[#10141d] space-y-3">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+            <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+            <span>
+              Hybrid Vector + Property Graph Fusion (768-d <code>text-embedding-005</code> + AlloyDB SCaNN → BigQuery <code>GRAPH_TABLE</code> Multi-Hop)
+            </span>
+          </div>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            Ask a conceptual question: embeds live in 768-d, retrieves matching semantic docs from local <strong>AlloyDB Omni SCaNN</strong>, and traverses 1–3 hop entity relationships in <strong>BigQuery Property Graph</strong>.
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            type="text"
+            value={hybridConcept}
+            onChange={(e) => setHybridConcept(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleHybridVectorGraph();
+            }}
+            placeholder="Conceptual risk or architecture query..."
+            className="flex-1 px-3 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs text-zinc-900 dark:text-zinc-100"
+          />
+          <button
+            type="button"
+            disabled={runningHybrid || !selectedDataset || !hybridConcept.trim()}
+            onClick={handleHybridVectorGraph}
+            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+          >
+            {runningHybrid ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <GitBranch className="w-3.5 h-3.5" />}
+            <span>{runningHybrid ? 'Fusing Vector + Graph...' : 'Run Hybrid Vector + Graph Fusion'}</span>
+          </button>
+        </div>
+
+        {hybridResult && (
+          <div className="space-y-3 pt-1">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono">
+              <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold">
+                Vertex Vector: {hybridResult.queryEmbeddingDims}-d
+              </span>
+              <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-800 dark:text-amber-200 font-bold">
+                AlloyDB SCaNN Docs: {hybridResult.alloyScannHits?.length || 0}
+              </span>
+              <span className="px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-blue-300 font-bold">
+                BigQuery GRAPH_TABLE Paths: {hybridResult.totalRows} ({hybridResult.durationMs}ms)
+              </span>
+            </div>
+
+            {Array.isArray(hybridResult.alloyScannHits) && hybridResult.alloyScannHits.length > 0 && (
+              <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs space-y-1">
+                <div className="text-[10.5px] font-mono font-bold text-amber-800 dark:text-amber-200">
+                  Live AlloyDB Omni SCaNN Semantic Hits:
+                </div>
+                {hybridResult.alloyScannHits.map((h, i) => (
+                  <div key={i} className="font-mono text-[11px] text-zinc-800 dark:text-zinc-200">
+                    • {h.title} ({h.docUri}) — cosine {h.similarity}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {hybridResult.mermaidGraph && (
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800">
+                <MermaidArchitectureDiagram code={hybridResult.mermaidGraph} />
               </div>
             )}
           </div>

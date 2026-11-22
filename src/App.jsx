@@ -118,6 +118,9 @@ import SecOpsSreForensicsPipelineBar from './components/SecOpsSreForensicsPipeli
 import OltpDatabaseContinuityBar from './components/OltpDatabaseContinuityBar';
 import FinOpsCostKillPipelineBar from './components/FinOpsCostKillPipelineBar';
 import AutonomousFinOpsAutopilotMatrix from './components/AutonomousFinOpsAutopilotMatrix';
+import AgenticIncidentCommanderPanel from './components/AgenticIncidentCommanderPanel';
+import SovereignComplianceBlueprintCompiler from './components/SovereignComplianceBlueprintCompiler';
+import KeynoteAutopilotModal from './components/KeynoteAutopilotModal';
 import GitOpsReleaseFactoryPipelineBar from './components/GitOpsReleaseFactoryPipelineBar';
 import MultiCloudGlobalParityPipelineBar from './components/MultiCloudGlobalParityPipelineBar';
 import EngineerWishlistWave2 from './components/EngineerWishlistWave2';
@@ -2296,9 +2299,11 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/data-fabric/synthesize-bridge') ||
       (rawUrl.includes('/data-fabric/orchestrate') && (body.action === 'COMPILE' || body.action === 'LIST_WORKFLOWS')) ||
       (rawUrl.includes('/data-fabric/rag-loop') && body.stage === 'QUERY_SCANN_RAG') ||
-      (rawUrl.includes('/bigquery/property-graph') && (body.action === 'DISCOVER' || body.action === 'AI_NL2GQL' || (body.action === 'RUN_GQL' && Boolean(body.dryRun)))) ||
+      (rawUrl.includes('/bigquery/property-graph') && (body.action === 'DISCOVER' || body.action === 'AI_NL2GQL' || body.action === 'HYBRID_VECTOR_GRAPH' || (body.action === 'RUN_GQL' && Boolean(body.dryRun)))) ||
       rawUrl.includes('/bigquery/observability-doctor') ||
       (rawUrl.includes('/finops/autopilot-matrix') && body.action === 'SCAN') ||
+      rawUrl.includes('/sre/agentic-commander') ||
+      rawUrl.includes('/sovereign/compliance-blueprint') ||
       (rawUrl.includes('/alloydb/execute-sql') &&
         String(body.mode || '').toUpperCase() === 'INTROSPECT_ALLOYDB') ||
       (rawUrl.includes('/cloudrun-bridge/action') &&
@@ -9468,6 +9473,18 @@ function CloudPulseCockpit() {
     };
   }, [triggerCrossUiSpotlight, handleNavigateStudioTab, resolveActiveSubTabLabel]);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [keynoteAutopilotOpen, setKeynoteAutopilotOpen] = useState(false);
+
+  useEffect(() => {
+    const onKeynoteShortcut = (e) => {
+      if (e.altKey && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        setKeynoteAutopilotOpen((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', onKeynoteShortcut);
+    return () => window.removeEventListener('keydown', onKeynoteShortcut);
+  }, []);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [copilotInitialPrompt, setCopilotInitialPrompt] = useState('');
   const [shellSeedCommand, setShellSeedCommand] = useState('');
@@ -10927,6 +10944,16 @@ function CloudPulseCockpit() {
                   </div>
                 )}
               </div>
+
+              <button
+                type="button"
+                onClick={() => setKeynoteAutopilotOpen(true)}
+                title="Open Platform-Wide Keynote Autopilot (Shortcut: Alt+K)"
+                className="hidden md:inline-flex items-center gap-1 text-[10.5px] font-mono font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 dark:text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded shrink-0 cursor-pointer transition-colors"
+              >
+                <span>KEYNOTE</span>
+                <span className="opacity-70">Alt+K</span>
+              </button>
 
               {gdePrivacyConfig.enabled && (
                 <span
@@ -12976,6 +13003,11 @@ function CloudPulseCockpit() {
                       onRunInShell={handleRunInShell}
                     />
                   </CollapsibleArchitecturePipelineBar>
+                  <SovereignComplianceBlueprintCompiler
+                    projectId={selectedProjectId}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
                   <SovereignTimeMachineIamStudio
                     projectId={selectedProjectId}
                     initialSubTab={sovereignSubTab}
@@ -13025,6 +13057,12 @@ function CloudPulseCockpit() {
                       onRunInShell={handleRunInShell}
                     />
                   </CollapsibleArchitecturePipelineBar>
+                  <AgenticIncidentCommanderPanel
+                    projectId={selectedProjectId}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
                   <SreWarRoomPerimeterStudio
                     projectId={selectedProjectId}
                     initialSubTab={sreSubTab}
@@ -13934,12 +13972,20 @@ function CloudPulseCockpit() {
                 |
               </span>
               <span className="hidden lg:inline text-[10px]">
-                ⌘K Search · [ Rail · / Filter · Alt+G Shield
+                ⌘K Search · [ Rail · / Filter · Alt+G Shield · Alt+K Keynote
               </span>
             </div>
           </footer>
         )}
       </div>
+
+      <KeynoteAutopilotModal
+        isOpen={keynoteAutopilotOpen}
+        onClose={() => setKeynoteAutopilotOpen(false)}
+        projectId={selectedProjectId}
+        onNavigateTab={handleNavigateStudioTab}
+        onShowToast={showToast}
+      />
 
       <CommandPaletteModal
         isOpen={commandPaletteOpen}

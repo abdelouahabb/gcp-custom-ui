@@ -13161,6 +13161,373 @@ app.post('/api/project/:projectId/bigquery/grant-connection-sa-roles', async (re
   }
 });
 
+// 9a-sovereign-blueprint. POST /api/project/:projectId/sovereign/compliance-blueprint
+// Live 5-Control Sovereign Cloud & DORA/GDPR Compliance Scanner + Dossier (.md) & Terraform (.tf) Compiler
+app.post('/api/project/:projectId/sovereign/compliance-blueprint', async (req, res) => {
+  const { projectId } = req.params;
+  const { region = 'europe-west1' } = req.body || {};
+  const startedAt = Date.now();
+  const safeRegion = String(region || 'europe-west1').replace(/[^a-z0-9-]/gi, '') || 'europe-west1';
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
+    }
+
+    const [kmsRes, bucketsRes, subnetsRes, iamRes, bqDsRes] = await Promise.all([
+      gcpFetch(
+        `https://cloudkms.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/${encodeURIComponent(safeRegion)}/keyRings`,
+        token,
+        projectId,
+        { timeout: 8000 }
+      ).catch(() => ({ keyRings: [] })),
+      gcpFetch(
+        `https://storage.googleapis.com/storage/v1/b?project=${encodeURIComponent(projectId)}&maxResults=50`,
+        token,
+        projectId,
+        { timeout: 8000 }
+      ).catch(() => ({ items: [] })),
+      gcpFetch(
+        `https://compute.googleapis.com/compute/v1/projects/${encodeURIComponent(projectId)}/aggregated/subnetworks?maxResults=50`,
+        token,
+        projectId,
+        { timeout: 8000 }
+      ).catch(() => ({ items: {} })),
+      gcpFetch(
+        `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(projectId)}:getIamPolicy`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: { options: { requestedPolicyVersion: 3 } },
+          timeout: 8000,
+        }
+      ).catch(() => ({ bindings: [] })),
+      gcpFetch(
+        `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/datasets?maxResults=40`,
+        token,
+        projectId,
+        { timeout: 8000 }
+      ).catch(() => ({ datasets: [] })),
+    ]);
+
+    const keyRings = Array.isArray(kmsRes?.keyRings) ? kmsRes.keyRings : [];
+    const buckets = Array.isArray(bucketsRes?.items) ? bucketsRes.items : [];
+    const nonPapBuckets = buckets.filter(
+      (b) => b?.iamConfiguration?.publicAccessPrevention !== 'enforced'
+    );
+    const nonUblaBuckets = buckets.filter(
+      (b) => !b?.iamConfiguration?.uniformBucketLevelAccess?.enabled
+    );
+
+    const subnets = [];
+    Object.values(subnetsRes?.items || {}).forEach((r) => {
+      if (Array.isArray(r?.subnetworks)) subnets.push(...r.subnetworks);
+    });
+    const privateGoogleSubnets = subnets.filter((s) => Boolean(s.privateIpGoogleAccess));
+
+    const bindings = Array.isArray(iamRes?.bindings) ? iamRes.bindings : [];
+    const publicBindings = bindings.filter((b) =>
+      (b.members || []).some((m) => m === 'allUsers' || m === 'allAuthenticatedUsers')
+    );
+    const broadPrimitiveMembers = bindings
+      .filter((b) => b.role === 'roles/owner' || b.role === 'roles/editor')
+      .reduce((sum, b) => sum + (b.members || []).length, 0);
+
+    const datasets = Array.isArray(bqDsRes?.datasets) ? bqDsRes.datasets : [];
+    const euDatasets = datasets.filter((d) =>
+      /^eu/i.test(String(d.location || ''))
+    );
+
+    const controls = [
+      {
+        id: 'CMEK_EKM',
+        regulation: 'DORA Art. 9 · GDPR Art. 32',
+        title: `Customer-Managed Encryption Keys (Cloud KMS in ${safeRegion})`,
+        status: keyRings.length > 0 ? 'PASS' : 'ACTION_REQUIRED',
+        evidence: keyRings.length > 0 ? `${keyRings.length} KMS KeyRing(s) active in ${safeRegion}` : `0 KMS KeyRings found in ${safeRegion}`,
+        remediation: `Create a regional KMS KeyRing + CryptoKey in ${safeRegion} for CMEK encryption across GCS, BigQuery & AlloyDB.`,
+      },
+      {
+        id: 'GCS_PAP_UBLA',
+        regulation: 'GDPR Art. 25 · Zero-Trust Storage',
+        title: 'Cloud Storage Public Access Prevention & Uniform Access',
+        status: nonPapBuckets.length === 0 && nonUblaBuckets.length === 0 ? 'PASS' : 'ACTION_REQUIRED',
+        evidence: `${buckets.length} bucket(s): ${nonPapBuckets.length} missing PAP=enforced, ${nonUblaBuckets.length} missing UBLA`,
+        remediation: `Enforce public_access_prevention = "enforced" and uniform_bucket_level_access = true on all buckets.`,
+      },
+      {
+        id: 'VPC_PRIVATE_ACCESS',
+        regulation: 'DORA Art. 9 · Private Perimeter',
+        title: 'VPC Private Google Access & Zero-Internet Egress',
+        status: privateGoogleSubnets.length > 0 ? 'PASS' : 'ACTION_REQUIRED',
+        evidence: `${privateGoogleSubnets.length}/${subnets.length} subnet(s) have Private Google Access enabled`,
+        remediation: `Enable private_ip_google_access = true on production subnets and attach VPC Service Controls perimeters.`,
+      },
+      {
+        id: 'IAM_LEAST_PRIVILEGE',
+        regulation: 'ISO 27001 A.9 · DORA Art. 9',
+        title: 'IAM Least-Privilege & Zero Public Principal Bindings',
+        status: publicBindings.length === 0 && broadPrimitiveMembers <= 3 ? 'PASS' : 'ACTION_REQUIRED',
+        evidence: `${publicBindings.length} public (allUsers) bindings · ${broadPrimitiveMembers} primitive Owner/Editor principals`,
+        remediation: `Replace primitive roles/owner & roles/editor with scoped predefined roles and PAM Just-in-Time grants.`,
+      },
+      {
+        id: 'BQ_DATA_RESIDENCY',
+        regulation: 'GDPR Chapter V · Data Residency',
+        title: 'BigQuery Dataset Regional Residency Audit',
+        status: datasets.length === 0 || euDatasets.length > 0 ? 'PASS' : 'ADVISORY',
+        evidence: `${datasets.length} dataset(s) discovered (${euDatasets.length} in EU regions)`,
+        remediation: `Pin sovereign datasets to EU / europe-west1 with default CMEK key and org-policy resourceLocations constraint.`,
+      },
+    ];
+
+    const passedCount = controls.filter((c) => c.status === 'PASS').length;
+    const score = Math.round((passedCount / controls.length) * 100);
+
+    const dossierMarkdown = `# Sovereign Cloud & DORA/GDPR Compliance Dossier
+- **Project**: \`${projectId}\`
+- **Target Sovereign Region**: \`${safeRegion}\`
+- **Live Readiness Score**: **${score}/100** (${passedCount}/${controls.length} controls passing)
+- **Generated**: ${new Date().toISOString()}
+
+## Control-by-Control Live Evidence
+${controls.map((c, i) => `${i + 1}. **[${c.status}] ${c.title}** (*${c.regulation}*)\n   - Evidence: ${c.evidence}\n   - Remediation: ${c.remediation}`).join('\n')}
+`;
+
+    const terraformBundle = `# CloudPulse 2026 — Sovereign Cloud & DORA/GDPR Remediation Bundle
+# Project: ${projectId} | Region: ${safeRegion} | Score: ${score}/100
+
+resource "google_kms_key_ring" "sovereign_ring" {
+  project  = "${projectId}"
+  name     = "cloudpulse-sovereign-ring"
+  location = "${safeRegion}"
+}
+
+resource "google_kms_crypto_key" "sovereign_cmek" {
+  name            = "cloudpulse-sovereign-cmek"
+  key_ring        = google_kms_key_ring.sovereign_ring.id
+  rotation_period = "7776000s" # 90-day rotation
+}
+${nonPapBuckets.slice(0, 5).map((b) => `
+# Enforce PAP + UBLA on gs://${b.name}
+# gcloud storage buckets update gs://${b.name} --public-access-prevention --uniform-bucket-level-access`).join('\n')}
+`;
+
+    return res.json({
+      ok: true,
+      projectId,
+      region: safeRegion,
+      score,
+      passedCount,
+      totalControls: controls.length,
+      controls,
+      dossierMarkdown,
+      terraformBundle,
+      durationMs: Date.now() - startedAt,
+    });
+  } catch (err) {
+    return res.status(err?.status || 500).json({
+      error: err?.message || 'Sovereign Compliance Blueprint scan failed.',
+    });
+  }
+});
+
+// 9a-sre-agentic-commander. POST /api/project/:projectId/sre/agentic-commander
+// Live 3-Stream Incident Correlation (Cloud Logging Errors + Failed BigQuery Jobs + Cloud Run Revision Health) + Gemini 4 Incident Commander
+app.post('/api/project/:projectId/sre/agentic-commander', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    lookbackHours = 24,
+    withGemini = true,
+    geminiModel = 'gemini-4-neon',
+  } = req.body || {};
+
+  const startedAt = Date.now();
+  const hours = Math.max(1, Math.min(168, Number(lookbackHours) || 24));
+  const sinceIso = new Date(Date.now() - hours * 3600 * 1000).toISOString();
+
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated with Google Cloud.' });
+    }
+
+    const [logsRes, bqJobsRes, runServicesRes] = await Promise.all([
+      gcpFetch(
+        'https://logging.googleapis.com/v2/entries:list',
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            resourceNames: [`projects/${projectId}`],
+            filter: `severity>=ERROR AND timestamp>="${sinceIso}"`,
+            orderBy: 'timestamp desc',
+            pageSize: 30,
+          },
+          timeout: 12000,
+        }
+      ).catch(() => ({ entries: [] })),
+      gcpFetch(
+        `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/jobs?stateFilter=DONE&maxResults=30&projection=full`,
+        token,
+        projectId,
+        { timeout: 10000 }
+      ).catch(() => ({ jobs: [] })),
+      gcpFetch(
+        `https://run.googleapis.com/v2/projects/${encodeURIComponent(projectId)}/locations/-/services?pageSize=30`,
+        token,
+        projectId,
+        { timeout: 10000 }
+      ).catch(() => ({ services: [] })),
+    ]);
+
+    const logErrors = (Array.isArray(logsRes?.entries) ? logsRes.entries : []).map((e) => ({
+      timestamp: e.timestamp || '',
+      severity: e.severity || 'ERROR',
+      resourceType: e?.resource?.type || 'global',
+      serviceName: e?.resource?.labels?.service_name || e?.resource?.labels?.configuration_name || e?.logName?.split('/').pop() || 'gcp-service',
+      message: String(
+        e.textPayload ||
+          e?.jsonPayload?.message ||
+          e?.protoPayload?.status?.message ||
+          e?.protoPayload?.methodName ||
+          'Error log entry'
+      ).slice(0, 220),
+    }));
+
+    const failedBqJobs = (Array.isArray(bqJobsRes?.jobs) ? bqJobsRes.jobs : [])
+      .filter((j) => Boolean(j?.status?.errorResult))
+      .slice(0, 10)
+      .map((j) => ({
+        jobId: j?.jobReference?.jobId || '',
+        location: j?.jobReference?.location || 'US',
+        reason: j?.status?.errorResult?.reason || 'error',
+        message: String(j?.status?.errorResult?.message || '').slice(0, 240),
+        createdAt: j?.statistics?.creationTime
+          ? new Date(Number(j.statistics.creationTime)).toISOString()
+          : '',
+      }));
+
+    const runServices = (Array.isArray(runServicesRes?.services) ? runServicesRes.services : []).map((s) => {
+      const shortName = String(s.name || '').split('/').pop() || '';
+      const locParts = String(s.name || '').split('/');
+      const region = locParts[locParts.indexOf('locations') + 1] || 'us-central1';
+      const terminal = s?.terminalCondition || {};
+      const unhealthy =
+        terminal.state && terminal.state !== 'CONDITION_SUCCEEDED';
+      const revisionDrift =
+        s.latestCreatedRevision &&
+        s.latestReadyRevision &&
+        s.latestCreatedRevision !== s.latestReadyRevision;
+      return {
+        name: shortName,
+        region,
+        uri: s.uri || '',
+        latestReadyRevision: String(s.latestReadyRevision || '').split('/').pop() || '',
+        latestCreatedRevision: String(s.latestCreatedRevision || '').split('/').pop() || '',
+        unhealthy: Boolean(unhealthy || revisionDrift),
+        terminalMessage: terminal.message || '',
+      };
+    });
+    const degradedServices = runServices.filter((s) => s.unhealthy);
+
+    // Detect actionable IAM / rollback signals
+    const detectedRemediations = [];
+    const allErrText = [
+      ...logErrors.map((e) => e.message),
+      ...failedBqJobs.map((j) => j.message),
+    ].join('\n');
+    const bqSaMatch = allErrText.match(
+      /([a-z0-9._-]+@gcp-sa-bigquery-condel\.iam\.gserviceaccount\.com)/i
+    );
+    if (bqSaMatch) {
+      detectedRemediations.push({
+        id: 'FIX_BQ_CONN_SA_IAM',
+        type: 'IAM_AUTO_FIX',
+        title: `Grant roles/aiplatform.user + roles/storage.objectViewer to ${bqSaMatch[1]}`,
+        serviceAccountEmail: bqSaMatch[1],
+        gcloudCmd: `gcloud projects add-iam-policy-binding ${projectId} --member="serviceAccount:${bqSaMatch[1]}" --role="roles/aiplatform.user"`,
+      });
+    }
+    degradedServices.slice(0, 3).forEach((srv) => {
+      detectedRemediations.push({
+        id: `ROLLBACK_${srv.name}`,
+        type: 'CLOUD_RUN_ROLLBACK',
+        title: `Route 100% traffic back to healthy revision ${srv.latestReadyRevision || 'LATEST_READY'} on ${srv.name}`,
+        serviceName: srv.name,
+        region: srv.region,
+        gcloudCmd: `gcloud run services update-traffic ${srv.name} --region=${srv.region} --project=${projectId} --to-revisions=${srv.latestReadyRevision}=100`,
+      });
+    });
+
+    const mermaidLines = [
+      'flowchart LR',
+      `  LOGS["Cloud Logging (${logErrors.length} Errors / ${hours}h)"] --> CMD["Gemini 4 Incident Commander"]`,
+      `  BQ["BigQuery Jobs (${failedBqJobs.length} Failed)"] --> CMD`,
+      `  RUN["Cloud Run Fleet (${degradedServices.length}/${runServices.length} Degraded)"] --> CMD`,
+      `  CMD --> ACT["Remediation Queue (${detectedRemediations.length} Automated Fixes)"]`,
+    ];
+
+    let sitrep = null;
+    if (withGemini) {
+      const cleanModel = String(geminiModel || 'gemini-4-neon').trim();
+      const prompt = `You are a Principal Google Cloud SRE Incident Commander. Correlate these 3 live telemetry streams for project "${projectId}" (last ${hours}h) into a crisp 3-part SITREP: (1) Primary Root Cause, (2) Blast Radius, (3) Exact Next Commands.\n\nCloud Logging Errors (${logErrors.length}): ${JSON.stringify(logErrors.slice(0, 6))}\nFailed BigQuery Jobs (${failedBqJobs.length}): ${JSON.stringify(failedBqJobs.slice(0, 5))}\nDegraded Cloud Run Services (${degradedServices.length}/${runServices.length}): ${JSON.stringify(degradedServices.slice(0, 5))}`;
+      const urls = [
+        `https://aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/global/publishers/google/models/${encodeURIComponent(cleanModel)}:generateContent`,
+        `https://us-central1-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/us-central1/publishers/google/models/${encodeURIComponent(cleanModel)}:generateContent`,
+      ];
+      for (const u of urls) {
+        try {
+          const gRes = await gcpFetch(u, token, projectId, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: {
+              contents: [{ role: 'user', parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.15, maxOutputTokens: 420 },
+            },
+            timeout: 20000,
+          });
+          const text = gRes?.candidates?.[0]?.content?.parts?.map((p) => p?.text || '').join('').trim();
+          if (text) {
+            sitrep = { modelUsed: cleanModel, text };
+            break;
+          }
+        } catch {
+          // try next endpoint
+        }
+      }
+    }
+
+    return res.json({
+      ok: true,
+      projectId,
+      lookbackHours: hours,
+      counts: {
+        logErrors: logErrors.length,
+        failedBqJobs: failedBqJobs.length,
+        totalRunServices: runServices.length,
+        degradedRunServices: degradedServices.length,
+      },
+      logErrors: logErrors.slice(0, 10),
+      failedBqJobs,
+      degradedServices,
+      detectedRemediations,
+      mermaidCausalGraph: mermaidLines.join('\n'),
+      sitrep,
+      durationMs: Date.now() - startedAt,
+    });
+  } catch (err) {
+    return res.status(err?.status || 500).json({
+      error: err?.message || 'Agentic Incident Commander scan failed.',
+    });
+  }
+});
+
 // 9a-finops-autopilot. POST /api/project/:projectId/finops/autopilot-matrix
 // Live 5-Engine Autonomous FinOps Autopilot & Cost-Kill Matrix (BigQuery, Managed Spark, Cloud Logging _Default Sink, Compute/Disks, AlloyDB/Cloud SQL)
 app.post('/api/project/:projectId/finops/autopilot-matrix', async (req, res) => {
@@ -13995,6 +14362,161 @@ User question: ${prompt}`;
         action: 'AI_NL2GQL',
         gql: generated,
         modelUsed: cleanModel,
+        durationMs: Date.now() - startedAt,
+      });
+    }
+
+    if (action === 'HYBRID_VECTOR_GRAPH') {
+      const concept = String(nlPrompt || '').trim();
+      if (!concept) {
+        return res.status(400).json({ error: 'Enter a conceptual query for Hybrid Vector + Graph Fusion.' });
+      }
+      const fullGraph = `${projectId}.${safeDataset}.${safeGraph}`;
+      const entitiesTbl = `${projectId}.${safeDataset}.graph_entities`;
+      const tokens = concept
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .split(/\s+/)
+        .filter((w) => w.length >= 3)
+        .slice(0, 6);
+
+      // 1. Live Vertex AI 768-d embedding for the conceptual query (proves live semantic vector generation)
+      let queryEmbeddingDims = 0;
+      let alloyScannHits = [];
+      try {
+        const embRes = await gcpFetch(
+          `https://${encodeURIComponent(safeRegion)}-aiplatform.googleapis.com/v1/projects/${encodeURIComponent(
+            projectId
+          )}/locations/${encodeURIComponent(safeRegion)}/publishers/google/models/text-embedding-005:predict`,
+          token,
+          projectId,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: { instances: [{ content: concept, task_type: 'RETRIEVAL_QUERY' }] },
+            timeout: 12000,
+          }
+        );
+        const vals = embRes?.predictions?.[0]?.embeddings?.values;
+        if (Array.isArray(vals) && vals.length === 768) {
+          queryEmbeddingDims = 768;
+          // Optionally query live local AlloyDB Omni SCaNN docs if container is running
+          const psOut = await new Promise((resolve) => {
+            const p = spawn('docker', ['ps', '--filter', 'name=^/alloydb-omni-dev$', '--format', '{{.Ports}}'], {
+              stdio: ['ignore', 'pipe', 'pipe'],
+            });
+            let out = '';
+            p.stdout.on('data', (d) => { out += d.toString(); });
+            p.on('close', () => resolve(out.trim()));
+            p.on('error', () => resolve(''));
+          });
+          if (psOut) {
+            const portMatch = psOut.match(/:(\d+)->5432\/tcp/);
+            const port = portMatch ? Number(portMatch[1]) : 5434;
+            const envOut = await new Promise((resolve) => {
+              const p = spawn('docker', ['inspect', 'alloydb-omni-dev', '--format', '{{range .Config.Env}}{{println .}}{{end}}'], {
+                stdio: ['ignore', 'pipe', 'pipe'],
+              });
+              let out = '';
+              p.stdout.on('data', (d) => { out += d.toString(); });
+              p.on('close', () => resolve(out));
+              p.on('error', () => resolve(''));
+            });
+            const pwLine = envOut.split('\n').find((l) => l.startsWith('POSTGRES_PASSWORD='));
+            const pw = pwLine ? pwLine.slice('POSTGRES_PASSWORD='.length).trim() : 'localdevpass';
+            const vecLit = `[${vals.map((n) => Number(n).toFixed(6)).join(',')}]`;
+            const scannOut = await new Promise((resolve) => {
+              const child = spawn(
+                'psql',
+                ['-h', '127.0.0.1', '-p', String(port), '-U', 'postgres', '-d', 'postgres', '-t', '-A'],
+                { env: { ...process.env, PGPASSWORD: pw, PGCONNECT_TIMEOUT: '5' }, stdio: ['pipe', 'pipe', 'pipe'] }
+              );
+              let out = '';
+              child.stdout.on('data', (d) => { out += d.toString(); });
+              child.on('close', () => resolve(out.trim()));
+              child.on('error', () => resolve(''));
+              child.stdin.write(
+                `SELECT json_agg(t) FROM (SELECT doc_uri AS "docUri", title, ROUND((1 - (embedding <=> '${vecLit}'::vector(768)))::numeric, 4) AS similarity FROM public.cloudpulse_rag_docs ORDER BY embedding <=> '${vecLit}'::vector(768) LIMIT 3) t;`
+              );
+              child.stdin.end();
+            });
+            try {
+              const parsed = JSON.parse(scannOut || '[]');
+              if (Array.isArray(parsed)) alloyScannHits = parsed;
+            } catch {
+              alloyScannHits = [];
+            }
+          }
+        }
+      } catch {
+        // non-fatal; continue with BigQuery GRAPH_TABLE traversal
+      }
+
+      // 2. Hybrid BigQuery GRAPH_TABLE multi-hop traversal seeded by conceptual entity match
+      const likeClause =
+        tokens.length > 0
+          ? tokens
+              .map(
+                (t) =>
+                  `(LOWER(entity_name) LIKE '%${t}%' OR LOWER(entity_type) LIKE '%${t}%' OR LOWER(region) LIKE '%${t}%')`
+              )
+              .join(' OR ')
+          : 'risk_score >= 0.5';
+
+      const hybridSql = `
+WITH seed_entities AS (
+  SELECT entity_id, entity_name, risk_score
+  FROM \`${entitiesTbl}\`
+  WHERE ${likeClause} OR risk_score >= 0.7
+)
+SELECT
+  g.source_name,
+  g.target_name,
+  g.hops,
+  g.target_risk_score
+FROM GRAPH_TABLE (
+  \`${fullGraph}\`
+  MATCH p = (src:Entity)-[:Transfers]->{1,3}(dst:Entity)
+  WHERE src.entity_id != dst.entity_id
+  COLUMNS (
+    src.entity_id AS src_id,
+    src.entity_name AS source_name,
+    dst.entity_name AS target_name,
+    PATH_LENGTH(p) AS hops,
+    dst.risk_score AS target_risk_score
+  )
+) AS g
+INNER JOIN seed_entities s ON g.src_id = s.entity_id OR g.target_risk_score >= 0.7
+ORDER BY g.target_risk_score DESC, g.hops ASC
+LIMIT 20`;
+
+      const bqRes = await gcpFetch(
+        `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}/queries`,
+        token,
+        projectId,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: { query: hybridSql, useLegacySql: false, timeoutMs: 20000 },
+          timeout: 25000,
+        }
+      );
+      if (Array.isArray(bqRes?.errors) && bqRes.errors.length > 0) {
+        return res.status(400).json({ error: bqRes.errors[0]?.message || 'Hybrid Vector + Graph query failed.' });
+      }
+      const rows = parseBqRows(bqRes);
+      const mermaidGraph = buildMermaidFromRows(rows);
+
+      return res.json({
+        ok: true,
+        action: 'HYBRID_VECTOR_GRAPH',
+        concept,
+        queryEmbeddingDims,
+        alloyScannHits,
+        hybridSql,
+        totalRows: rows.length,
+        rows,
+        mermaidGraph,
         durationMs: Date.now() - startedAt,
       });
     }
