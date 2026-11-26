@@ -12007,6 +12007,9 @@ app.get('/api/project/:projectId/alloydb/overview', async (req, res) => {
         publicIpAddress: inst.publicIpAddress || null,
         publicDnsName: String(inst.networkInfo?.publicDnsName || inst.publicIpAddress || inst.outboundPublicIpAddresses?.[0] || inst.ipAddress || '').replace(/\.$/, '') || null,
         publicDnsEnabled: Boolean(inst.networkConfig?.publicDnsEnabled || inst.networkConfig?.enablePublicIp),
+        authorizedExternalNetworks: Array.isArray(inst.networkConfig?.authorizedExternalNetworks)
+          ? inst.networkConfig.authorizedExternalNetworks.map((n) => n?.cidrRange).filter(Boolean)
+          : [],
         pscEnabled: Boolean(inst.pscInstanceConfig?.pscDnsName || inst.pscInstanceConfig?.allowedConsumerProjects?.length),
         pscDnsName: inst.pscInstanceConfig?.pscDnsName || null,
         databaseFlags: flags,

@@ -2935,52 +2935,103 @@ GROUP BY 1 ORDER BY turns DESC;`;
                       )}
                     </div>
 
-                    <div className="p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-xs space-y-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-bold text-zinc-900 dark:text-zinc-100">
-                          Option B: Direct Public DNS + /32 IP (No Local Proxy)
-                        </span>
-                        <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 font-mono text-[10px] font-bold">
-                          TLS + /32 IP
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
-                        Connects directly to <code className="font-mono">*.alloydb.s.cloud.goog:5432</code> over TLS. Requires authorizing your current <code className="font-mono">/32</code> IPv4 (must re-authorize if your IP changes).
-                      </p>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const h = resolveClusterHost(targetCluster);
-                            if (h) {
-                              setCloudSqlHost(h);
-                              setCloudSqlPort("5432");
-                            }
-                          }}
-                          className="px-2.5 py-1 rounded-md border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[11px] font-semibold cursor-pointer"
+                    {(() => {
+                      const directHost = resolveClusterHost(targetCluster);
+                      const isDirectSelected = Boolean(
+                        directHost &&
+                          cloudSqlHost.trim() === directHost &&
+                          String(cloudSqlPort).trim() === "5432"
+                      );
+                      const authorizedCidrs = Array.isArray(targetCluster.primaryInstance?.authorizedExternalNetworks)
+                        ? targetCluster.primaryInstance.authorizedExternalNetworks
+                        : [];
+                      const hasAuthorizedIp = authorizedCidrs.length > 0;
+                      const isAuthorizing =
+                        busyKey === `PUBIP_${targetCluster.clusterId}` ||
+                        pendingLroByCluster[targetCluster.clusterId]?.action === "ENABLE_PUBLIC_IP_FOR_MY_IP";
+                      return (
+                        <div
+                          className={`p-3 rounded-lg border text-xs space-y-2 transition-colors ${
+                            isDirectSelected
+                              ? "border-amber-500 bg-amber-500/[0.08]"
+                              : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950"
+                          }`}
                         >
-                          Use Public DNS
-                        </button>
-                        <button
-                          type="button"
-                          disabled={busyKey === `PUBIP_${targetCluster.clusterId}`}
-                          onClick={() =>
-                            executeAlloyAction(
-                              {
-                                action: "ENABLE_PUBLIC_IP_FOR_MY_IP",
-                                region: targetCluster.location,
-                                clusterId: targetCluster.clusterId,
-                                instanceId: targetCluster.primaryInstance.instanceId,
-                              },
-                              `PUBIP_${targetCluster.clusterId}`
-                            )
-                          }
-                          className="px-2.5 py-1 rounded-md border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 disabled:opacity-50 text-amber-800 dark:text-amber-200 text-[11px] font-bold cursor-pointer"
-                        >
-                          {busyKey === `PUBIP_${targetCluster.clusterId}` ? "Authorizing My IP…" : "Authorize My /32 IP"}
-                        </button>
-                      </div>
-                    </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                              Option B: Direct Public DNS + /32 IP (No Local Proxy)
+                            </span>
+                            <span
+                              className={`px-1.5 py-0.5 rounded font-mono text-[10px] font-bold ${
+                                isDirectSelected
+                                  ? "bg-amber-500/20 text-amber-800 dark:text-amber-200"
+                                  : "bg-zinc-200/70 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
+                              }`}
+                            >
+                              {isDirectSelected ? "● Active (:5432)" : "TLS + /32 IP"}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                            Connects directly to <code className="font-mono">{directHost || "*.alloydb.s.cloud.goog"}:5432</code> over TLS. Requires authorizing your current <code className="font-mono">/32</code> IPv4.
+                          </p>
+                          {hasAuthorizedIp && (
+                            <div className="flex flex-wrap items-center gap-1.5 text-[10.5px] font-mono">
+                              <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold">
+                                ✓ Authorized: {authorizedCidrs.join(", ")}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={!directHost}
+                              onClick={() => {
+                                if (!directHost) return;
+                                setCloudSqlHost(directHost);
+                                setCloudSqlPort("5432");
+                                notify(`Switched SQL Console to Direct Public DNS (${directHost}:5432)`);
+                              }}
+                              className={`px-2.5 py-1 rounded-md border text-[11px] font-bold cursor-pointer disabled:opacity-45 ${
+                                isDirectSelected
+                                  ? "border-amber-500 bg-amber-500/20 text-amber-800 dark:text-amber-200"
+                                  : "border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200"
+                              }`}
+                            >
+                              {isDirectSelected ? "✓ Using Public DNS (:5432)" : "Use Public DNS"}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isAuthorizing}
+                              onClick={() =>
+                                executeAlloyAction(
+                                  {
+                                    action: "ENABLE_PUBLIC_IP_FOR_MY_IP",
+                                    region: targetCluster.location,
+                                    clusterId: targetCluster.clusterId,
+                                    instanceId: targetCluster.primaryInstance.instanceId,
+                                  },
+                                  `PUBIP_${targetCluster.clusterId}`
+                                )
+                              }
+                              className={`px-2.5 py-1 rounded-md border text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer disabled:opacity-50 ${
+                                hasAuthorizedIp
+                                  ? "border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
+                                  : "border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-200"
+                              }`}
+                            >
+                              {isAuthorizing && <RefreshCw className="w-3 h-3 animate-spin" />}
+                              <span>
+                                {isAuthorizing
+                                  ? "Authorizing My /32 IP…"
+                                  : hasAuthorizedIp
+                                  ? "✓ IP Authorized (Add / Refresh)"
+                                  : "Authorize My /32 IP"}
+                              </span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
 
