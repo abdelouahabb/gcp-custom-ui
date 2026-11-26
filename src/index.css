@@ -868,52 +868,133 @@ button.bg-blue-600:not([role="tab"]):not(.cp-nav-rail-item):hover:not(:disabled)
 }
 
 /* ============================================================================
- * 2026 Spatial Breathing System — Vertical Scroll Friendly, Zero Side-Scroll
- * Gives every studio generous vertical rhythm, airy grid gaps, and readable tables
+ * 2026 Spatial Breathing & Editorial Typography System
+ * - Proportional root scale (17px desktop) so fonts, buttons & heights stay locked
+ * - Readability floor: eliminates 9px-11px eyestrain across studios & tables
+ * - Anti-collision button/flex guardrails + zero horizontal scroll
+ * - Refined Swiss/Linear surface hierarchy & tabular-nums precision
  * ============================================================================ */
-html,
+html {
+  font-size: 16px;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (min-width: 1024px) {
+  html {
+    font-size: 17px;
+  }
+}
+
 body {
   overflow-x: hidden;
+  line-height: 1.5;
+  background-color: #f6f8fb;
+}
+
+.dark body {
+  background-color: #080b11;
+}
+
+/* Crisp Editorial Headings & Tabular Precision */
+#cloudpulse-main-workspace h1,
+#cloudpulse-main-workspace h2,
+#cloudpulse-main-workspace h3 {
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+}
+
+#cloudpulse-main-workspace .font-bold,
+#cloudpulse-main-workspace .font-extrabold {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Readability Floor inside Main Workspace (no microscopic text) */
+#cloudpulse-main-workspace .text-\[10px\] {
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+#cloudpulse-main-workspace .text-\[10\.5px\],
+#cloudpulse-main-workspace .text-\[11px\] {
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+#cloudpulse-main-workspace .text-xs {
+  font-size: 0.84rem;
+  line-height: 1.48;
+}
+
+#cloudpulse-main-workspace .text-sm {
+  font-size: 0.94rem;
+  line-height: 1.5;
+}
+
+/* Anti-Collision Button & Control Alignment */
+#cloudpulse-main-workspace button,
+#cloudpulse-main-workspace select,
+#cloudpulse-main-workspace input[type="text"],
+#cloudpulse-main-workspace input[type="search"] {
+  line-height: 1.25;
 }
 
 #cloudpulse-main-workspace .space-y-3 > :not([hidden]) ~ :not([hidden]) {
-  margin-top: 1.15rem;
+  margin-top: 1.2rem;
 }
 
 #cloudpulse-main-workspace .space-y-4 > :not([hidden]) ~ :not([hidden]) {
-  margin-top: 1.5rem;
+  margin-top: 1.55rem;
 }
 
 #cloudpulse-main-workspace .space-y-5 > :not([hidden]) ~ :not([hidden]) {
-  margin-top: 1.85rem;
+  margin-top: 1.9rem;
 }
 
 #cloudpulse-main-workspace .space-y-6 > :not([hidden]) ~ :not([hidden]) {
-  margin-top: 2.25rem;
+  margin-top: 2.3rem;
 }
 
 #cloudpulse-main-workspace .grid.gap-2 {
-  gap: 0.9rem;
+  gap: 0.95rem;
 }
 
 #cloudpulse-main-workspace .grid.gap-3 {
-  gap: 1.2rem;
+  gap: 1.25rem;
 }
 
 #cloudpulse-main-workspace .grid.gap-4 {
-  gap: 1.5rem;
+  gap: 1.55rem;
+}
+
+#cloudpulse-main-workspace table {
+  font-size: 0.84rem;
 }
 
 #cloudpulse-main-workspace table th,
 #cloudpulse-main-workspace table td {
-  padding-top: 0.72rem;
-  padding-bottom: 0.72rem;
+  padding-top: 0.78rem;
+  padding-bottom: 0.78rem;
+}
+
+/* Refined Card Surface Elevation */
+#cloudpulse-main-workspace section.rounded-xl,
+#cloudpulse-main-workspace section.rounded-2xl {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.dark #cloudpulse-main-workspace section.rounded-xl,
+.dark #cloudpulse-main-workspace section.rounded-2xl {
+  background-color: #0e131e;
+  border-color: rgba(148, 163, 184, 0.14);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 
 @media (min-width: 768px) {
   #cloudpulse-main-workspace section.rounded-xl,
   #cloudpulse-main-workspace section.rounded-2xl {
-    padding: 1.5rem;
+    padding: 1.6rem;
   }
 }
 

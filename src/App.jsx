@@ -11869,8 +11869,8 @@ function CloudPulseCockpit() {
           {!mobilePreview && (
             <aside
               aria-label="Google Cloud Architectural Studios Navigation"
-              className={`hidden md:flex flex-col shrink-0 sticky top-[49px] h-[calc(100vh-73px)] overflow-y-auto border-r border-zinc-200 dark:border-[#1e2433] bg-white dark:bg-[#0c0f16] select-none transition-all duration-150 ${
-                sidebarCollapsed ? 'w-14' : 'w-60'
+              className={`hidden md:flex flex-col shrink-0 sticky top-[52px] h-[calc(100vh-76px)] overflow-y-auto border-r border-zinc-200/80 dark:border-[#1a2130] bg-white dark:bg-[#0b0f17] select-none transition-all duration-150 ${
+                sidebarCollapsed ? 'w-14' : 'w-64'
               }`}
             >
               {/* Inline Quick Studio Filter (Expanded Mode) */}
@@ -12076,10 +12076,10 @@ function CloudPulseCockpit() {
                                 data-feature-id={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
                                 title={tab.tip}
-                                className={`cp-nav-rail-item flex-1 min-w-0 flex items-center justify-between pl-3 pr-1 h-8 text-[12px] bg-transparent border-none shadow-none cursor-pointer ${
+                                className={`cp-nav-rail-item flex-1 min-w-0 flex items-center justify-between pl-3 pr-1 h-9 text-[13px] bg-transparent border-none shadow-none cursor-pointer ${
                                   isActive
                                     ? 'text-zinc-950 dark:text-white font-semibold'
-                                    : 'text-zinc-600 dark:text-[#8b95a5] hover:text-zinc-950 dark:hover:text-zinc-100 font-medium'
+                                    : 'text-zinc-600 dark:text-[#b0bac9] hover:text-zinc-950 dark:hover:text-zinc-100 font-medium'
                                 }`}
                               >
                                 <span className="flex items-center gap-2.5 min-w-0">

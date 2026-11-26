@@ -37,12 +37,12 @@ export default function StudioWorkspaceTabs({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             {studioTitle && (
-              <h2 className="text-base font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
+              <h2 className="text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-50 truncate">
                 {studioTitle}
               </h2>
             )}
             {studioSubtitle && (
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                 {studioSubtitle}
               </p>
             )}
@@ -70,7 +70,7 @@ export default function StudioWorkspaceTabs({
         </div>
 
         {tabs.length > 1 && (
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1 border-t border-zinc-100 dark:border-[#181f2e]">
+          <div className="flex flex-wrap items-center gap-2 pt-2.5 border-t border-zinc-100 dark:border-[#181f2e]">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab?.id === tab.id;
@@ -79,7 +79,7 @@ export default function StudioWorkspaceTabs({
                   key={tab.id}
                   type="button"
                   onClick={() => handleSelect(tab.id)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+                  className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-md text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
                     isActive
                       ? 'bg-amber-500 text-zinc-950 font-semibold shadow-2xs'
                       : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100/80 dark:hover:bg-[#151c2c]'
