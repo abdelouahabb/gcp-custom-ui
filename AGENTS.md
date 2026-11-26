@@ -28,6 +28,7 @@
 ## 4. Historical Milestones Archive
 All prior waves and detailed milestone logs (A through Q) are archived in [docs/MILESTONES_ARCHIVE.md](docs/MILESTONES_ARCHIVE.md) to keep active prompt context lean.
 
-## 5. Rotating Local Task Log (Git-Ignored)
-- Every commit is automatically appended to `.cloudpulse-logs/agent-tasks.log` (git-ignored, auto-rotates at 256 KB, keeps 5 archives) via `.git/hooks/post-commit` → [scripts/task-log.mjs](scripts/task-log.mjs).
-- Start new sessions by running `node scripts/task-log.mjs tail 20` for instant chronological context; log non-commit tasks via `node scripts/task-log.mjs add "<CATEGORY>" "<summary>" "[files]"`.
+## 5. Rotating Local Task & Cloud-Actions Logs (Git-Ignored)
+- **Git Tasks**: Every commit is automatically appended to `.cloudpulse-logs/agent-tasks.log` (git-ignored, auto-rotates at **10 MB**, keeps 5 archives) via `.git/hooks/post-commit` → [scripts/task-log.mjs](scripts/task-log.mjs).
+- **Live Cloud Actions**: Every live `POST`/`PATCH`/`PUT`/`DELETE` under `/api/...` is automatically appended (with secrets redacted) to `.cloudpulse-logs/cloud-actions.log` (git-ignored, auto-rotates at **10 MB**, keeps 5 archives) via Express middleware in [server/index.js](server/index.js).
+- Start new sessions by running `node scripts/task-log.mjs tail 20` and `node scripts/task-log.mjs tail-actions 20` for instant chronological context.

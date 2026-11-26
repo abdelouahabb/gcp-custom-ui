@@ -53,6 +53,82 @@ const gcpHttp = axios.create({
 app.use(cors());
 app.use(express.json({ limit: '15mb' }));
 
+// ============================================================================
+// Rotating Local Cloud Actions Audit Logger (.cloudpulse-logs/cloud-actions.log)
+// Git-ignored, auto-rotates at 10 MB (keeps 5 archives), redacts secrets.
+// ============================================================================
+const CLOUDPULSE_LOG_DIR = path.resolve(__dirname, '..', '.cloudpulse-logs');
+const CLOUD_ACTIONS_LOG = path.join(CLOUDPULSE_LOG_DIR, 'cloud-actions.log');
+const CLOUD_ACTIONS_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
+const CLOUD_ACTIONS_MAX_ROTATIONS = 5;
+const REDACT_KEY_RE = /pass|token|secret|apikey|api_key|private|credential|auth|cookie/i;
+
+function rotateCloudActionsLogIfNeeded() {
+  if (!fs.existsSync(CLOUD_ACTIONS_LOG)) return;
+  const { size } = fs.statSync(CLOUD_ACTIONS_LOG);
+  if (size < CLOUD_ACTIONS_MAX_BYTES) return;
+  for (let i = CLOUD_ACTIONS_MAX_ROTATIONS - 1; i >= 1; i--) {
+    const src = path.join(CLOUDPULSE_LOG_DIR, `cloud-actions.${i}.log`);
+    const dst = path.join(CLOUDPULSE_LOG_DIR, `cloud-actions.${i + 1}.log`);
+    if (fs.existsSync(src)) {
+      if (i + 1 > CLOUD_ACTIONS_MAX_ROTATIONS) fs.unlinkSync(src);
+      else fs.renameSync(src, dst);
+    }
+  }
+  fs.renameSync(CLOUD_ACTIONS_LOG, path.join(CLOUDPULSE_LOG_DIR, 'cloud-actions.1.log'));
+}
+
+app.use((req, res, next) => {
+  if (!req.path.startsWith('/api/') || !['POST', 'PATCH', 'PUT', 'DELETE'].includes(req.method)) {
+    return next();
+  }
+  const startedAt = Date.now();
+  res.on('finish', () => {
+    try {
+      fs.mkdirSync(CLOUDPULSE_LOG_DIR, { recursive: true });
+      rotateCloudActionsLogIfNeeded();
+      const body = req.body && typeof req.body === 'object' ? req.body : {};
+      const projMatch = req.path.match(/\/api\/project\/([^/]+)/);
+      const projectId = projMatch ? decodeURIComponent(projMatch[1]) : undefined;
+      const action = body.action || body.serviceType || body.mode || body.actionType || undefined;
+      const target =
+        body.name ||
+        body.clusterName ||
+        body.instanceName ||
+        body.vmName ||
+        body.serviceName ||
+        body.bucketName ||
+        body.datasetId ||
+        body.exclusionName ||
+        body.resourceName ||
+        undefined;
+      const safeBody = {};
+      for (const [k, v] of Object.entries(body).slice(0, 12)) {
+        safeBody[k] = REDACT_KEY_RE.test(k)
+          ? '[REDACTED]'
+          : typeof v === 'string'
+            ? v.slice(0, 160)
+            : v;
+      }
+      const entry = {
+        ts: new Date().toISOString(),
+        method: req.method,
+        path: req.path,
+        projectId,
+        action: action ? String(action) : undefined,
+        target: target ? String(target) : undefined,
+        status: res.statusCode,
+        durationMs: Date.now() - startedAt,
+        payload: safeBody,
+      };
+      fs.appendFileSync(CLOUD_ACTIONS_LOG, JSON.stringify(entry) + '\n', 'utf8');
+    } catch {
+      // Never impact live API responses
+    }
+  });
+  next();
+});
+
 const ATTRIBUTION_ENV = {
   ...process.env,
   CLOUDSDK_METRICS_ENVIRONMENT: `${

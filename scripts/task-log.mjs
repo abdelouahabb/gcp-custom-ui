@@ -5,7 +5,8 @@ import { execSync } from 'child_process';
 
 const LOG_DIR = path.resolve(process.cwd(), '.cloudpulse-logs');
 const LOG_FILE = path.join(LOG_DIR, 'agent-tasks.log');
-const MAX_BYTES = 256 * 1024; // 256 KB per file
+const ACTIONS_LOG_FILE = path.join(LOG_DIR, 'cloud-actions.log');
+const MAX_BYTES = 10 * 1024 * 1024; // 10 MB per file
 const MAX_ROTATIONS = 5;
 
 function ensureDir() {
@@ -94,7 +95,22 @@ if (cmd === 'add') {
       console.log(line);
     }
   }
+} else if (cmd === 'tail-actions') {
+  const n = Math.min(100, Math.max(1, Number(rest[0]) || 20));
+  if (!fs.existsSync(ACTIONS_LOG_FILE)) {
+    console.log('(no live cloud-actions log entries yet)');
+    process.exit(0);
+  }
+  const lines = fs.readFileSync(ACTIONS_LOG_FILE, 'utf8').trim().split('\n').filter(Boolean);
+  for (const line of lines.slice(-n)) {
+    try {
+      const e = JSON.parse(line);
+      console.log(`[${String(e.ts || '').slice(0, 19).replace('T', ' ')}] ${e.method} ${e.path} -> HTTP ${e.status} (${e.durationMs}ms)${e.projectId ? ` [proj=${e.projectId}]` : ''}${e.action ? ` [action=${e.action}]` : ''}${e.target ? ` [target=${e.target}]` : ''}`);
+    } catch {
+      console.log(line);
+    }
+  }
 } else {
-  console.error(`Unknown command: ${cmd}. Use: add | from-git-head | seed-recent | tail`);
+  console.error(`Unknown command: ${cmd}. Use: add | from-git-head | seed-recent | tail | tail-actions`);
   process.exit(1);
 }
