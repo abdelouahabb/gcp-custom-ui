@@ -12595,10 +12595,24 @@ app.post('/api/project/:projectId/alloydb/omni-local', async (req, res) => {
       srv.listen(p, '127.0.0.1');
     });
 
+  const containerBin = fs.existsSync('/usr/bin/docker') || fs.existsSync('/usr/local/bin/docker') || fs.existsSync('/snap/bin/docker')
+    ? 'docker'
+    : (fs.existsSync('/usr/bin/podman') || fs.existsSync('/usr/local/bin/podman'))
+      ? 'podman'
+      : 'docker';
+
+  const formatDockerErr = (err, stderr) => {
+    const raw = String(stderr || err?.message || 'Docker command failed').trim();
+    if (err?.code === 'ENOENT' || /ENOENT/i.test(raw)) {
+      return 'Docker CLI is not installed on this host (no docker/podman binary in PATH). Install Docker Engine (e.g. sudo apt-get install -y docker.io && sudo usermod -aG docker $USER) to run local AlloyDB Omni containers, or connect to a Managed Cloud AlloyDB cluster.';
+    }
+    return raw;
+  };
+
   const runDocker = (args, timeoutMs = 20000) =>
     new Promise((resolve, reject) => {
-      execFile('docker', args, { timeout: timeoutMs, maxBuffer: 512 * 1024 }, (err, stdout, stderr) => {
-        if (err) return reject(new Error(String(stderr || err.message || 'Docker command failed').trim()));
+      execFile(containerBin, args, { timeout: timeoutMs, maxBuffer: 512 * 1024 }, (err, stdout, stderr) => {
+        if (err) return reject(new Error(formatDockerErr(err, stderr)));
         resolve({ stdout: String(stdout || '').trim(), stderr: String(stderr || '').trim() });
       });
     });
@@ -12735,7 +12749,7 @@ app.post('/api/project/:projectId/alloydb/omni-local', async (req, res) => {
               job.phase = 'PULLING_IMAGE';
               pushLog(`Image ${fullImage} not cached locally — pulling from Docker Hub (first pull may take 1-3 min)...`);
               await new Promise((resolve, reject) => {
-                const pullProc = spawn('docker', ['pull', fullImage]);
+                const pullProc = spawn(containerBin, ['pull', fullImage]);
                 job._proc = pullProc;
                 let stderrBuf = '';
                 let lastOutputAt = Date.now();
