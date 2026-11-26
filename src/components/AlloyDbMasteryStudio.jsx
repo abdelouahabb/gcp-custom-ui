@@ -2789,7 +2789,10 @@ GROUP BY 1 ORDER BY turns DESC;`;
             authProxyState.running || (cloudSqlHost.trim() && cloudSqlHost.trim() !== "127.0.0.1")
           );
           const step2Authed = Boolean(
-            cloudSqlAuthMode === "IAM_TOKEN" || cloudSqlPassword.trim().length > 0
+            (cloudSqlAuthMode === "IAM_TOKEN" &&
+              cloudSqlUser.trim().length > 0 &&
+              cloudSqlUser.trim().toLowerCase() !== "postgres") ||
+              (cloudSqlAuthMode === "PASSWORD" && cloudSqlPassword.trim().length > 0)
           );
           const sqlActionsUnlocked = step1Connected && step2Authed;
           return (
@@ -2956,7 +2959,10 @@ GROUP BY 1 ORDER BY turns DESC;`;
                   <div className="inline-flex rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-0.5 text-[11px]">
                     <button
                       type="button"
-                      onClick={() => setCloudSqlAuthMode("PASSWORD")}
+                      onClick={() => {
+                        setCloudSqlAuthMode("PASSWORD");
+                        if (!cloudSqlUser.trim()) setCloudSqlUser("postgres");
+                      }}
                       className={`px-2.5 py-1 rounded-md font-semibold cursor-pointer ${
                         cloudSqlAuthMode === "PASSWORD"
                           ? "bg-amber-500/20 text-amber-800 dark:text-amber-200"
@@ -2967,7 +2973,12 @@ GROUP BY 1 ORDER BY turns DESC;`;
                     </button>
                     <button
                       type="button"
-                      onClick={() => setCloudSqlAuthMode("IAM_TOKEN")}
+                      onClick={() => {
+                        setCloudSqlAuthMode("IAM_TOKEN");
+                        if (cloudSqlUser.trim().toLowerCase() === "postgres") {
+                          setCloudSqlUser("");
+                        }
+                      }}
                       className={`px-2.5 py-1 rounded-md font-semibold cursor-pointer ${
                         cloudSqlAuthMode === "IAM_TOKEN"
                           ? "bg-amber-500/20 text-amber-800 dark:text-amber-200"
@@ -3169,7 +3180,9 @@ GROUP BY 1 ORDER BY turns DESC;`;
                     <span className="text-[11px] text-amber-700 dark:text-amber-300 font-medium">
                       {!step1Connected
                         ? "Step 1: Start Auth Proxy Tunnel or pick Public DNS to unlock."
-                        : "Step 2: Enter your postgres password (or switch to Zero-Password IAM) to unlock SQL."}
+                        : cloudSqlAuthMode === "IAM_TOKEN"
+                        ? "Step 2: Enter your IAM user email (not 'postgres') — bind it via '+ IAM User' on the cluster card first."
+                        : "Step 2: Enter your postgres password (or click 'Reset / Set') to unlock SQL."}
                     </span>
                   )}
                 </div>
