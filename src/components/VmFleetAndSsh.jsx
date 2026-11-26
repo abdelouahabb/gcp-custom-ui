@@ -1562,8 +1562,10 @@ export default function VmFleetAndSsh({
   const [cveReportByVm, setCveReportByVm] = useState({});
   const [cvePatchReceiptByVm, setCvePatchReceiptByVm] = useState({});
   const [cveFilterText, setCveFilterText] = useState('');
+  const [cveSeverityFilter, setCveSeverityFilter] = useState('ALL');
   const [cveSortField, setCveSortField] = useState('severity');
   const [cveSortDir, setCveSortDir] = useState('desc');
+  const cvePanelRef = useRef(null);
 
   const toggleCveSort = (field) => {
     if (cveSortField === field) {
@@ -1582,7 +1584,9 @@ export default function VmFleetAndSsh({
     }
     const resolvedZone = String(vm.zone || vm.region || 'us-central1-a').split('/').pop();
     setOpenCveVm(vm.name);
+    setCveSeverityFilter('ALL');
     setCveScanBusyVm(vm.name);
+    setTimeout(() => cvePanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
     try {
       const { data } = await axios.post(
         `/api/project/${encodeURIComponent(projectId)}/vms/${encodeURIComponent(vm.name)}/cve-scan`,
@@ -2997,6 +3001,313 @@ export default function VmFleetAndSsh({
               </div>
             )}
           </div>
+
+          {/* FULL-WIDTH LIVE GCE CVE SECURITY AUDIT & PATCH WORKBENCH (lifted out of narrow 33% VM sidebar!) */}
+          {openCveVm && (() => {
+            const cveVm = vms.find((v) => v.name === openCveVm) || { name: openCveVm, status: 'RUNNING', zone: '' };
+            const rep = cveReportByVm[cveVm.name];
+            const sc = rep?.severityCounts || { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0, TOTAL: 0 };
+            const receipt = cvePatchReceiptByVm[cveVm.name];
+            const sevRank = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1, UNKNOWN: 0 };
+            const visibleVulns = (rep?.vulnerabilities || [])
+              .filter((v) => {
+                if (cveSeverityFilter !== 'ALL' && String(v.severity || '').toUpperCase() !== cveSeverityFilter) return false;
+                if (!cveFilterText.trim()) return true;
+                const q = cveFilterText.trim().toLowerCase();
+                return (
+                  String(v.cveId || '').toLowerCase().includes(q) ||
+                  String(v.packageName || '').toLowerCase().includes(q) ||
+                  String(v.source || '').toLowerCase().includes(q) ||
+                  String(v.severity || '').toLowerCase().includes(q)
+                );
+              })
+              .sort((a, b) => {
+                let cmp = 0;
+                if (cveSortField === 'severity') {
+                  cmp = (sevRank[String(a.severity || '').toUpperCase()] || 0) - (sevRank[String(b.severity || '').toUpperCase()] || 0);
+                } else {
+                  cmp = String(a[cveSortField] || '').localeCompare(String(b[cveSortField] || ''));
+                }
+                return cveSortDir === 'desc' ? -cmp : cmp;
+              });
+
+            return (
+              <section
+                ref={cvePanelRef}
+                className="rounded-2xl border border-amber-500/40 bg-white dark:bg-[#0e131e] p-5 sm:p-6 shadow-md space-y-5 cp-studio-enter"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-zinc-200 dark:border-[#1e2433]">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                      <ShieldAlert className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-zinc-950 dark:text-zinc-50">
+                        Live CVE &amp; Installed Package Audit — {cveVm.name}
+                      </h3>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                        Full-width OS Config + live OSV.dev vulnerability workbench with 1-click apt upgrade &amp; Zero-SSH Patch Jobs.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={cveScanBusyVm === cveVm.name}
+                      onClick={() => handleScanVmCves(cveVm, false)}
+                      className="px-3 py-1.5 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-800 dark:text-zinc-200 inline-flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${cveScanBusyVm === cveVm.name ? 'animate-spin' : ''}`} />
+                      Re-Scan
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOpenCveVm('')}
+                      className="px-3 py-1.5 rounded-md bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs font-medium text-zinc-600 dark:text-zinc-300 cursor-pointer"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+
+                {cveScanBusyVm === cveVm.name && !rep ? (
+                  <div className="py-6 text-xs text-amber-700 dark:text-amber-300 flex items-center justify-center gap-2.5">
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Querying OS Config Vulnerability Report &amp; cross-checking installed packages against live OSV.dev…</span>
+                  </div>
+                ) : rep ? (
+                  <div className="space-y-5">
+                    {/* Agent & OS Status + 1-Click Patch Controls */}
+                    <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl bg-zinc-50/80 dark:bg-[#090d16] border border-zinc-200 dark:border-[#1e2433]">
+                      <div className="space-y-1">
+                        <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                          Agent:{' '}
+                          <span
+                            className={
+                              rep.agentStatus === 'ACTIVE_OSCONFIG'
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : rep.agentStatus === 'SSH_APT_CHECK'
+                                ? 'text-amber-600 dark:text-amber-400'
+                                : 'text-red-500'
+                            }
+                          >
+                            {rep.agentStatus === 'ACTIVE_OSCONFIG'
+                              ? `google-osconfig-agent ACTIVE (${rep.osInfo?.osconfigAgentVersion || 'v1'})`
+                              : rep.agentStatus === 'SSH_APT_CHECK'
+                              ? 'Live SSH apt package check (OS Config syncing)'
+                              : 'OS Config Agent Not Detected'}
+                          </span>
+                        </div>
+                        <div className="text-xs text-zinc-500">
+                          {rep.osInfo?.longName || 'Linux Guest'} · {rep.installedPackageCount || 0} installed packages · zone {rep.zone}
+                          {rep.osvPackagesScanned > 0 && (
+                            <span className="ml-2 text-emerald-600 dark:text-emerald-400 font-semibold">
+                              · OSV.dev checked {rep.osvPackagesScanned} pkgs (+{rep.osvFindingsCount || 0} findings)
+                            </span>
+                          )}
+                        </div>
+                        {(rep.sshCheckNote || rep.osConfigError) && rep.agentStatus !== 'ACTIVE_OSCONFIG' && (
+                          <div className="text-xs text-amber-700 dark:text-amber-300">
+                            {rep.sshCheckNote || rep.osConfigError}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        {rep.agentStatus !== 'ACTIVE_OSCONFIG' && (
+                          <button
+                            type="button"
+                            disabled={Boolean(installingVmAgent)}
+                            onClick={() => handleInstallGceAgentOnVm(cveVm, ['OS_CONFIG_AGENT', 'OPS_AGENT'], true)}
+                            className="px-3 py-1.5 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold text-xs cursor-pointer"
+                          >
+                            Install OS Config Agent
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          disabled={Boolean(cvePatchBusyVm) || cveVm.status !== 'RUNNING'}
+                          onClick={() =>
+                            handlePatchVmCves(
+                              cveVm,
+                              'APT_UPGRADE_SSH',
+                              rep.upgradablePackages?.length > 0 ? rep.upgradablePackages : []
+                            )
+                          }
+                          className="px-3.5 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
+                        >
+                          {cvePatchBusyVm === `${cveVm.name}:APT_UPGRADE_SSH` ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Terminal className="w-3.5 h-3.5" />
+                          )}
+                          <span>
+                            {cvePatchBusyVm === `${cveVm.name}:APT_UPGRADE_SSH`
+                              ? 'Running apt-get upgrade...'
+                              : rep.upgradablePackages?.length > 0
+                              ? `Fix ${rep.upgradablePackages.length} Pkg(s) via apt upgrade`
+                              : 'Run Live apt-get upgrade -y'}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={Boolean(cvePatchBusyVm)}
+                          onClick={() =>
+                            handlePatchVmCves(
+                              cveVm,
+                              'OSCONFIG_PATCH_JOB',
+                              rep.upgradablePackages?.length > 0 ? rep.upgradablePackages : []
+                            )
+                          }
+                          className="px-3 py-1.5 rounded-md bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
+                        >
+                          {cvePatchBusyVm === `${cveVm.name}:OSCONFIG_PATCH_JOB` ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
+                          )}
+                          <span>Zero-SSH Patch Job</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Interactive Severity Filter KPI Strip */}
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                      {[
+                        { id: 'ALL', label: 'All Findings', count: sc.TOTAL, cls: 'text-zinc-900 dark:text-zinc-100' },
+                        { id: 'CRITICAL', label: 'Critical', count: sc.CRITICAL, cls: 'text-red-600 dark:text-red-400' },
+                        { id: 'HIGH', label: 'High', count: sc.HIGH, cls: 'text-amber-600 dark:text-amber-400' },
+                        { id: 'MEDIUM', label: 'Medium', count: sc.MEDIUM, cls: 'text-blue-600 dark:text-blue-400' },
+                        { id: 'LOW', label: 'Low', count: sc.LOW, cls: 'text-zinc-600 dark:text-zinc-300' },
+                      ].map((k) => {
+                        const active = cveSeverityFilter === k.id;
+                        return (
+                          <button
+                            key={k.id}
+                            type="button"
+                            onClick={() => setCveSeverityFilter(k.id)}
+                            className={`text-left rounded-xl border p-3 transition cursor-pointer ${
+                              active
+                                ? 'border-amber-500 bg-amber-500/12'
+                                : 'border-zinc-200 dark:border-[#1e2433] bg-zinc-50/70 dark:bg-[#090d16] hover:border-zinc-300 dark:hover:border-zinc-700'
+                            }`}
+                          >
+                            <div className="text-[11px] text-zinc-500">{k.label}</div>
+                            <div className={`text-xl font-bold mt-0.5 tabular-nums ${k.cls}`}>{k.count}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Full-Width Spacious CVE Table */}
+                    {Array.isArray(rep.vulnerabilities) && rep.vulnerabilities.length > 0 ? (
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <input
+                            type="text"
+                            value={cveFilterText}
+                            onChange={(e) => setCveFilterText(e.target.value)}
+                            placeholder="Filter CVEs by package, ID, or severity (e.g. nginx, openssl, kernel, CVE-2025)..."
+                            className="flex-1 min-w-[260px] px-3 py-2 rounded-lg bg-zinc-50 dark:bg-[#090d16] border border-zinc-200 dark:border-[#1e2433] text-xs text-zinc-900 dark:text-zinc-100"
+                          />
+                          <span className="text-xs text-zinc-500">
+                            Showing <strong>{visibleVulns.length}</strong> of {rep.vulnerabilities.length} CVEs
+                          </span>
+                        </div>
+                        <div className="max-h-[460px] overflow-auto border border-zinc-200 dark:border-[#1e2433] rounded-xl">
+                          <table className="w-full text-left text-xs">
+                            <thead className="bg-zinc-50 dark:bg-[#090d16] text-zinc-600 dark:text-zinc-400 sticky top-0 border-b border-zinc-200 dark:border-[#1e2433]">
+                              <tr>
+                                {[
+                                  { id: 'cveId', label: 'CVE ID' },
+                                  { id: 'source', label: 'Source' },
+                                  { id: 'severity', label: 'Severity' },
+                                  { id: 'packageName', label: 'Affected Package' },
+                                  { id: 'fixedVersion', label: 'Installed → Fixed Version' },
+                                ].map((col) => (
+                                  <th key={col.id} className="px-4 py-2.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleCveSort(col.id)}
+                                      className="inline-flex items-center gap-1 font-semibold hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
+                                    >
+                                      <span>{col.label}</span>
+                                      {cveSortField === col.id && (
+                                        <span className="text-amber-500">
+                                          {cveSortDir === 'asc' ? '↑' : '↓'}
+                                        </span>
+                                      )}
+                                    </button>
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-zinc-200 dark:divide-[#1e2433]">
+                              {visibleVulns.map((v, idx) => (
+                                <tr key={`${v.cveId}-${v.packageName}-${idx}`} className="hover:bg-zinc-50/80 dark:hover:bg-[#131a2b]">
+                                  <td className="px-4 py-2.5 font-mono whitespace-nowrap">
+                                    <a
+                                      href={v.source === 'OSV_DEV' ? `https://osv.dev/vulnerability/${v.cveId}` : `https://nvd.nist.gov/vuln/detail/${v.cveId}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+                                    >
+                                      {v.cveId}
+                                    </a>
+                                  </td>
+                                  <td className="px-4 py-2.5 whitespace-nowrap">
+                                    <span
+                                      className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                                        v.source === 'OSV_DEV'
+                                          ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300'
+                                          : 'bg-amber-500/15 text-amber-800 dark:text-amber-200'
+                                      }`}
+                                    >
+                                      {v.source === 'OSV_DEV' ? 'OSV.dev' : 'OS Config'}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-2.5 whitespace-nowrap">
+                                    <span
+                                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                        v.severity === 'CRITICAL'
+                                          ? 'bg-red-500/15 text-red-600 dark:text-red-400'
+                                          : v.severity === 'HIGH'
+                                          ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                                          : 'bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
+                                      }`}
+                                    >
+                                      {v.severity}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-2.5 font-mono font-semibold text-zinc-900 dark:text-zinc-100">
+                                    {v.packageName}
+                                  </td>
+                                  <td className="px-4 py-2.5 font-mono text-zinc-600 dark:text-zinc-400">
+                                    {v.installedVersion} → <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{v.fixedVersion}</span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-700 dark:text-emerald-300">
+                        No open CVEs or upgradable security packages reported for {cveVm.name}.
+                      </div>
+                    )}
+
+                    {receipt?.output && (
+                      <pre className="p-3.5 rounded-xl bg-zinc-950 text-emerald-300 font-mono text-xs max-h-48 overflow-auto whitespace-pre-wrap">
+                        <code>{receipt.output}</code>
+                      </pre>
+                    )}
+                  </div>
+                ) : null}
+              </section>
+            );
+          })()}
 
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
             {/* Compact Left VM Fleet Sidebar (Default 4/12 = 33%, auto-widens to 6/12 when a VM drawer is open) */}
