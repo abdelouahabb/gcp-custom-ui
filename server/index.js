@@ -6912,11 +6912,13 @@ app.post('/api/project/:projectId/vms/:vmName/cve-patch', async (req, res) => {
       });
     }
 
-    // Mode: APT_UPGRADE_SSH (Live apt-get update && apt-get upgrade -y via gcloud compute ssh with IAP fallback)
+    // Mode: APT_UPGRADE_SSH (Non-interactive apt-get upgrade with dpkg confold + NEEDRESTART_MODE=a to prevent TUI hangs)
+    const aptEnvFlags = 'DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a';
+    const dpkgOpts = '-o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"';
     const upgradeCmd =
       safePackages.length > 0
-        ? `sudo DEBIAN_FRONTEND=noninteractive apt-get update -y && sudo DEBIAN_FRONTEND=noninteractive apt-get install --only-upgrade -y ${safePackages.join(' ')}`
-        : 'sudo DEBIAN_FRONTEND=noninteractive apt-get update -y && sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y';
+        ? `sudo ${aptEnvFlags} apt-get update -y </dev/null && sudo ${aptEnvFlags} apt-get install --only-upgrade -y ${dpkgOpts} ${safePackages.join(' ')} </dev/null`
+        : `sudo ${aptEnvFlags} apt-get update -y </dev/null && sudo ${aptEnvFlags} apt-get upgrade -y ${dpkgOpts} </dev/null`;
 
     const runSshPatch = (useIap) =>
       new Promise((resolve, reject) => {
@@ -6931,9 +6933,9 @@ app.post('/api/project/:projectId/vms/:vmName/cve-patch', async (req, res) => {
             ...(useIap ? ['--tunnel-through-iap'] : []),
             `--command=${upgradeCmd}`,
             '--quiet',
-            '--ssh-flag=-o ConnectTimeout=10 -o StrictHostKeyChecking=no',
+            '--ssh-flag=-o ConnectTimeout=10 -o StrictHostKeyChecking=no -o BatchMode=yes',
           ],
-          { env: ATTRIBUTION_ENV, timeout: 120000, maxBuffer: 8 * 1024 * 1024 },
+          { env: ATTRIBUTION_ENV, timeout: 180000, maxBuffer: 8 * 1024 * 1024 },
           (err, stdout, stderr) => {
             if (err) {
               err.stdout = stdout;
@@ -6948,7 +6950,11 @@ app.post('/api/project/:projectId/vms/:vmName/cve-patch', async (req, res) => {
     let sshRes;
     try {
       sshRes = await runSshPatch(false);
-    } catch {
+    } catch (firstErr) {
+      // Only fall back to IAP on SSH connectivity failure — never double-run a timed-out apt upgrade!
+      if (firstErr?.killed || firstErr?.signal === 'SIGTERM' || Date.now() - startedAt > 25000) {
+        throw firstErr;
+      }
       sshRes = await runSshPatch(true);
     }
     const combinedOutput = [sshRes.stdout, sshRes.stderr].filter(Boolean).join('\n').trim();
