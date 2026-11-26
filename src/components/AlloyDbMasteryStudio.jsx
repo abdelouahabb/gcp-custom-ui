@@ -2253,9 +2253,20 @@ GROUP BY 1 ORDER BY turns DESC;`;
                     Live AlloyDB Fleet ({overview?.clusters?.length || 0} Clusters)
                   </h3>
                 </div>
-                <span className="text-[10px] font-mono text-zinc-500">
-                  locations/-/clusters
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-zinc-500">
+                    locations/-/clusters
+                  </span>
+                  <a
+                    href={`https://console.cloud.google.com/alloydb/clusters?project=${encodeURIComponent(projectId)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-2 py-0.5 rounded border border-blue-500/30 bg-blue-500/10 text-[10.5px] font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-500/20 inline-flex items-center gap-1"
+                  >
+                    <span>GCP Console</span>
+                    <ArrowUpRight className="w-3 h-3" />
+                  </a>
+                </div>
               </div>
 
               {(overview?.clusters || []).length === 0 ? (
@@ -2293,9 +2304,20 @@ GROUP BY 1 ORDER BY turns DESC;`;
                             {c.databaseVersion} · {c.location}
                           </span>
                         </div>
-                        <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                          {c.state}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                            {c.state}
+                          </span>
+                          <a
+                            href={`https://console.cloud.google.com/alloydb/locations/${encodeURIComponent(c.location)}/clusters/${encodeURIComponent(c.clusterId)}/overview?project=${encodeURIComponent(projectId)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-1.5 py-0.5 rounded border border-blue-500/30 bg-blue-500/10 text-[10px] font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-500/20 inline-flex items-center gap-0.5"
+                          >
+                            <span>Console</span>
+                            <ArrowUpRight className="w-2.5 h-2.5" />
+                          </a>
+                        </div>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-1.5 text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400">
