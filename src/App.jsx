@@ -3525,7 +3525,7 @@ function CloudPulseCockpit() {
           {!mobilePreview && !zenMode && (
             <aside
               aria-label="Google Cloud Architectural Studios Navigation"
-              className={`hidden md:flex flex-col shrink-0 sticky top-[52px] h-[calc(100vh-76px)] overflow-y-auto border-r border-zinc-200/80 dark:border-[#1a2130] bg-white dark:bg-[#0b0f17] select-none transition-all duration-150 ${
+              className={`hidden md:flex flex-col shrink-0 sticky top-[52px] h-[calc(100vh-52px)] overflow-y-auto border-r border-zinc-200/80 dark:border-[#1a2130] bg-white dark:bg-[#0b0f17] select-none transition-all duration-150 ${
                 sidebarCollapsed ? 'w-14' : 'w-64'
               }`}
             >
