@@ -126,6 +126,7 @@ import LoggingFinOpsAuditorPanel from './components/LoggingFinOpsAuditorPanel';
 import FinOpsZombieExecutorPanel from './components/FinOpsZombieExecutorPanel';
 import BigQueryDataLineagePanel from './components/BigQueryDataLineagePanel';
 import IamPamGovernancePanel from './components/IamPamGovernancePanel';
+import StudioWorkspaceTabs from './components/StudioWorkspaceTabs';
 import GitOpsReleaseFactoryPipelineBar from './components/GitOpsReleaseFactoryPipelineBar';
 import MultiCloudGlobalParityPipelineBar from './components/MultiCloudGlobalParityPipelineBar';
 import EngineerWishlistWave2 from './components/EngineerWishlistWave2';
@@ -143,17 +144,15 @@ function CollapsibleArchitecturePipelineBar({
 }) {
   const [expanded, setExpanded] = useState(false);
   return (
-    <div className="rounded-lg border border-zinc-200 dark:border-[#1e2433] bg-white dark:bg-[#10141d] px-3.5 py-2 shadow-2xs transition-colors">
+    <div className="rounded-lg border border-zinc-200/70 dark:border-[#1a2130] bg-zinc-50/70 dark:bg-[#0b0f18] px-3 py-1.5 transition-colors">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <div className="w-5 h-5 rounded bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
-            <Layers className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-          </div>
-          <span className="text-[11px] font-mono font-bold text-zinc-800 dark:text-zinc-200 truncate">
+          <Layers className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 shrink-0" />
+          <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400 truncate">
             {label}
           </span>
           {chainSummary && (
-            <span className="hidden lg:inline text-[10.5px] font-mono text-zinc-500 dark:text-[#7c879c] truncate">
+            <span className="hidden xl:inline text-[10.5px] font-mono text-zinc-400 dark:text-[#647087] truncate">
               · {chainSummary}
             </span>
           )}
@@ -161,13 +160,9 @@ function CollapsibleArchitecturePipelineBar({
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="px-2.5 py-1 rounded text-[10.5px] font-mono font-bold cursor-pointer inline-flex items-center gap-1.5 shrink-0 bg-zinc-100 hover:bg-zinc-200 dark:bg-[#151a25] dark:hover:bg-[#1e2636] border border-zinc-200 dark:border-[#262e42] text-zinc-700 dark:text-zinc-200 transition-colors"
+          className="px-2 py-0.5 rounded text-[11px] font-medium cursor-pointer inline-flex items-center gap-1 shrink-0 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-200/60 dark:hover:bg-[#161e2e] transition-colors"
         >
-          <span>
-            {expanded
-              ? 'Hide Architecture Chain'
-              : '6-Stage Chain & Playbooks'}
-          </span>
+          <span>{expanded ? 'Hide Chain' : 'Expand Chain'}</span>
           {expanded ? (
             <ChevronUp className="w-3 h-3" />
           ) : (
@@ -176,7 +171,7 @@ function CollapsibleArchitecturePipelineBar({
         </button>
       </div>
       {expanded && (
-        <div className="pt-3 mt-2.5 border-t border-zinc-200 dark:border-[#1e2433] cp-studio-enter">
+        <div className="pt-3 mt-2 border-t border-zinc-200/70 dark:border-[#1e2433] cp-studio-enter">
           {children}
         </div>
       )}
@@ -8591,13 +8586,19 @@ function CloudPulseCockpit() {
     return defaults;
   });
   const [collapsedRailGroups, setCollapsedRailGroups] = useState(() => {
+    const calmDefaults = {
+      INFRA_COMPUTE: true,
+      DATA_AI: true,
+      SECURITY_SRE: true,
+      OPS_DOCS: true,
+    };
     try {
-      const saved = JSON.parse(
-        localStorage.getItem('cloudpulse_collapsed_groups_v1') || '{}'
-      );
-      return saved && typeof saved === 'object' ? saved : {};
+      const raw = localStorage.getItem('cloudpulse_collapsed_groups_v2');
+      if (!raw) return calmDefaults;
+      const saved = JSON.parse(raw);
+      return saved && typeof saved === 'object' ? saved : calmDefaults;
     } catch {
-      return {};
+      return calmDefaults;
     }
   });
 
@@ -8631,7 +8632,7 @@ function CloudPulseCockpit() {
     setCollapsedRailGroups((prev) => {
       const next = { ...prev, [groupId]: !prev[groupId] };
       try {
-        localStorage.setItem('cloudpulse_collapsed_groups_v1', JSON.stringify(next));
+        localStorage.setItem('cloudpulse_collapsed_groups_v2', JSON.stringify(next));
       } catch {
         // ignore
       }
@@ -11171,8 +11172,8 @@ function CloudPulseCockpit() {
           </div>
         )}
 
-        {/* 3-Zone Architectural Cloud Command Header */}
-        <header className="sticky top-0 z-40 border-b border-zinc-200 dark:border-[#1e2433] bg-white/95 dark:bg-[#0c0f16]/95 backdrop-blur-md px-3 sm:px-4 py-2">
+        {/* Slim 3-Zone Cloud Command Header */}
+        <header className="sticky top-0 z-40 border-b border-zinc-200/80 dark:border-[#1a2130] bg-white/95 dark:bg-[#0c0f16]/95 backdrop-blur-md px-4 sm:px-5 py-2">
           {/* Primary Command Row: [Left: Rail + Brand + Project Context] · [Center: Omnibox Search] · [Right: Telemetry + Actions] */}
           <div className="relative z-50 flex items-center justify-between gap-2.5 flex-wrap sm:flex-nowrap">
             {/* LEFT ZONE: Rail Toggle + Brand Mark + Searchable Active GCP Project Switcher */}
@@ -11211,17 +11212,13 @@ function CloudPulseCockpit() {
                 </div>
                 <div className="hidden sm:block min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-extrabold tracking-tight text-zinc-950 dark:text-zinc-50">
+                    <span className="text-sm font-bold tracking-tight text-zinc-950 dark:text-zinc-50">
                       CloudPulse
-                    </span>
-                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 inline-flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                      <span>LIVE</span>
                     </span>
                   </div>
                   <div
                     data-gde-ignore="true"
-                    className="text-[10px] text-zinc-500 dark:text-[#7c879c] font-mono truncate max-w-[180px]"
+                    className="text-[10px] text-zinc-500 dark:text-[#7c879c] font-mono truncate max-w-[160px]"
                   >
                     {gdePrivacyConfig.enabled
                       ? redactTextForGdeMode(
@@ -11371,11 +11368,10 @@ function CloudPulseCockpit() {
               <button
                 type="button"
                 onClick={() => setKeynoteAutopilotOpen(true)}
-                title="Open Platform-Wide Keynote Autopilot (Shortcut: Alt+K)"
-                className="hidden md:inline-flex items-center gap-1 text-[10.5px] font-mono font-bold bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 dark:text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded shrink-0 cursor-pointer transition-colors"
+                title="Open Keynote Autopilot (Shortcut: Alt+K)"
+                className="hidden xl:inline-flex items-center gap-1 text-[11px] font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-[#151a25] px-2 h-8 rounded-md shrink-0 cursor-pointer transition-colors"
               >
-                <span>KEYNOTE</span>
-                <span className="opacity-70">Alt+K</span>
+                <span>Keynote</span>
               </button>
 
               {gdePrivacyConfig.enabled && (
@@ -11402,7 +11398,7 @@ function CloudPulseCockpit() {
                   <span className="flex items-center gap-2 min-w-0 truncate">
                     <Search className="w-3.5 h-3.5 text-zinc-400 dark:text-[#647087] shrink-0" />
                     <span className="truncate">
-                      Search 26 studios, live GCP resources, 505 MCP tools, or voice ops...
+                      Search studios, live GCP resources, or run ops...
                     </span>
                   </span>
                   <span className="flex items-center gap-1 shrink-0">
@@ -11989,9 +11985,16 @@ function CloudPulseCockpit() {
                           type="button"
                           onClick={() => handleToggleRailGroup(section.id)}
                           title={`Toggle ${section.title} section`}
-                          className="cp-nav-rail-item w-full px-3 pb-1 flex items-center justify-between text-[10px] font-mono font-semibold uppercase tracking-wider text-zinc-400 dark:text-[#647087] hover:text-zinc-700 dark:hover:text-zinc-300 bg-transparent border-none shadow-none cursor-pointer"
+                          className="cp-nav-rail-item w-full px-3 py-1 flex items-center justify-between text-[10.5px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-[#647087] hover:text-zinc-700 dark:hover:text-zinc-300 bg-transparent border-none shadow-none cursor-pointer"
                         >
-                          <span>{section.title}</span>
+                          <span className="inline-flex items-center gap-1.5">
+                            <span>{section.title}</span>
+                            {isGroupCollapsed && (
+                              <span className="text-[9.5px] font-mono font-normal px-1.5 py-0.2 rounded-full bg-zinc-100 dark:bg-[#151a25] text-zinc-400 dark:text-[#647087]">
+                                {groupTabs.length}
+                              </span>
+                            )}
+                          </span>
                           <ChevronDown
                             className={`w-3 h-3 transition-transform ${
                               isGroupCollapsed ? '-rotate-90' : ''
@@ -12983,77 +12986,105 @@ function CloudPulseCockpit() {
               )}
 
               {activeTab === 'BIGQUERY_STUDIO' && (
-                <div className="space-y-4">
-                  <CollapsibleArchitecturePipelineBar
-                    label="Data Lakehouse, BigQuery & AI Architecture Chain"
-                    chainSummary="GCS → BigLake → BigQuery Capacitor → Serverless Spark → BQML"
-                  >
-                    <DataLakehouseAiPipelineBar
-                      projectId={selectedProjectId}
-                      activeTab={activeTab}
-                      onOpenProvision={handleOpenProvision}
-                      onSelectTab={handleNavigateStudioTab}
-                      onOpenBigQuerySql={handleOpenBigQuerySql}
-                      onRunInShell={handleRunInShell}
-                      onShowToast={showToast}
-                    />
-                  </CollapsibleArchitecturePipelineBar>
-                  <BigQueryStudio
-                    projectId={selectedProjectId}
-                    initialSql={bigQueryInitialSql}
-                    sqlSeedNonce={bigQuerySqlNonce}
-                    initialSubTab={bigQuerySubTab}
-                    subTabNonce={studioSubTabNonce}
-                    onOpenBigLakeStudio={(sub) =>
-                      handleNavigateStudioTab(
-                        'BIGLAKE_STUDIO',
-                        sub || 'METASTORE_CATALOGS'
-                      )
-                    }
-                    onOpenDataEngineerStudio={(sub) =>
-                      handleNavigateStudioTab(
-                        'DATA_ENGINEER_STUDIO',
-                        sub || 'MEDALLION_ELT'
-                      )
-                    }
-                    onNavigateTab={handleNavigateStudioTab}
-                    onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                    onOpenTimeMachine={() => handleNavigateStudioTab('TIME_MACHINE')}
-                    onOpenProvision={handleOpenProvision}
-                    onRunInShell={handleRunInShell}
-                    onRefreshGlobal={() =>
-                      fetchProjectOverview(selectedProjectId)
-                    }
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                  <BigQueryDataLineagePanel
-                    projectId={selectedProjectId}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                  <StudioGcpAdvantageBar
-                    projectId={selectedProjectId}
-                    studioDomain="BIGQUERY"
-                    onRunInShell={handleRunInShell}
-                    onLoadBigQuerySql={handleOpenBigQuerySql}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                  <PersonaContextualHelper
-                    persona="DATA_ENG"
-                    projectId={selectedProjectId}
-                    studioContextLabel="BigQuery Studio · Column Lineage Guard & DLQ Replay"
-                    defaultExpanded={false}
-                    onOpenFullBoard={(p) =>
-                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                    }
-                    onOpenBigQuerySql={handleOpenBigQuerySql}
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                </div>
+                <StudioWorkspaceTabs
+                  studioTitle="BigQuery Analytics & Lineage Studio"
+                  studioSubtitle="Run Dry-Run cost-guarded SQL, inspect Dremel jobs, and trace live Data Lineage blast radius."
+                  defaultTabId="SQL_WORKBENCH"
+                  tabs={[
+                    {
+                      id: 'SQL_WORKBENCH',
+                      label: 'SQL Workbench',
+                      icon: Database,
+                      render: () => (
+                        <BigQueryStudio
+                          projectId={selectedProjectId}
+                          initialSql={bigQueryInitialSql}
+                          sqlSeedNonce={bigQuerySqlNonce}
+                          initialSubTab={bigQuerySubTab}
+                          subTabNonce={studioSubTabNonce}
+                          onOpenBigLakeStudio={(sub) =>
+                            handleNavigateStudioTab(
+                              'BIGLAKE_STUDIO',
+                              sub || 'METASTORE_CATALOGS'
+                            )
+                          }
+                          onOpenDataEngineerStudio={(sub) =>
+                            handleNavigateStudioTab(
+                              'DATA_ENGINEER_STUDIO',
+                              sub || 'MEDALLION_ELT'
+                            )
+                          }
+                          onNavigateTab={handleNavigateStudioTab}
+                          onOpenHealthAndDrift={() => setCopilotOpen(true)}
+                          onOpenTimeMachine={() =>
+                            handleNavigateStudioTab('TIME_MACHINE')
+                          }
+                          onOpenProvision={handleOpenProvision}
+                          onRunInShell={handleRunInShell}
+                          onRefreshGlobal={() =>
+                            fetchProjectOverview(selectedProjectId)
+                          }
+                          onShowToast={showToast}
+                          onShowError={setErrorBanner}
+                        />
+                      ),
+                    },
+                    {
+                      id: 'DATA_LINEAGE',
+                      label: 'Data Lineage & Blast Radius',
+                      icon: Layers,
+                      render: () => (
+                        <BigQueryDataLineagePanel
+                          projectId={selectedProjectId}
+                          onShowToast={showToast}
+                          onShowError={setErrorBanner}
+                        />
+                      ),
+                    },
+                  ]}
+                  secondaryTools={
+                    <>
+                      <CollapsibleArchitecturePipelineBar
+                        label="Data Lakehouse, BigQuery & AI Architecture Chain"
+                        chainSummary="GCS → BigLake → BigQuery Capacitor → Serverless Spark → BQML"
+                      >
+                        <DataLakehouseAiPipelineBar
+                          projectId={selectedProjectId}
+                          activeTab={activeTab}
+                          onOpenProvision={handleOpenProvision}
+                          onSelectTab={handleNavigateStudioTab}
+                          onOpenBigQuerySql={handleOpenBigQuerySql}
+                          onRunInShell={handleRunInShell}
+                          onShowToast={showToast}
+                        />
+                      </CollapsibleArchitecturePipelineBar>
+                      <StudioGcpAdvantageBar
+                        projectId={selectedProjectId}
+                        studioDomain="BIGQUERY"
+                        onRunInShell={handleRunInShell}
+                        onLoadBigQuerySql={handleOpenBigQuerySql}
+                        onShowToast={showToast}
+                        onShowError={setErrorBanner}
+                      />
+                      <PersonaContextualHelper
+                        persona="DATA_ENG"
+                        projectId={selectedProjectId}
+                        studioContextLabel="BigQuery Studio · Column Lineage Guard & DLQ Replay"
+                        defaultExpanded={false}
+                        onOpenFullBoard={(p) =>
+                          handleNavigateStudioTab(
+                            'INNOVATION_LAB',
+                            `FIVE_PERSONA_${p}`
+                          )
+                        }
+                        onOpenBigQuerySql={handleOpenBigQuerySql}
+                        onRunInShell={handleRunInShell}
+                        onShowToast={showToast}
+                        onShowError={setErrorBanner}
+                      />
+                    </>
+                  }
+                />
               )}
 
               {activeTab === 'BIGLAKE_STUDIO' && (
@@ -13419,130 +13450,199 @@ function CloudPulseCockpit() {
               )}
 
               {activeTab === 'SOVEREIGN_STUDIO' && (
-                <div className="space-y-4">
-                  <CollapsibleArchitecturePipelineBar
-                    label="Wave 4 · 6-Stage Zero-Trust SecOps, Incident SRE & Forensics Chain"
-                    chainSummary="IAM & Secret Vault → Perimeter & Toxic Graph → Cloud Audit → SOAR → SRE Burn Gate"
-                  >
-                    <SecOpsSreForensicsPipelineBar
-                      projectId={selectedProjectId}
-                      activeTab={activeTab}
-                      onSelectTab={handleNavigateStudioTab}
-                      onRunInShell={handleRunInShell}
-                    />
-                  </CollapsibleArchitecturePipelineBar>
-                  <SovereignComplianceBlueprintCompiler
-                    projectId={selectedProjectId}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                  <SovereignTimeMachineIamStudio
-                    projectId={selectedProjectId}
-                    initialSubTab={sovereignSubTab}
-                    subTabNonce={studioSubTabNonce}
-                    onTriggerToast={showToast}
-                    onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                    onNavigateTab={handleNavigateStudioTab}
-                    onRefreshOverview={() =>
-                      fetchProjectOverview(selectedProjectId)
-                    }
-                  />
-                  <StudioGcpAdvantageBar
-                    projectId={selectedProjectId}
-                    studioDomain="IAM"
-                    onRunInShell={handleRunInShell}
-                    onRefreshParent={() =>
-                      fetchProjectOverview(selectedProjectId)
-                    }
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                  <PersonaContextualHelper
-                    persona="DEVSECOPS"
-                    projectId={selectedProjectId}
-                    studioContextLabel="IAM & Zero-Trust Studio · Escalation Paths, @sha256 & OIDC WIF"
-                    defaultExpanded={false}
-                    onOpenFullBoard={(p) =>
-                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                    }
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                </div>
+                <StudioWorkspaceTabs
+                  studioTitle="Sovereign IAM, KMS & Compliance Studio"
+                  studioSubtitle="Zero-trust IAM time-machine snapshots, KMS/Secrets governance, and DORA/GDPR compliance blueprints."
+                  defaultTabId="IAM_TIME_MACHINE"
+                  tabs={[
+                    {
+                      id: 'IAM_TIME_MACHINE',
+                      label: 'IAM & Time Machine',
+                      icon: ShieldCheck,
+                      render: () => (
+                        <SovereignTimeMachineIamStudio
+                          projectId={selectedProjectId}
+                          initialSubTab={sovereignSubTab}
+                          subTabNonce={studioSubTabNonce}
+                          onTriggerToast={showToast}
+                          onOpenHealthAndDrift={() => setCopilotOpen(true)}
+                          onNavigateTab={handleNavigateStudioTab}
+                          onRefreshOverview={() =>
+                            fetchProjectOverview(selectedProjectId)
+                          }
+                        />
+                      ),
+                    },
+                    {
+                      id: 'COMPLIANCE_BLUEPRINT',
+                      label: 'DORA / GDPR Blueprint',
+                      icon: Lock,
+                      render: () => (
+                        <SovereignComplianceBlueprintCompiler
+                          projectId={selectedProjectId}
+                          onShowToast={showToast}
+                          onShowError={setErrorBanner}
+                        />
+                      ),
+                    },
+                  ]}
+                  secondaryTools={
+                    <>
+                      <CollapsibleArchitecturePipelineBar
+                        label="Wave 4 · 6-Stage Zero-Trust SecOps, Incident SRE & Forensics Chain"
+                        chainSummary="IAM & Secret Vault → Perimeter & Toxic Graph → Cloud Audit → SOAR → SRE Burn Gate"
+                      >
+                        <SecOpsSreForensicsPipelineBar
+                          projectId={selectedProjectId}
+                          activeTab={activeTab}
+                          onSelectTab={handleNavigateStudioTab}
+                          onRunInShell={handleRunInShell}
+                        />
+                      </CollapsibleArchitecturePipelineBar>
+                      <StudioGcpAdvantageBar
+                        projectId={selectedProjectId}
+                        studioDomain="IAM"
+                        onRunInShell={handleRunInShell}
+                        onRefreshParent={() =>
+                          fetchProjectOverview(selectedProjectId)
+                        }
+                        onShowToast={showToast}
+                        onShowError={setErrorBanner}
+                      />
+                      <PersonaContextualHelper
+                        persona="DEVSECOPS"
+                        projectId={selectedProjectId}
+                        studioContextLabel="IAM & Zero-Trust Studio · Escalation Paths, @sha256 & OIDC WIF"
+                        defaultExpanded={false}
+                        onOpenFullBoard={(p) =>
+                          handleNavigateStudioTab(
+                            'INNOVATION_LAB',
+                            `FIVE_PERSONA_${p}`
+                          )
+                        }
+                        onRunInShell={handleRunInShell}
+                        onShowToast={showToast}
+                        onShowError={setErrorBanner}
+                      />
+                    </>
+                  }
+                />
               )}
 
               {activeTab === 'SRE_WAR_ROOM' && (
-                <div className="space-y-4">
-                  <CollapsibleArchitecturePipelineBar
-                    label="6-Stage Zero-Trust SecOps, Incident SRE & Forensics Chain"
-                    chainSummary="IAM & Secrets → Perimeter → Cloud Audit → SOAR → 14.4x SLO Burn Gate"
-                  >
-                    <SecOpsSreForensicsPipelineBar
-                      projectId={selectedProjectId}
-                      activeTab={activeTab}
-                      onSelectTab={handleNavigateStudioTab}
-                      onRunInShell={handleRunInShell}
-                    />
-                  </CollapsibleArchitecturePipelineBar>
-                  <AgenticIncidentCommanderPanel
-                    projectId={selectedProjectId}
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                  <SccVulnerabilityMissionControl
-                    projectId={selectedProjectId}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                    onNavigateTab={handleNavigateStudioTab}
-                    onRunInShell={handleRunInShell}
-                  />
-                  <IamPamGovernancePanel
-                    projectId={selectedProjectId}
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                  <SreWarRoomPerimeterStudio
-                    projectId={selectedProjectId}
-                    initialSubTab={sreSubTab}
-                    subTabNonce={studioSubTabNonce}
-                    onTriggerToast={showToast}
-                    onRunInShell={handleRunInShell}
-                    onOpenHealthAndDrift={() => setCopilotOpen(true)}
-                    onNavigateTab={handleNavigateStudioTab}
-                    onRefreshOverview={() =>
-                      fetchProjectOverview(selectedProjectId)
-                    }
-                  />
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                    <PersonaContextualHelper
-                      persona="SRE_ONCALL"
-                      projectId={selectedProjectId}
-                      studioContextLabel="SRE War-Room · 14.4x SLO Freeze Gate, Change Correlator & Chaos"
-                      defaultExpanded={false}
-                      onOpenFullBoard={(p) =>
-                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                      }
-                      onRunInShell={handleRunInShell}
-                      onShowToast={showToast}
-                      onShowError={setErrorBanner}
-                    />
-                    <PersonaContextualHelper
-                      persona="ARCHITECT"
-                      projectId={selectedProjectId}
-                      studioContextLabel="SRE War-Room · Region Blackout SPOF Drill & Org Guardrails"
-                      defaultExpanded={false}
-                      onOpenFullBoard={(p) =>
-                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                      }
-                      onRunInShell={handleRunInShell}
-                      onShowToast={showToast}
-                      onShowError={setErrorBanner}
-                    />
-                  </div>
-                </div>
+                <StudioWorkspaceTabs
+                  studioTitle="SRE War-Room & Security Mission Control"
+                  studioSubtitle="Switch cleanly between live SLO incident response, SCC v2 vulnerabilities, IAM/PAM JIT, and Agentic triage."
+                  defaultTabId="WAR_ROOM_SLOS"
+                  tabs={[
+                    {
+                      id: 'WAR_ROOM_SLOS',
+                      label: 'War-Room & SLOs',
+                      icon: Activity,
+                      render: () => (
+                        <SreWarRoomPerimeterStudio
+                          projectId={selectedProjectId}
+                          initialSubTab={sreSubTab}
+                          subTabNonce={studioSubTabNonce}
+                          onTriggerToast={showToast}
+                          onRunInShell={handleRunInShell}
+                          onOpenHealthAndDrift={() => setCopilotOpen(true)}
+                          onNavigateTab={handleNavigateStudioTab}
+                          onRefreshOverview={() =>
+                            fetchProjectOverview(selectedProjectId)
+                          }
+                        />
+                      ),
+                    },
+                    {
+                      id: 'SCC_VULNS',
+                      label: 'SCC v2 Vulnerabilities',
+                      icon: ShieldAlert,
+                      render: () => (
+                        <SccVulnerabilityMissionControl
+                          projectId={selectedProjectId}
+                          onShowToast={showToast}
+                          onShowError={setErrorBanner}
+                          onNavigateTab={handleNavigateStudioTab}
+                          onRunInShell={handleRunInShell}
+                        />
+                      ),
+                    },
+                    {
+                      id: 'IAM_PAM_JIT',
+                      label: 'IAM & PAM JIT',
+                      icon: ShieldCheck,
+                      render: () => (
+                        <IamPamGovernancePanel
+                          projectId={selectedProjectId}
+                          onRunInShell={handleRunInShell}
+                          onShowToast={showToast}
+                          onShowError={setErrorBanner}
+                        />
+                      ),
+                    },
+                    {
+                      id: 'AGENTIC_COMMANDER',
+                      label: 'Agentic Commander',
+                      icon: Sparkles,
+                      render: () => (
+                        <AgenticIncidentCommanderPanel
+                          projectId={selectedProjectId}
+                          onRunInShell={handleRunInShell}
+                          onShowToast={showToast}
+                          onShowError={setErrorBanner}
+                        />
+                      ),
+                    },
+                  ]}
+                  secondaryTools={
+                    <>
+                      <CollapsibleArchitecturePipelineBar
+                        label="6-Stage Zero-Trust SecOps, Incident SRE & Forensics Chain"
+                        chainSummary="IAM & Secrets → Perimeter → Cloud Audit → SOAR → 14.4x SLO Burn Gate"
+                      >
+                        <SecOpsSreForensicsPipelineBar
+                          projectId={selectedProjectId}
+                          activeTab={activeTab}
+                          onSelectTab={handleNavigateStudioTab}
+                          onRunInShell={handleRunInShell}
+                        />
+                      </CollapsibleArchitecturePipelineBar>
+                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                        <PersonaContextualHelper
+                          persona="SRE_ONCALL"
+                          projectId={selectedProjectId}
+                          studioContextLabel="SRE War-Room · 14.4x SLO Freeze Gate, Change Correlator & Chaos"
+                          defaultExpanded={false}
+                          onOpenFullBoard={(p) =>
+                            handleNavigateStudioTab(
+                              'INNOVATION_LAB',
+                              `FIVE_PERSONA_${p}`
+                            )
+                          }
+                          onRunInShell={handleRunInShell}
+                          onShowToast={showToast}
+                          onShowError={setErrorBanner}
+                        />
+                        <PersonaContextualHelper
+                          persona="ARCHITECT"
+                          projectId={selectedProjectId}
+                          studioContextLabel="SRE War-Room · Region Blackout SPOF Drill & Org Guardrails"
+                          defaultExpanded={false}
+                          onOpenFullBoard={(p) =>
+                            handleNavigateStudioTab(
+                              'INNOVATION_LAB',
+                              `FIVE_PERSONA_${p}`
+                            )
+                          }
+                          onRunInShell={handleRunInShell}
+                          onShowToast={showToast}
+                          onShowError={setErrorBanner}
+                        />
+                      </div>
+                    </>
+                  }
+                />
               )}
 
               {activeTab === 'CLOUD_RUN' && (
@@ -13859,128 +13959,181 @@ function CloudPulseCockpit() {
               )}
 
               {activeTab === 'FINOPS' && (
-                <div className="space-y-6">
-                  <CollapsibleArchitecturePipelineBar
-                    label="6-Stage FinOps, Credit Guardian & Zombie Reaper Chain"
-                    chainSummary="Billing Export → Credit Ledger → Zombie Reaper → CUDs → Emergency API Kill-Switch"
-                  >
-                    <FinOpsCostKillPipelineBar
-                      projectId={selectedProjectId}
-                      activeTab={activeTab}
-                      onSelectTab={handleNavigateStudioTab}
-                      onOpenBigQuerySql={handleOpenBigQuerySql}
-                      onRunInShell={handleRunInShell}
-                    />
-                  </CollapsibleArchitecturePipelineBar>
-                  <AutonomousFinOpsAutopilotMatrix
-                    projectId={selectedProjectId}
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                  <LoggingFinOpsAuditorPanel
-                    projectId={selectedProjectId}
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                  <FinOpsZombieExecutorPanel
-                    projectId={selectedProjectId}
-                    onRunInShell={handleRunInShell}
-                    onNavigateTab={handleNavigateStudioTab}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                  <div
-                    id="finops-billing-guardian-section"
-                    className="scroll-mt-24"
-                  >
-                    <BillingAccountCreditGuardian
-                      projectId={selectedProjectId}
-                      liveBurn={liveBurn}
-                      gdePrivacyConfig={gdePrivacyConfig}
-                      onOpenBigQuerySql={handleOpenBigQuerySql}
-                      onOpenProvision={handleOpenProvision}
-                      onOpenSecretManagerStudio={() =>
-                        handleNavigateStudioTab('SECRETS_KMS')
-                      }
-                      onOpenEmergencyKillSwitch={handleScrollToApisWithSpotlight}
-                      onRunInShell={handleRunInShell}
-                      onShowToast={showToast}
-                      onGrantsSummaryChange={setGdeSummary}
-                    />
-                  </div>
-                  <div
-                    id="finops-zombie-reaper-section"
-                    className="scroll-mt-24"
-                  >
-                    <EngineerWishlistWave2
-                      activeMode="ZOMBIES"
-                      projectId={selectedProjectId}
-                      overview={overview}
-                      vms={(overview?.resources || []).filter(
-                        (r) => r.type === 'Compute Engine VM'
-                      )}
-                      onRefreshOverview={() =>
-                        fetchProjectOverview(selectedProjectId, { force: true })
-                      }
-                      onShowToast={showToast}
-                      onShowError={setErrorBanner}
-                    />
-                  </div>
-                  <SortableKpiRow
-                    summary={overview?.summary}
-                    fetchLatencyMs={overview?.fetchLatencyMs}
-                    isSyncing={loadingOverview}
-                    onRefreshOverview={() =>
-                      fetchProjectOverview(selectedProjectId, { force: true })
-                    }
-                    onNavigateTab={handleNavigateStudioTab}
-                    onScrollToApis={handleScrollToApisWithSpotlight}
-                  />
-                  <TelemetryCharts
-                    telemetry={overview?.telemetry}
-                    projectId={selectedProjectId}
-                    onOpenCopilot={handleOpenCopilotWithPrompt}
-                    onSelectTab={handleNavigateStudioTab}
-                  />
-                  <StudioGcpAdvantageBar
-                    projectId={selectedProjectId}
-                    studioDomain="GKE_FINOPS"
-                    onRunInShell={handleRunInShell}
-                    onRefreshParent={() =>
-                      fetchProjectOverview(selectedProjectId)
-                    }
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                    <PersonaContextualHelper
-                      persona="FINOPS_ENG"
-                      projectId={selectedProjectId}
-                      studioContextLabel="FinOps & GreenOps · Unit Cost ($/1k req), Zombie Reaper & 98% CFE"
-                      defaultExpanded={false}
-                      onOpenFullBoard={(p) =>
-                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                      }
-                      onRunInShell={handleRunInShell}
-                      onShowToast={showToast}
-                      onShowError={setErrorBanner}
-                    />
-                    <PersonaContextualHelper
-                      persona="ARCHITECT"
-                      projectId={selectedProjectId}
-                      studioContextLabel="FinOps Studio · 3-Cloud Arbitrage (GCP vs AWS vs Azure) & Guardrails"
-                      defaultExpanded={false}
-                      onOpenFullBoard={(p) =>
-                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                      }
-                      onRunInShell={handleRunInShell}
-                      onShowToast={showToast}
-                      onShowError={setErrorBanner}
-                    />
-                  </div>
-                </div>
+                <StudioWorkspaceTabs
+                  studioTitle="FinOps & Cost Control Center"
+                  studioSubtitle="One focused workspace at a time — billing & credits, autonomous cost autopilot, logging spend, and idle-zombie cleanup."
+                  defaultTabId="BILLING_CREDITS"
+                  tabs={[
+                    {
+                      id: 'BILLING_CREDITS',
+                      label: 'Billing & Credits',
+                      icon: DollarSign,
+                      render: () => (
+                        <div className="space-y-5">
+                          <div
+                            id="finops-billing-guardian-section"
+                            className="scroll-mt-24"
+                          >
+                            <BillingAccountCreditGuardian
+                              projectId={selectedProjectId}
+                              liveBurn={liveBurn}
+                              gdePrivacyConfig={gdePrivacyConfig}
+                              onOpenBigQuerySql={handleOpenBigQuerySql}
+                              onOpenProvision={handleOpenProvision}
+                              onOpenSecretManagerStudio={() =>
+                                handleNavigateStudioTab('SECRETS_KMS')
+                              }
+                              onOpenEmergencyKillSwitch={
+                                handleScrollToApisWithSpotlight
+                              }
+                              onRunInShell={handleRunInShell}
+                              onShowToast={showToast}
+                              onGrantsSummaryChange={setGdeSummary}
+                            />
+                          </div>
+                          <SortableKpiRow
+                            summary={overview?.summary}
+                            fetchLatencyMs={overview?.fetchLatencyMs}
+                            isSyncing={loadingOverview}
+                            onRefreshOverview={() =>
+                              fetchProjectOverview(selectedProjectId, {
+                                force: true,
+                              })
+                            }
+                            onNavigateTab={handleNavigateStudioTab}
+                            onScrollToApis={handleScrollToApisWithSpotlight}
+                          />
+                          <TelemetryCharts
+                            telemetry={overview?.telemetry}
+                            projectId={selectedProjectId}
+                            onOpenCopilot={handleOpenCopilotWithPrompt}
+                            onSelectTab={handleNavigateStudioTab}
+                          />
+                        </div>
+                      ),
+                    },
+                    {
+                      id: 'FINOPS_AUTOPILOT',
+                      label: 'FinOps Autopilot',
+                      icon: Sparkles,
+                      render: () => (
+                        <AutonomousFinOpsAutopilotMatrix
+                          projectId={selectedProjectId}
+                          onRunInShell={handleRunInShell}
+                          onShowToast={showToast}
+                          onShowError={setErrorBanner}
+                        />
+                      ),
+                    },
+                    {
+                      id: 'LOGGING_FINOPS',
+                      label: 'Logging FinOps',
+                      icon: Activity,
+                      render: () => (
+                        <LoggingFinOpsAuditorPanel
+                          projectId={selectedProjectId}
+                          onRunInShell={handleRunInShell}
+                          onShowToast={showToast}
+                          onShowError={setErrorBanner}
+                        />
+                      ),
+                    },
+                    {
+                      id: 'ZOMBIE_EXECUTOR',
+                      label: 'Idle-Zombie Executor',
+                      icon: Trash2,
+                      render: () => (
+                        <div className="space-y-5">
+                          <FinOpsZombieExecutorPanel
+                            projectId={selectedProjectId}
+                            onRunInShell={handleRunInShell}
+                            onNavigateTab={handleNavigateStudioTab}
+                            onShowToast={showToast}
+                            onShowError={setErrorBanner}
+                          />
+                          <div
+                            id="finops-zombie-reaper-section"
+                            className="scroll-mt-24"
+                          >
+                            <EngineerWishlistWave2
+                              activeMode="ZOMBIES"
+                              projectId={selectedProjectId}
+                              overview={overview}
+                              vms={(overview?.resources || []).filter(
+                                (r) => r.type === 'Compute Engine VM'
+                              )}
+                              onRefreshOverview={() =>
+                                fetchProjectOverview(selectedProjectId, {
+                                  force: true,
+                                })
+                              }
+                              onShowToast={showToast}
+                              onShowError={setErrorBanner}
+                            />
+                          </div>
+                        </div>
+                      ),
+                    },
+                  ]}
+                  secondaryTools={
+                    <>
+                      <CollapsibleArchitecturePipelineBar
+                        label="6-Stage FinOps, Credit Guardian & Zombie Reaper Chain"
+                        chainSummary="Billing Export → Credit Ledger → Zombie Reaper → CUDs → Emergency API Kill-Switch"
+                      >
+                        <FinOpsCostKillPipelineBar
+                          projectId={selectedProjectId}
+                          activeTab={activeTab}
+                          onSelectTab={handleNavigateStudioTab}
+                          onOpenBigQuerySql={handleOpenBigQuerySql}
+                          onRunInShell={handleRunInShell}
+                        />
+                      </CollapsibleArchitecturePipelineBar>
+                      <StudioGcpAdvantageBar
+                        projectId={selectedProjectId}
+                        studioDomain="GKE_FINOPS"
+                        onRunInShell={handleRunInShell}
+                        onRefreshParent={() =>
+                          fetchProjectOverview(selectedProjectId)
+                        }
+                        onShowToast={showToast}
+                        onShowError={setErrorBanner}
+                      />
+                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                        <PersonaContextualHelper
+                          persona="FINOPS_ENG"
+                          projectId={selectedProjectId}
+                          studioContextLabel="FinOps & GreenOps · Unit Cost ($/1k req), Zombie Reaper & 98% CFE"
+                          defaultExpanded={false}
+                          onOpenFullBoard={(p) =>
+                            handleNavigateStudioTab(
+                              'INNOVATION_LAB',
+                              `FIVE_PERSONA_${p}`
+                            )
+                          }
+                          onRunInShell={handleRunInShell}
+                          onShowToast={showToast}
+                          onShowError={setErrorBanner}
+                        />
+                        <PersonaContextualHelper
+                          persona="ARCHITECT"
+                          projectId={selectedProjectId}
+                          studioContextLabel="FinOps Studio · 3-Cloud Arbitrage (GCP vs AWS vs Azure) & Guardrails"
+                          defaultExpanded={false}
+                          onOpenFullBoard={(p) =>
+                            handleNavigateStudioTab(
+                              'INNOVATION_LAB',
+                              `FIVE_PERSONA_${p}`
+                            )
+                          }
+                          onRunInShell={handleRunInShell}
+                          onShowToast={showToast}
+                          onShowError={setErrorBanner}
+                        />
+                      </div>
+                    </>
+                  }
+                />
               )}
 
               {activeTab === 'LOGS_SHELL' && (
