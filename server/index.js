@@ -6873,6 +6873,40 @@ app.post('/api/project/:projectId/vms/:vmName/cve-scan', async (req, res) => {
   }
 });
 
+// Live OS Config Patch Job Status Poller (real osconfig.googleapis.com/v1 patchJobs + instanceDetails)
+app.get('/api/project/:projectId/osconfig/patch-jobs/:patchJobId', async (req, res) => {
+  const { projectId, patchJobId } = req.params;
+  if (!/^[a-z0-9][-a-z0-9._]*$/i.test(projectId) || !/^[a-zA-Z0-9_-]{4,80}$/.test(patchJobId)) {
+    return res.status(400).json({ error: 'Invalid projectId or patchJobId.' });
+  }
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+    const base = `https://osconfig.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/patchJobs/${encodeURIComponent(patchJobId)}`;
+    const [job, details] = await Promise.all([
+      gcpFetch(base, token, projectId, { timeout: 10000 }),
+      gcpFetch(`${base}/instanceDetails`, token, projectId, { timeout: 10000 }).catch(() => ({})),
+    ]);
+    const inst = Array.isArray(details?.patchJobInstanceDetails) ? details.patchJobInstanceDetails[0] : null;
+    const state = String(job?.state || 'STARTED');
+    const instState = String(inst?.state || state);
+    const done = ['SUCCEEDED', 'COMPLETED_WITH_ERRORS', 'CANCELED', 'TIMED_OUT'].includes(state);
+    return res.json({
+      ok: true,
+      patchJobId,
+      state,
+      instanceState: instState,
+      percentComplete: Number(job?.percentComplete ?? (done ? 100 : 15)),
+      done,
+      failureReason: inst?.failureReason || null,
+      updateTime: job?.updateTime || new Date().toISOString(),
+      summary: job?.instanceDetailsSummary || {},
+    });
+  } catch (err) {
+    return res.status(err?.status || 500).json({ error: err?.message || 'Failed to poll OS Config Patch Job.' });
+  }
+});
+
 // GCE Live CVE Remediation: either live `sudo apt-get update && apt-get upgrade -y` (SSH/IAP) or Zero-SSH OS Config Patch Job
 app.post('/api/project/:projectId/vms/:vmName/cve-patch', async (req, res) => {
   const { projectId, vmName } = req.params;
@@ -6934,8 +6968,9 @@ app.post('/api/project/:projectId/vms/:vmName/cve-patch', async (req, res) => {
         zone,
         patchJobId,
         state: jobRes?.state || 'STARTED',
+        percentComplete: Number(jobRes?.percentComplete || 0),
         consoleUrl: `https://console.cloud.google.com/compute/patchDeployments?project=${encodeURIComponent(projectId)}`,
-        output: `Submitted live OS Config Patch Job "${patchJobId}" (${jobRes?.state || 'STARTED'}) targeting zones/${zone}/instances/${vmName} with apt.type=UPGRADE${safePackages.length > 0 ? ` (${safePackages.join(', ')})` : ' (all upgradable packages)'}.`,
+        output: `Submitted live OS Config Patch Job "${patchJobId}" (${jobRes?.state || 'STARTED'}) targeting zones/${zone}/instances/${vmName} with apt.type=UPGRADE${safePackages.length > 0 ? ` (${safePackages.join(', ')})` : ' (all upgradable packages)'}. Polling live VM Manager state…`,
         durationMs: Date.now() - startedAt,
       });
     }

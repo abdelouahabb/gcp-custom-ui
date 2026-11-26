@@ -1636,15 +1636,50 @@ export default function VmFleetAndSsh({
         }
       );
       setCvePatchReceiptByVm((prev) => ({ ...prev, [vm.name]: data }));
-      if (onShowToast) {
-        onShowToast(
-          mode === 'OSCONFIG_PATCH_JOB'
-            ? `OS Config Patch Job ${data.patchJobId} started on ${vm.name}!`
-            : `Live apt-get upgrade completed on ${vm.name} (${data.durationMs}ms)!`,
-          'success'
-        );
-      }
-      if (mode === 'APT_UPGRADE_SSH') {
+      if (mode === 'OSCONFIG_PATCH_JOB' && data?.patchJobId) {
+        if (onShowToast) {
+          onShowToast(`OS Config Patch Job ${data.patchJobId} queued on ${vm.name} — polling live GCP status…`, 'info');
+        }
+        // Poll real osconfig.googleapis.com/v1 patchJob state every 4s until terminal state
+        const pollStartedAt = Date.now();
+        const pollTimer = setInterval(async () => {
+          try {
+            const pollRes = await axios.get(
+              `/api/project/${encodeURIComponent(projectId)}/osconfig/patch-jobs/${encodeURIComponent(data.patchJobId)}`
+            );
+            const p = pollRes.data || {};
+            const elapsedMs = Date.now() - pollStartedAt;
+            setCvePatchReceiptByVm((prev) => ({
+              ...prev,
+              [vm.name]: {
+                ...(prev[vm.name] || data),
+                state: p.state || data.state,
+                instanceState: p.instanceState || p.state,
+                percentComplete: Number(p.percentComplete || 0),
+                done: Boolean(p.done),
+                failureReason: p.failureReason || null,
+                durationMs: elapsedMs,
+                output: `OS Config Patch Job "${data.patchJobId}" on ${vm.name} (${resolvedZone})\nJob State: ${p.state} · Instance Phase: ${p.instanceState || p.state} · Progress: ${Math.round(Number(p.percentComplete || 0))}%${p.failureReason ? `\nFailure Reason: ${p.failureReason}` : ''}`,
+              },
+            }));
+            if (p.done || elapsedMs > 300000) {
+              clearInterval(pollTimer);
+              if (p.state === 'SUCCEEDED') {
+                onShowToast?.(`Zero-SSH Patch Job ${data.patchJobId} SUCCEEDED on ${vm.name}!`, 'success');
+                handleScanVmCves(vm, false);
+              }
+            }
+          } catch {
+            clearInterval(pollTimer);
+          }
+        }, 4000);
+      } else {
+        if (onShowToast) {
+          onShowToast(
+            `Live apt-get upgrade completed on ${vm.name} (${data.durationMs}ms)!`,
+            'success'
+          );
+        }
         handleScanVmCves(vm, false);
       }
     } catch (err) {
@@ -3261,16 +3296,50 @@ export default function VmFleetAndSsh({
                       const unpackedPkgs = [...rawOut.matchAll(/^Unpacking\s+([a-z0-9][a-z0-9.+_-]*)(?::\S+)?\s+\(([^)]+)\)/gim)]
                         .map((m) => ({ name: m[1], version: m[2] }));
 
+                      const isAsyncPatchJob = receipt.mode === 'OSCONFIG_PATCH_JOB';
+                      const isPatchJobRunning = isAsyncPatchJob && !receipt.done;
+                      const jobPct = isAsyncPatchJob
+                        ? Math.max(12, Math.min(100, Math.round(Number(receipt.percentComplete || (receipt.done ? 100 : 18)))))
+                        : 100;
+
                       return (
-                        <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/[0.05] p-4 space-y-3.5 cp-studio-enter">
+                        <div className={`rounded-xl border p-4 space-y-3.5 cp-studio-enter ${
+                          isPatchJobRunning
+                            ? 'border-blue-500/40 bg-blue-500/[0.05]'
+                            : receipt.state === 'COMPLETED_WITH_ERRORS' || receipt.state === 'TIMED_OUT'
+                            ? 'border-amber-500/40 bg-amber-500/[0.05]'
+                            : 'border-emerald-500/40 bg-emerald-500/[0.05]'
+                        }`}>
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                              <CheckCircle2 className="w-4 h-4 shrink-0" />
+                            <div className={`flex items-center gap-2 text-xs font-semibold ${
+                              isPatchJobRunning
+                                ? 'text-blue-700 dark:text-blue-300'
+                                : 'text-emerald-700 dark:text-emerald-300'
+                            }`}>
+                              {isPatchJobRunning ? (
+                                <RefreshCw className="w-4 h-4 shrink-0 animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                              )}
                               <span>
-                                Live Patch Completed on <strong>{cveVm.name}</strong> ({Math.max(1, Math.round((receipt.durationMs || 1000) / 1000))}s) — 100%
+                                {isPatchJobRunning
+                                  ? `Zero-SSH OS Config Patch Job Running on ${cveVm.name}: ${receipt.instanceState || receipt.state || 'STARTED'} (${jobPct}%)`
+                                  : isAsyncPatchJob
+                                  ? `Zero-SSH Patch Job ${receipt.state || 'SUCCEEDED'} on ${cveVm.name} (${Math.max(1, Math.round((receipt.durationMs || 1000) / 1000))}s)`
+                                  : `Live Patch Completed on ${cveVm.name} (${Math.max(1, Math.round((receipt.durationMs || 1000) / 1000))}s) — 100%`}
                               </span>
                             </div>
                             <div className="flex items-center gap-2">
+                              {receipt.consoleUrl && (
+                                <a
+                                  href={receipt.consoleUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="px-2 py-1 rounded-md border border-blue-500/30 bg-blue-500/10 text-[11px] font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-500/20"
+                                >
+                                  Open in GCP Console ↗
+                                </a>
+                              )}
                               <button
                                 type="button"
                                 onClick={() => {
@@ -3297,9 +3366,12 @@ export default function VmFleetAndSsh({
                             </div>
                           </div>
 
-                          {/* 100% Completed Progress Bar */}
-                          <div className="h-2 w-full rounded-full bg-emerald-500/20 overflow-hidden">
-                            <div className="h-full w-full rounded-full bg-emerald-500" />
+                          {/* Live Progress Bar (real GCP percentComplete for OS Config Patch Job, 100% when done) */}
+                          <div className={`h-2 w-full rounded-full overflow-hidden ${isPatchJobRunning ? 'bg-blue-500/20' : 'bg-emerald-500/20'}`}>
+                            <div
+                              className={`h-full rounded-full transition-all duration-700 ${isPatchJobRunning ? 'bg-blue-600' : 'bg-emerald-500'}`}
+                              style={{ width: `${jobPct}%` }}
+                            />
                           </div>
 
                           {/* 3-Column Real Outcome Breakdown: Patched | Already Latest (Awaiting Distro Fix) | Remaining on VM */}
