@@ -12231,9 +12231,11 @@ app.post('/api/project/:projectId/alloydb/action', async (req, res) => {
       const initialPassword =
         String(password || '').trim() || `AlloyExpress2026!${Math.floor(1000 + Math.random() * 8999)}`;
 
+      const pscEnabled = req.body?.pscEnabled !== false;
       const body = {
         databaseVersion: databaseVersion || 'POSTGRES_18',
         expressConfig: { enabled: true },
+        ...(pscEnabled ? { pscConfig: { pscEnabled: true } } : {}),
         initialUser: {
           user: 'postgres',
           password: initialPassword,

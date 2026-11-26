@@ -284,11 +284,11 @@ const DEMO_DIRECTOR_TRACKS = [
 ];
 
 const ALLOYDB_EXPRESS_REGIONS = [
-  { id: 'us-central1', label: 'us-central1 (Iowa · C4A 1-vCPU Upgrade Ready)', c4aReady: true },
+  { id: 'us-west1', label: 'us-west1 (Oregon · Express Verified · C4A Ready)', c4aReady: true },
+  { id: 'europe-west1', label: 'europe-west1 (Belgium · C4A Ready)', c4aReady: true },
   { id: 'us-east1', label: 'us-east1 (South Carolina · C4A Ready)', c4aReady: true },
   { id: 'us-east4', label: 'us-east4 (Northern Virginia · C4A Ready)', c4aReady: true },
-  { id: 'us-west1', label: 'us-west1 (Oregon · C4A Ready)', c4aReady: true },
-  { id: 'europe-west1', label: 'europe-west1 (Belgium · C4A Ready)', c4aReady: true },
+  { id: 'us-central1', label: 'us-central1 (Iowa · C4A Ready)', c4aReady: true },
   { id: 'europe-west4', label: 'europe-west4 (Netherlands · C4A Ready)', c4aReady: true },
   { id: 'asia-southeast1', label: 'asia-southeast1 (Singapore · C4A Ready)', c4aReady: true },
   { id: 'asia-northeast1', label: 'asia-northeast1 (Tokyo)', c4aReady: false },
@@ -420,9 +420,10 @@ export default function AlloyDbMasteryStudio({
 
   // Pillar 1: AlloyDB Express Provisioner & Starter Kit State
   const [expressClusterId, setExpressClusterId] = useState('alloydb-express-app');
-  const [expressRegion, setExpressRegion] = useState('us-central1');
+  const [expressRegion, setExpressRegion] = useState('us-west1');
   const [expressDbVersion, setExpressDbVersion] = useState('POSTGRES_18');
   const [expressPublicDns, setExpressPublicDns] = useState(true);
+  const [expressPscEnabled, setExpressPscEnabled] = useState(true);
   const [starterStack, setStarterStack] = useState('NEXTJS_CLOUDRUN'); // NODE_PG | PYTHON_FASTAPI | NEXTJS_CLOUDRUN
 
   // Pillar 2: Zero Lock-in & Omni State
@@ -2084,7 +2085,27 @@ GROUP BY 1 ORDER BY turns DESC;`;
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800 text-xs">
+              <div className="space-y-2 p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800 text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <label className="inline-flex items-center gap-2 cursor-pointer text-zinc-700 dark:text-zinc-300">
+                    <input
+                      type="checkbox"
+                      checked={expressPscEnabled}
+                      onChange={(e) => setExpressPscEnabled(e.target.checked)}
+                      className="rounded border-zinc-400"
+                    />
+                    <span>Enable Private Service Connect (<code className="font-mono text-[11px]">--enable-private-service-connect</code>, zero VPC peering)</span>
+                  </label>
+                  {selectedExpressRegionMeta?.c4aReady ? (
+                    <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                      C4A 1-vCPU Upgrade Ready
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400">
+                      Resize to 2 vCPU before upgrade
+                    </span>
+                  )}
+                </div>
                 <label className="inline-flex items-center gap-2 cursor-pointer text-zinc-700 dark:text-zinc-300">
                   <input
                     type="checkbox"
@@ -2092,17 +2113,8 @@ GROUP BY 1 ORDER BY turns DESC;`;
                     onChange={(e) => setExpressPublicDns(e.target.checked)}
                     className="rounded border-zinc-400"
                   />
-                  <span>Enable Public DNS for instant laptop / Cloud Run prototyping</span>
+                  <span>Enable Public DNS on Primary Instance for instant laptop / Cloud Run prototyping</span>
                 </label>
-                {selectedExpressRegionMeta?.c4aReady ? (
-                  <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                    C4A 1-vCPU Upgrade Ready
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400">
-                    Resize to 2 vCPU before upgrade
-                  </span>
-                )}
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -2116,6 +2128,7 @@ GROUP BY 1 ORDER BY turns DESC;`;
                         region: expressRegion,
                         clusterId: expressClusterId,
                         databaseVersion: expressDbVersion,
+                        pscEnabled: expressPscEnabled,
                       },
                       'CREATE_EXPRESS'
                     )
