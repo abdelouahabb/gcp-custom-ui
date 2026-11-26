@@ -434,7 +434,15 @@ export default function AlloyDbMasteryStudio({
   );
   const [cloudSqlBusy, setCloudSqlBusy] = useState(false);
   const [cloudSqlResult, setCloudSqlResult] = useState(null);
+  const [pendingLroByCluster, setPendingLroByCluster] = useState({});
+  const [lroClockMs, setLroClockMs] = useState(Date.now());
   const [starterStack, setStarterStack] = useState('NEXTJS_CLOUDRUN'); // NODE_PG | PYTHON_FASTAPI | NEXTJS_CLOUDRUN
+
+  useEffect(() => {
+    if (Object.keys(pendingLroByCluster).length === 0) return;
+    const t = setInterval(() => setLroClockMs(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [pendingLroByCluster]);
 
   const resolveClusterHost = (c) => {
     const p = c?.primaryInstance;
@@ -981,6 +989,28 @@ ${activeDemoTrack.beats
         payload
       );
       const opName = data.operation?.name || null;
+      const lroClusterKey = payload.clusterId || data.clusterId || '';
+      const lroLabelMap = {
+        DELETE_CLUSTER: `Deleting cluster "${lroClusterKey}" & instances`,
+        CREATE_EXPRESS_CLUSTER: `Provisioning AlloyDB Express cluster "${lroClusterKey}"`,
+        CREATE_EXPRESS_PRIMARY_INSTANCE: `Creating 1-vCPU Primary Instance on "${lroClusterKey}"`,
+        UPGRADE_EXPRESS_TO_ENTERPRISE: `Upgrading "${lroClusterKey}" to Enterprise AlloyDB`,
+        SCALE_INSTANCE_CPU: `Scaling compute on "${lroClusterKey}"`,
+        APPLY_INSTANCE_FLAGS: `Applying 10X PostgreSQL flags on "${lroClusterKey}"`,
+        TRIGGER_ON_DEMAND_BACKUP: `Creating snapshot backup of "${lroClusterKey}"`,
+      };
+      if (opName && lroClusterKey) {
+        setLroClockMs(Date.now());
+        setPendingLroByCluster((prev) => ({
+          ...prev,
+          [lroClusterKey]: {
+            action: payload.action,
+            label: lroLabelMap[payload.action] || `Running ${payload.action} on "${lroClusterKey}"`,
+            startedAt: Date.now(),
+            operationId: opName.split('/').pop() || opName,
+          },
+        }));
+      }
       setLastReceipt({
         ok: true,
         action: payload.action,
@@ -1000,6 +1030,14 @@ ${activeDemoTrack.beats
         if (m) {
           const [, opLoc, opId] = m;
           const pollStarted = Date.now();
+          const clearPendingLro = () => {
+            if (!lroClusterKey) return;
+            setPendingLroByCluster((prev) => {
+              const next = { ...prev };
+              delete next[lroClusterKey];
+              return next;
+            });
+          };
           const pollOnce = async () => {
             try {
               const pollRes = await axios.get(
@@ -1007,6 +1045,8 @@ ${activeDemoTrack.beats
               );
               const op = pollRes.data || {};
               if (op.done) {
+                clearPendingLro();
+                const elapsedSec = Math.max(1, Math.round((Date.now() - pollStarted) / 1000));
                 if (op.errorMessage) {
                   const hint = /tenant project/i.test(op.errorMessage)
                     ? ' (Hint: AlloyDB Express preview may not be enabled in this region/project yet — try another region like us-west1/europe-west1 or verify Service Networking + AlloyDB service agent.)'
@@ -1021,7 +1061,14 @@ ${activeDemoTrack.beats
                   });
                   reportError(fullErr);
                 } else {
-                  const okMsg = `AlloyDB ${op.verb} SUCCEEDED for "${op.targetName || payload.clusterId || 'resource'}" in ${opLoc}!`;
+                  if (payload.action === 'DELETE_CLUSTER') {
+                    if (sqlConsoleClusterId === lroClusterKey) setSqlConsoleClusterId('');
+                    if (connectClusterId === lroClusterKey) setConnectClusterId('');
+                  }
+                  const okMsg =
+                    payload.action === 'DELETE_CLUSTER'
+                      ? `Deleted AlloyDB cluster "${op.targetName || lroClusterKey}" (${opLoc}) in ${elapsedSec}s.`
+                      : `AlloyDB ${op.verb} SUCCEEDED for "${op.targetName || lroClusterKey || 'resource'}" in ${opLoc} (${elapsedSec}s)!`;
                   setLastReceipt({
                     ok: true,
                     action: payload.action,
@@ -1036,9 +1083,14 @@ ${activeDemoTrack.beats
                 return true;
               }
             } catch {
+              clearPendingLro();
               return true;
             }
-            return Date.now() - pollStarted > 300000;
+            if (Date.now() - pollStarted > 300000) {
+              clearPendingLro();
+              return true;
+            }
+            return false;
           };
           setTimeout(async () => {
             const finished = await pollOnce();
@@ -2290,10 +2342,21 @@ GROUP BY 1 ORDER BY turns DESC;`;
           </div>
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-            {overview.clusters.map((c) => (
+            {overview.clusters.map((c) => {
+              const activeLro = pendingLroByCluster[c.clusterId] || null;
+              const isDeletingCluster = activeLro?.action === "DELETE_CLUSTER" || busyKey === `DEL_${c.clusterId}` || String(c.state || "").toUpperCase() === "DELETING";
+              const lroElapsedSec = activeLro ? Math.max(1, Math.round((lroClockMs - activeLro.startedAt) / 1000)) : 0;
+              const lroPct = activeLro ? Math.min(92, Math.round(18 + lroElapsedSec * 3.5)) : 0;
+              return (
               <div
                 key={c.name}
-                className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/60 space-y-2.5"
+                className={`p-3.5 rounded-xl border space-y-2.5 transition-all ${
+                  isDeletingCluster
+                    ? "border-rose-500/50 bg-rose-500/[0.06] opacity-90"
+                    : activeLro
+                    ? "border-blue-500/45 bg-blue-500/[0.04]"
+                    : "border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/60"
+                }`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex flex-wrap items-center gap-2 min-w-0">
@@ -2314,8 +2377,21 @@ GROUP BY 1 ORDER BY turns DESC;`;
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-bold">
-                      {c.state}
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold inline-flex items-center gap-1 ${
+                        isDeletingCluster
+                          ? "bg-rose-500/20 text-rose-700 dark:text-rose-300"
+                          : activeLro
+                          ? "bg-blue-500/20 text-blue-700 dark:text-blue-300"
+                          : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                      }`}
+                    >
+                      {(isDeletingCluster || activeLro) && <RefreshCw className="w-2.5 h-2.5 animate-spin" />}
+                      {isDeletingCluster
+                        ? `DELETING${lroElapsedSec ? ` · ${lroElapsedSec}s` : "…"}`
+                        : activeLro
+                        ? `UPDATING · ${lroElapsedSec}s`
+                        : c.state}
                     </span>
                     <a
                       href={`https://console.cloud.google.com/alloydb/locations/${encodeURIComponent(c.location)}/clusters/${encodeURIComponent(c.clusterId)}/overview?project=${encodeURIComponent(projectId)}`}
@@ -2328,6 +2404,35 @@ GROUP BY 1 ORDER BY turns DESC;`;
                     </a>
                   </div>
                 </div>
+
+                {/* Live Inline LRO Progress Bar (Deleting / Creating Primary / Upgrading / Scaling) */}
+                {activeLro && (
+                  <div
+                    className={`p-2.5 rounded-lg border space-y-1.5 text-xs ${
+                      isDeletingCluster
+                        ? "border-rose-500/40 bg-rose-500/10 text-rose-800 dark:text-rose-200"
+                        : "border-blue-500/40 bg-blue-500/10 text-blue-800 dark:text-blue-200"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-1.5 font-semibold">
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin shrink-0" />
+                        <span>{activeLro.label}…</span>
+                      </span>
+                      <span className="font-mono text-[11px] tabular-nums shrink-0">
+                        {lroPct}% · {lroElapsedSec}s
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-black/15 dark:bg-white/10 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-700 ${
+                          isDeletingCluster ? "bg-rose-500" : "bg-blue-500"
+                        }`}
+                        style={{ width: `${lroPct}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* Clear 2-Step Cluster -> Primary Instance Readiness Indicator */}
                 {c.instanceCount === 0 ? (
@@ -2491,7 +2596,7 @@ GROUP BY 1 ORDER BY turns DESC;`;
                   </button>
                   <button
                     type="button"
-                    disabled={busyKey === `DEL_${c.clusterId}`}
+                    disabled={isDeletingCluster}
                     onClick={() =>
                       executeAlloyAction(
                         {
@@ -2502,10 +2607,10 @@ GROUP BY 1 ORDER BY turns DESC;`;
                         `DEL_${c.clusterId}`
                       )
                     }
-                    className="px-2.5 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer ml-auto"
+                    className="px-2.5 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 disabled:opacity-60 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer ml-auto"
                   >
-                    <Trash2 className="w-3 h-3" />
-                    Delete
+                    {isDeletingCluster ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                    {isDeletingCluster ? "Deleting…" : "Delete"}
                   </button>
                 </div>
 
@@ -2583,7 +2688,8 @@ GROUP BY 1 ORDER BY turns DESC;`;
                   </div>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
