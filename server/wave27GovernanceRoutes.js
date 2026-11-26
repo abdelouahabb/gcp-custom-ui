@@ -1062,4 +1062,273 @@ Respond concisely in Markdown with 3 sections:
       items: filtered.slice(0, 40),
     });
   });
+
+  // ============================================================================
+  // 6. EXECUTIVE SRE SLI / SLO ATTAINMENT, ERROR BUDGET & MULTI-WINDOW BURN ENGINE
+  // ============================================================================
+  app.post('/api/project/:projectId/wave27/sre-slo', async (req, res) => {
+    const projectId = sanitizeProjectId(req.params.projectId);
+    if (!projectId) return res.status(400).json({ error: 'Invalid projectId' });
+
+    const token = await resolveToken(getLocalOrMetadataAccessToken);
+    if (!token) return res.status(401).json({ error: 'Missing active GCP OAuth2 token.' });
+
+    const action = String(req.body?.action || 'HEALTH').toUpperCase();
+
+    if (action === 'ADVISE') {
+      const targetSlo = Number(req.body?.targetSlo || 99.5);
+      const hours = Number(req.body?.hours || 720);
+      const overall = req.body?.overall || {};
+      const services = Array.isArray(req.body?.services) ? req.body.services.slice(0, 12) : [];
+
+      const prompt = `You are a Principal Google Cloud Site Reliability Engineer (SRE).
+Evaluate the live SLI/SLO reliability data below and return a STRICT JSON object (no markdown fences) with keys:
+- "decision": one of "Safe to Ship", "Proceed with Caution", or "Pause & Stabilize"
+- "headline": concise 1-sentence executive headline
+- "explanation": 2-3 sentences in plain English explaining whether the ${targetSlo}% SLO promise is reached and why
+- "keyTakeaways": array of exactly 3 concise bullet strings
+- "recommendedAction": 1 concrete next step for the engineering team
+
+Project: ${projectId}
+Window: Last ${hours} hours
+Target SLO Promise: ${targetSlo}%
+Overall Live SLI: ${overall.sliPercent ?? 100}% (${overall.goodEvents ?? 0} good, ${overall.errorEvents ?? 0} errors out of ${overall.totalEvents ?? 0} events)
+Per-Service Breakdown:
+${services.map((s) => `- ${s.service}: SLI=${s.sliPercent}% (${s.totalEvents} events, ${s.errorEvents} errors, latestError=${s.lastErrorSummary || 'none'})`).join('\n') || 'No service activity recorded'}`;
+
+      const ai = await callVertexGemini4(projectId, token, prompt, req.body?.geminiModel || 'gemini-4-neon');
+      if (!ai.ok) {
+        return res.status(502).json({
+          error: `Vertex AI SRE Advisor failed: ${ai.error}. Ensure aiplatform.googleapis.com is enabled.`,
+        });
+      }
+
+      let parsed = null;
+      try {
+        const cleaned = ai.text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
+        parsed = JSON.parse(cleaned);
+      } catch {
+        parsed = {
+          decision: Number(overall.sliPercent ?? 100) >= targetSlo ? 'Safe to Ship' : 'Pause & Stabilize',
+          headline: `Live SLI is ${Number(overall.sliPercent ?? 100).toFixed(2)}% against ${targetSlo}% SLO target`,
+          explanation: ai.text,
+          keyTakeaways: [
+            `Measured ${overall.totalEvents ?? 0} live events with ${overall.errorEvents ?? 0} errors.`,
+            `Target uptime promise is ${targetSlo}% over the last ${hours}h.`,
+            `Review any service below target before launching high-risk changes.`,
+          ],
+          recommendedAction: 'Inspect erroring services in Cloud Logs and verify alerting thresholds.',
+        };
+      }
+
+      return res.json({
+        ok: true,
+        model: ai.model,
+        location: ai.location,
+        ...parsed,
+      });
+    }
+
+    // Default: HEALTH (read-only live Cloud Logging + Cloud Monitoring Services/SLOs + Uptime Checks)
+    const hours = [24, 168, 720].includes(Number(req.body?.hours)) ? Number(req.body.hours) : 720;
+    const now = new Date();
+    const start = new Date(now.getTime() - hours * 60 * 60 * 1000);
+    const startIso = start.toISOString();
+
+    const [logsRes, servicesRes, uptimeRes] = await Promise.all([
+      gSend(
+        'POST',
+        'https://logging.googleapis.com/v2/entries:list',
+        token,
+        {
+          resourceNames: [`projects/${projectId}`],
+          filter: `timestamp >= "${startIso}"`,
+          orderBy: 'timestamp desc',
+          pageSize: 600,
+        },
+        undefined,
+        20000
+      ),
+      gGet(
+        `https://monitoring.googleapis.com/v3/projects/${encodeURIComponent(projectId)}/services`,
+        token,
+        { pageSize: 20 },
+        8000
+      ),
+      gGet(
+        `https://monitoring.googleapis.com/v3/projects/${encodeURIComponent(projectId)}/uptimeCheckConfigs`,
+        token,
+        { pageSize: 20 },
+        8000
+      ),
+    ]);
+
+    const entries = Array.isArray(logsRes.data?.entries) ? logsRes.data.entries : [];
+    const friendlyService = (rawType, logName) => {
+      const t = String(rawType || '').toLowerCase();
+      if (t.includes('cloud_run')) return 'Cloud Run';
+      if (t.includes('gce_instance') || t.includes('compute')) return 'Compute Engine';
+      if (t.includes('cloudsql')) return 'Cloud SQL';
+      if (t.includes('alloydb')) return 'AlloyDB';
+      if (t.includes('bigquery')) return 'BigQuery';
+      if (t.includes('gcs_bucket') || t.includes('storage')) return 'Cloud Storage';
+      if (t.includes('k8s') || t.includes('gke')) return 'GKE Kubernetes';
+      if (t.includes('cloud_function')) return 'Cloud Functions';
+      if (t.includes('audited_resource')) {
+        const ln = String(logName || '');
+        if (ln.includes('cloudaudit')) return 'IAM & Cloud Audit';
+      }
+      return rawType || 'Global Platform';
+    };
+
+    const svcMap = new Map();
+    const dayMap = new Map();
+    let totalEvents = 0;
+    let errorEvents = 0;
+    let warningEvents = 0;
+    let last1hTotal = 0;
+    let last1hErrors = 0;
+    let last6hTotal = 0;
+    let last6hErrors = 0;
+    const nowMs = now.getTime();
+
+    for (const e of entries) {
+      const sev = String(e.severity || 'DEFAULT').toUpperCase();
+      const isErr = ['ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY'].includes(sev);
+      const isWarn = sev === 'WARNING';
+      const tsMs = Date.parse(e.timestamp || e.receiveTimestamp || '');
+      const dayKey = String(e.timestamp || e.receiveTimestamp || '').slice(0, 10) || now.toISOString().slice(0, 10);
+      const svcName = friendlyService(e.resource?.type, e.logName);
+
+      totalEvents += 1;
+      if (isErr) errorEvents += 1;
+      if (isWarn) warningEvents += 1;
+
+      if (Number.isFinite(tsMs)) {
+        const ageHrs = (nowMs - tsMs) / 3600000;
+        if (ageHrs <= 1) {
+          last1hTotal += 1;
+          if (isErr) last1hErrors += 1;
+        }
+        if (ageHrs <= 6) {
+          last6hTotal += 1;
+          if (isErr) last6hErrors += 1;
+        }
+      }
+
+      const dayRec = dayMap.get(dayKey) || { date: dayKey, total: 0, errors: 0 };
+      dayRec.total += 1;
+      if (isErr) dayRec.errors += 1;
+      dayMap.set(dayKey, dayRec);
+
+      const rec = svcMap.get(svcName) || {
+        service: svcName,
+        resourceType: e.resource?.type || 'global',
+        totalEvents: 0,
+        goodEvents: 0,
+        errorEvents: 0,
+        warningEvents: 0,
+        lastErrorSummary: '',
+        lastSeen: e.timestamp || null,
+      };
+      rec.totalEvents += 1;
+      if (isErr) {
+        rec.errorEvents += 1;
+        if (!rec.lastErrorSummary) {
+          const msg =
+            e.textPayload ||
+            e.jsonPayload?.message ||
+            e.protoPayload?.status?.message ||
+            e.protoPayload?.methodName ||
+            `${sev} event on ${svcName}`;
+          rec.lastErrorSummary = String(msg).replace(/\s+/g, ' ').trim().slice(0, 140);
+        }
+      } else {
+        rec.goodEvents += 1;
+      }
+      if (isWarn) rec.warningEvents += 1;
+      svcMap.set(svcName, rec);
+    }
+
+    const goodEvents = Math.max(0, totalEvents - errorEvents);
+    const sliPercent = totalEvents > 0 ? +((goodEvents / totalEvents) * 100).toFixed(3) : 100;
+
+    const services = Array.from(svcMap.values())
+      .map((s) => ({
+        ...s,
+        sliPercent: s.totalEvents > 0 ? +(((s.totalEvents - s.errorEvents) / s.totalEvents) * 100).toFixed(3) : 100,
+      }))
+      .sort((a, b) => b.errorEvents - a.errorEvents || b.totalEvents - a.totalEvents);
+
+    const dailyTrend = Array.from(dayMap.values())
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map((d) => ({
+        date: d.date,
+        total: d.total,
+        errors: d.errors,
+        sliPercent: d.total > 0 ? +(((d.total - d.errors) / d.total) * 100).toFixed(2) : 100,
+      }));
+
+    // Fetch native GCP Cloud Monitoring SLOs for first 5 services (if any)
+    const nativeServices = (servicesRes.data?.services || []).slice(0, 5);
+    const nativeSlos = [];
+    await Promise.all(
+      nativeServices.map(async (svc) => {
+        const sloRes = await gGet(
+          `https://monitoring.googleapis.com/v3/${svc.name}/serviceLevelObjectives`,
+          token,
+          { pageSize: 10 },
+          5000
+        );
+        for (const slo of sloRes.data?.serviceLevelObjectives || []) {
+          nativeSlos.push({
+            serviceDisplayName: svc.displayName || shortName(svc.name),
+            sloName: slo.displayName || shortName(slo.name),
+            goalPercent: +(Number(slo.goal || 0.99) * 100).toFixed(3),
+            rollingPeriod: slo.rollingPeriod || slo.calendarPeriod || '30d',
+          });
+        }
+      })
+    );
+
+    const uptimeChecks = (uptimeRes.data?.uptimeCheckConfigs || []).map((u) => ({
+      name: u.displayName || shortName(u.name),
+      host: u.monitoredResource?.labels?.host || u.httpCheck?.path || 'configured',
+      period: u.period || '60s',
+    }));
+
+    return res.json({
+      projectId,
+      hours,
+      checkedAt: now.toISOString(),
+      apiStatus: {
+        cloudLogging: classifyApiResult(logsRes),
+        serviceMonitoring: classifyApiResult(servicesRes),
+        uptimeChecks: classifyApiResult(uptimeRes),
+      },
+      overall: {
+        totalEvents,
+        goodEvents,
+        errorEvents,
+        warningEvents,
+        sliPercent,
+        windows: {
+          h1: {
+            total: last1hTotal,
+            errors: last1hErrors,
+            errorRate: last1hTotal > 0 ? last1hErrors / last1hTotal : 0,
+          },
+          h6: {
+            total: last6hTotal,
+            errors: last6hErrors,
+            errorRate: last6hTotal > 0 ? last6hErrors / last6hTotal : 0,
+          },
+        },
+      },
+      dailyTrend,
+      services,
+      nativeSlos,
+      uptimeChecks,
+    });
+  });
 }

@@ -128,6 +128,7 @@ import LoggingFinOpsAuditorPanel from './components/LoggingFinOpsAuditorPanel';
 import FinOpsZombieExecutorPanel from './components/FinOpsZombieExecutorPanel';
 import BigQueryDataLineagePanel from './components/BigQueryDataLineagePanel';
 import IamPamGovernancePanel from './components/IamPamGovernancePanel';
+import SreSliSloCockpitPanel from './components/SreSliSloCockpitPanel';
 import StudioWorkspaceTabs from './components/StudioWorkspaceTabs';
 import GitOpsReleaseFactoryPipelineBar from './components/GitOpsReleaseFactoryPipelineBar';
 import MultiCloudGlobalParityPipelineBar from './components/MultiCloudGlobalParityPipelineBar';
@@ -2329,6 +2330,7 @@ function classifyDestructiveAxiosConfig(config) {
       (rawUrl.includes('/wave27/bq-lineage') && ['LIST_ASSETS', 'TRACE'].includes(String(body.action || '').toUpperCase())) ||
       (rawUrl.includes('/wave27/iam-pam') && String(body.action || 'AUDIT').toUpperCase() === 'AUDIT') ||
       (rawUrl.includes('/wave27/zombie-reaper') && String(body.action || 'SCAN').toUpperCase() === 'SCAN') ||
+      (rawUrl.includes('/wave27/sre-slo') && String(body.action || 'HEALTH').toUpperCase() === 'HEALTH') ||
       (rawUrl.includes('/alloydb/execute-sql') &&
         String(body.mode || '').toUpperCase() === 'INTROSPECT_ALLOYDB') ||
       (rawUrl.includes('/cloudrun-bridge/action') &&
@@ -5400,6 +5402,30 @@ function classifyDestructiveAxiosConfig(config) {
     }
 
     // 3G-12C. Wave 27 Governance, Lineage, Logging FinOps & Zombie Reaper Gatekeepers
+    if (rawUrl.includes('/wave27/sre-slo') && String(body.action || '').toUpperCase() === 'ADVISE') {
+      const targetSlo = body.targetSlo || 99.5;
+      const model = body.geminiModel || 'gemini-4-neon';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Run Vertex AI (${model}) Ship vs. Stabilize SRE Verdict (${targetSlo}% SLO)?`,
+        laymanSummary: `In Plain English: Sends your live SLI/SLO metrics and per-service error budget status to Google Cloud Vertex AI (aiplatform.googleapis.com/v1) using "${model}" to generate an executive "Safe to Ship" vs. "Pause & Stabilize" verdict. Read-only AI synthesis—makes zero changes to your cloud.`,
+        headerBadge: 'SRE SLI/SLO Advisor — Vertex AI Ship vs. Stabilize Verdict',
+        targetLabel: 'Target AI Engine & SLO Promise',
+        resourceKind: `Vertex AI Generative API (aiplatform.googleapis.com/v1 · ${model})`,
+        targetName: `${projectId} (${targetSlo}% SLO Target)`,
+        location: 'global / us-central1 (Vertex AI)',
+        projectId,
+        method: 'VERTEX AI SRE VERDICT',
+        endpoint: rawUrl,
+        confirmLabel: `Generate SRE Verdict (${model})`,
+        cancelToast: 'SRE Advisor evaluation cancelled.',
+        whatHappensNext: `1. Calls Vertex AI (aiplatform.googleapis.com/v1) using your active GCP OAuth2 credentials.\n2. Returns a structured decision (Safe to Ship / Proceed with Caution / Pause & Stabilize), 3 takeaways, and recommended next action.`,
+        costWarning: `NEGLIGIBLE VERTEX AI COST (<$0.001): Single short prompt; makes zero infrastructure changes.`,
+        impactWarning: `Read-only AI synthesis on Vertex AI. Requires aiplatform.googleapis.com enabled on "${projectId}".`,
+      };
+    }
+
     if (rawUrl.includes('/wave27/logging-finops') && String(body.action || '').toUpperCase() === 'APPLY_EXCLUSION') {
       const exName = body.exclusionName || 'cloudpulse_noise_filter';
       const exFilter = body.filter || 'severity<WARNING';
@@ -13556,13 +13582,27 @@ function CloudPulseCockpit() {
               {activeTab === 'SRE_WAR_ROOM' && (
                 <StudioWorkspaceTabs
                   studioTitle="SRE War-Room & Security Mission Control"
-                  studioSubtitle="Switch cleanly between live SLO incident response, SCC v2 vulnerabilities, IAM/PAM JIT, and Agentic triage."
-                  defaultTabId="WAR_ROOM_SLOS"
+                  studioSubtitle="Track live SLI/SLO attainment & error budgets, SLO incident response, SCC v2 vulnerabilities, and IAM/PAM JIT."
+                  defaultTabId="SLI_SLO_ATTAINMENT"
                   tabs={[
                     {
-                      id: 'WAR_ROOM_SLOS',
-                      label: 'War-Room & SLOs',
+                      id: 'SLI_SLO_ATTAINMENT',
+                      label: 'SLI / SLO Attainment',
                       icon: Activity,
+                      render: () => (
+                        <SreSliSloCockpitPanel
+                          projectId={selectedProjectId}
+                          onNavigateTab={handleNavigateStudioTab}
+                          onRunInShell={handleRunInShell}
+                          onShowToast={showToast}
+                          onShowError={setErrorBanner}
+                        />
+                      ),
+                    },
+                    {
+                      id: 'WAR_ROOM_SLOS',
+                      label: 'War-Room & Perimeter',
+                      icon: ShieldCheck,
                       render: () => (
                         <SreWarRoomPerimeterStudio
                           projectId={selectedProjectId}
