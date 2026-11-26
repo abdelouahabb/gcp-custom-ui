@@ -3609,7 +3609,18 @@ export default function VmFleetAndSsh({
                                   : `Live Patch Completed on ${cveVm.name} (${Math.max(1, Math.round((receipt.durationMs || 1000) / 1000))}s) — 100%`}
                               </span>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              {!isPatchJobRunning && (
+                                <button
+                                  type="button"
+                                  disabled={cveScanBusyVm === cveVm.name}
+                                  onClick={() => handleScanVmCves(cveVm, false)}
+                                  className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-[11px] font-semibold inline-flex items-center gap-1.5 cursor-pointer"
+                                >
+                                  <RefreshCw className={`w-3 h-3 ${cveScanBusyVm === cveVm.name ? 'animate-spin' : ''}`} />
+                                  <span>{cveScanBusyVm === cveVm.name ? 'Re-scanning CVEs…' : 'Re-scan CVEs'}</span>
+                                </button>
+                              )}
                               {receipt.consoleUrl && (
                                 <a
                                   href={receipt.consoleUrl}
@@ -3777,9 +3788,20 @@ export default function VmFleetAndSsh({
                             placeholder="Filter CVEs by package, ID, or severity (e.g. nginx, openssl, kernel, CVE-2025)..."
                             className="flex-1 min-w-[260px] px-3 py-2 rounded-lg bg-zinc-50 dark:bg-[#090d16] border border-zinc-200 dark:border-[#1e2433] text-xs text-zinc-900 dark:text-zinc-100"
                           />
-                          <span className="text-xs text-zinc-500">
-                            Showing <strong>{visibleVulns.length}</strong> of {rep.vulnerabilities.length} CVEs
-                          </span>
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-xs text-zinc-500">
+                              Showing <strong>{visibleVulns.length}</strong> of {rep.vulnerabilities.length} CVEs
+                            </span>
+                            <button
+                              type="button"
+                              disabled={cveScanBusyVm === cveVm.name}
+                              onClick={() => handleScanVmCves(cveVm, false)}
+                              className="px-2.5 py-1.5 rounded-lg border border-zinc-200 dark:border-[#1e2433] bg-white dark:bg-[#0b101b] hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 text-xs font-semibold text-zinc-700 dark:text-zinc-200 inline-flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <RefreshCw className={`w-3.5 h-3.5 ${cveScanBusyVm === cveVm.name ? 'animate-spin text-blue-500' : ''}`} />
+                              <span>{cveScanBusyVm === cveVm.name ? 'Scanning…' : 'Re-scan CVEs'}</span>
+                            </button>
+                          </div>
                         </div>
                         <div className="max-h-[460px] overflow-auto border border-zinc-200 dark:border-[#1e2433] rounded-xl">
                           <table className="w-full text-left text-xs">
