@@ -2147,6 +2147,7 @@ export function classifyDestructiveAxiosConfig(config) {
       (rawUrl.includes('/wave27/iam-pam') && String(body.action || 'AUDIT').toUpperCase() === 'AUDIT') ||
       (rawUrl.includes('/wave27/zombie-reaper') && String(body.action || 'SCAN').toUpperCase() === 'SCAN') ||
       (rawUrl.includes('/wave27/sre-slo') && String(body.action || 'HEALTH').toUpperCase() === 'HEALTH') ||
+      (rawUrl.includes('/api/local-audit-log/config') && String(body.action || 'UPDATE').toUpperCase() !== 'CLEAR') ||
       (rawUrl.includes('/alloydb/execute-sql') &&
         String(body.mode || '').toUpperCase() === 'INTROSPECT_ALLOYDB') ||
       (rawUrl.includes('/cloudrun-bridge/action') &&
@@ -5218,6 +5219,26 @@ export function classifyDestructiveAxiosConfig(config) {
     }
 
     // 3G-12C. Wave 27 Governance, Lineage, Logging FinOps & Zombie Reaper Gatekeepers
+    if (rawUrl.includes('/api/local-audit-log/config') && String(body.action || '').toUpperCase() === 'CLEAR') {
+      return {
+        title: 'Clear Local Cloud Actions Audit Log (.cloudpulse-logs/cloud-actions.log)?',
+        headerBadge: 'Local Audit Log — Clear History',
+        targetLabel: 'Target Local Log File',
+        resourceKind: 'Local Rotating Audit Log (10 MB · Git-Ignored)',
+        targetName: '.cloudpulse-logs/cloud-actions.log',
+        location: 'Local Workspace Disk',
+        projectId,
+        method: 'CLEAR LOCAL LOG',
+        endpoint: rawUrl,
+        confirmLabel: 'Confirm & Clear Local Log',
+        cancelToast: 'Local audit log clear cancelled.',
+        laymanSummary: 'In Plain English: Empties the active local log file (.cloudpulse-logs/cloud-actions.log) on your machine. Your Google Cloud Logging data and rotated archives remain untouched.',
+        whatHappensNext: 'Truncates .cloudpulse-logs/cloud-actions.log to 0 bytes while keeping your ON/OFF and log-level settings intact.',
+        costWarning: 'ZERO COST ($0.00): Local disk operation only.',
+        impactWarning: 'Removes recorded entries from the active local audit log file.',
+      };
+    }
+
     if (rawUrl.includes('/wave27/sre-slo') && String(body.action || '').toUpperCase() === 'ADVISE') {
       const targetSlo = body.targetSlo || 99.5;
       const model = body.geminiModel || 'gemini-4-neon';

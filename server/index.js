@@ -56,12 +56,44 @@ app.use(express.json({ limit: '15mb' }));
 // ============================================================================
 // Rotating Local Cloud Actions Audit Logger (.cloudpulse-logs/cloud-actions.log)
 // Git-ignored, auto-rotates at 10 MB (keeps 5 archives), redacts secrets.
+// User-configurable ON/OFF + level: ERRORS_ONLY | MUTATIONS_ONLY | ALL_API
 // ============================================================================
 const CLOUDPULSE_LOG_DIR = path.resolve(__dirname, '..', '.cloudpulse-logs');
 const CLOUD_ACTIONS_LOG = path.join(CLOUDPULSE_LOG_DIR, 'cloud-actions.log');
+const CLOUD_ACTIONS_CFG = path.join(CLOUDPULSE_LOG_DIR, 'logger-config.json');
 const CLOUD_ACTIONS_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 const CLOUD_ACTIONS_MAX_ROTATIONS = 5;
 const REDACT_KEY_RE = /pass|token|secret|apikey|api_key|private|credential|auth|cookie/i;
+const READ_ONLY_ACTION_SET = new Set(['SCAN', 'AUDIT', 'HEALTH', 'LIST_ASSETS', 'TRACE', 'DISCOVER', 'STATUS', 'INSPECT_COCKPIT', 'COMPILE', 'LIST_WORKFLOWS']);
+
+let cloudActionsLoggerConfig = (() => {
+  try {
+    if (fs.existsSync(CLOUD_ACTIONS_CFG)) {
+      const parsed = JSON.parse(fs.readFileSync(CLOUD_ACTIONS_CFG, 'utf8'));
+      return {
+        enabled: parsed.enabled !== false,
+        level: ['ERRORS_ONLY', 'MUTATIONS_ONLY', 'ALL_API'].includes(parsed.level)
+          ? parsed.level
+          : 'MUTATIONS_ONLY',
+      };
+    }
+  } catch {
+    // fallback to defaults
+  }
+  return { enabled: true, level: 'MUTATIONS_ONLY' };
+})();
+
+function saveCloudActionsLoggerConfig(next) {
+  cloudActionsLoggerConfig = {
+    enabled: Boolean(next.enabled),
+    level: ['ERRORS_ONLY', 'MUTATIONS_ONLY', 'ALL_API'].includes(next.level)
+      ? next.level
+      : 'MUTATIONS_ONLY',
+  };
+  fs.mkdirSync(CLOUDPULSE_LOG_DIR, { recursive: true });
+  fs.writeFileSync(CLOUD_ACTIONS_CFG, JSON.stringify(cloudActionsLoggerConfig, null, 2), 'utf8');
+  return cloudActionsLoggerConfig;
+}
 
 function rotateCloudActionsLogIfNeeded() {
   if (!fs.existsSync(CLOUD_ACTIONS_LOG)) return;
@@ -79,18 +111,32 @@ function rotateCloudActionsLogIfNeeded() {
 }
 
 app.use((req, res, next) => {
-  if (!req.path.startsWith('/api/') || !['POST', 'PATCH', 'PUT', 'DELETE'].includes(req.method)) {
+  if (
+    !cloudActionsLoggerConfig.enabled ||
+    !req.path.startsWith('/api/') ||
+    req.path.startsWith('/api/local-audit-log') ||
+    !['POST', 'PATCH', 'PUT', 'DELETE'].includes(req.method)
+  ) {
     return next();
   }
   const startedAt = Date.now();
   res.on('finish', () => {
     try {
+      const body = req.body && typeof req.body === 'object' ? req.body : {};
+      const actionRaw = body.action || body.serviceType || body.mode || body.actionType || '';
+      const actionUpper = String(actionRaw).toUpperCase();
+      const isError = res.statusCode >= 400;
+      const isReadOnlyPost =
+        req.method === 'POST' &&
+        (READ_ONLY_ACTION_SET.has(actionUpper) || Boolean(body.dryRun) || /cve-scan|observability-doctor|readiness-xray|nl2sql|query$/i.test(req.path));
+
+      if (cloudActionsLoggerConfig.level === 'ERRORS_ONLY' && !isError) return;
+      if (cloudActionsLoggerConfig.level === 'MUTATIONS_ONLY' && isReadOnlyPost && !isError) return;
+
       fs.mkdirSync(CLOUDPULSE_LOG_DIR, { recursive: true });
       rotateCloudActionsLogIfNeeded();
-      const body = req.body && typeof req.body === 'object' ? req.body : {};
       const projMatch = req.path.match(/\/api\/project\/([^/]+)/);
       const projectId = projMatch ? decodeURIComponent(projMatch[1]) : undefined;
-      const action = body.action || body.serviceType || body.mode || body.actionType || undefined;
       const target =
         body.name ||
         body.clusterName ||
@@ -112,10 +158,11 @@ app.use((req, res, next) => {
       }
       const entry = {
         ts: new Date().toISOString(),
+        level: isError ? 'ERROR' : isReadOnlyPost ? 'INFO' : 'MUTATION',
         method: req.method,
         path: req.path,
         projectId,
-        action: action ? String(action) : undefined,
+        action: actionRaw ? String(actionRaw) : undefined,
         target: target ? String(target) : undefined,
         status: res.statusCode,
         durationMs: Date.now() - startedAt,
@@ -127,6 +174,62 @@ app.use((req, res, next) => {
     }
   });
   next();
+});
+
+app.get('/api/local-audit-log', (req, res) => {
+  const limit = Math.min(200, Math.max(5, Number(req.query?.limit) || 60));
+  let fileSizeBytes = 0;
+  let archiveCount = 0;
+  let entries = [];
+  try {
+    if (fs.existsSync(CLOUD_ACTIONS_LOG)) {
+      fileSizeBytes = fs.statSync(CLOUD_ACTIONS_LOG).size;
+      const rawLines = fs.readFileSync(CLOUD_ACTIONS_LOG, 'utf8').trim().split('\n').filter(Boolean);
+      entries = rawLines
+        .slice(-limit)
+        .reverse()
+        .map((line) => {
+          try {
+            return JSON.parse(line);
+          } catch {
+            return { ts: '', raw: line };
+          }
+        });
+    }
+    if (fs.existsSync(CLOUDPULSE_LOG_DIR)) {
+      archiveCount = fs
+        .readdirSync(CLOUDPULSE_LOG_DIR)
+        .filter((f) => /^cloud-actions\.\d+\.log$/.test(f)).length;
+    }
+  } catch {
+    // ignore
+  }
+  return res.json({
+    config: cloudActionsLoggerConfig,
+    fileSizeBytes,
+    maxBytes: CLOUD_ACTIONS_MAX_BYTES,
+    maxRotations: CLOUD_ACTIONS_MAX_ROTATIONS,
+    archiveCount,
+    logPath: '.cloudpulse-logs/cloud-actions.log',
+    entries,
+  });
+});
+
+app.post('/api/local-audit-log/config', (req, res) => {
+  const action = String(req.body?.action || 'UPDATE').toUpperCase();
+  if (action === 'CLEAR') {
+    try {
+      if (fs.existsSync(CLOUD_ACTIONS_LOG)) fs.writeFileSync(CLOUD_ACTIONS_LOG, '', 'utf8');
+    } catch {
+      // ignore
+    }
+    return res.json({ ok: true, cleared: true, config: cloudActionsLoggerConfig });
+  }
+  const next = saveCloudActionsLoggerConfig({
+    enabled: req.body?.enabled !== undefined ? req.body.enabled : cloudActionsLoggerConfig.enabled,
+    level: req.body?.level || cloudActionsLoggerConfig.level,
+  });
+  return res.json({ ok: true, config: next });
 });
 
 const ATTRIBUTION_ENV = {

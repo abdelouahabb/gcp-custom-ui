@@ -132,6 +132,7 @@ import SreSliSloCockpitPanel from './components/SreSliSloCockpitPanel';
 import StudioWorkspaceTabs from './components/StudioWorkspaceTabs';
 import SpatialOverviewHero from './components/SpatialOverviewHero';
 import FloatingSpatialDock from './components/FloatingSpatialDock';
+import LocalAuditLogPanel from './components/LocalAuditLogPanel';
 import { classifyDestructiveAxiosConfig } from './utils/destructiveGatekeeper';
 import GitOpsReleaseFactoryPipelineBar from './components/GitOpsReleaseFactoryPipelineBar';
 import MultiCloudGlobalParityPipelineBar from './components/MultiCloudGlobalParityPipelineBar';
@@ -5926,45 +5927,81 @@ function CloudPulseCockpit() {
               )}
 
               {activeTab === 'LOGS_SHELL' && (
-                <div className="space-y-4">
-                  <CollapsibleArchitecturePipelineBar
-                    label="6-Stage SecOps, Cloud Audit & SRE Forensics Chain"
-                    chainSummary="IAM & Secrets → Perimeter → 400d Cloud Audit Logs → SOAR → SRE Burn Gate"
-                  >
-                    <SecOpsSreForensicsPipelineBar
-                      projectId={selectedProjectId}
-                      activeTab={activeTab}
-                      onSelectTab={handleNavigateStudioTab}
-                      onRunInShell={handleRunInShell}
-                    />
-                  </CollapsibleArchitecturePipelineBar>
-                  <LogStreamerAndShell
-                    logs={overview?.logs || []}
-                    projectId={selectedProjectId}
-                    account={contextData.account}
-                    initialCommand={shellSeedCommand}
-                    initialCommandNonce={shellSeedNonce}
-                    initialLogExplorerSpec={logExplorerSeedSpec}
-                    onSelectTab={handleNavigateStudioTab}
-                    onRefreshLogs={() => fetchProjectOverview(selectedProjectId, { force: true })}
-                    onAskCopilot={handleOpenCopilotWithPrompt}
-                    onOpenRecycleBin={() => handleNavigateStudioTab('RECYCLE_BIN')}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                  <PersonaContextualHelper
-                    persona="SRE_ONCALL"
-                    projectId={selectedProjectId}
-                    studioContextLabel="Logs & Cloud Shell · Golden-Signal Change Correlator & SLO Burn Gate"
-                    defaultExpanded={false}
-                    onOpenFullBoard={(p) =>
-                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                    }
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                </div>
+                <StudioWorkspaceTabs
+                  studioTitle="Cloud Logs, Shell & Local Action Audit"
+                  studioSubtitle="Stream live GCP logs, run guarded Cloud Shell commands, and control your 10 MB rotating local action log."
+                  defaultTabId="CLOUD_LOGS_SHELL"
+                  tabs={[
+                    {
+                      id: 'CLOUD_LOGS_SHELL',
+                      label: 'Cloud Logs & Shell',
+                      icon: Terminal,
+                      render: () => (
+                        <LogStreamerAndShell
+                          logs={overview?.logs || []}
+                          projectId={selectedProjectId}
+                          account={contextData.account}
+                          initialCommand={shellSeedCommand}
+                          initialCommandNonce={shellSeedNonce}
+                          initialLogExplorerSpec={logExplorerSeedSpec}
+                          onSelectTab={handleNavigateStudioTab}
+                          onRefreshLogs={() =>
+                            fetchProjectOverview(selectedProjectId, {
+                              force: true,
+                            })
+                          }
+                          onAskCopilot={handleOpenCopilotWithPrompt}
+                          onOpenRecycleBin={() =>
+                            handleNavigateStudioTab('RECYCLE_BIN')
+                          }
+                          onShowToast={showToast}
+                          onShowError={setErrorBanner}
+                        />
+                      ),
+                    },
+                    {
+                      id: 'LOCAL_AUDIT_LOG',
+                      label: 'Local Action Audit Log (10MB)',
+                      icon: ShieldCheck,
+                      render: () => (
+                        <LocalAuditLogPanel
+                          onShowToast={showToast}
+                          onShowError={setErrorBanner}
+                        />
+                      ),
+                    },
+                  ]}
+                  secondaryTools={
+                    <>
+                      <CollapsibleArchitecturePipelineBar
+                        label="6-Stage SecOps, Cloud Audit & SRE Forensics Chain"
+                        chainSummary="IAM & Secrets → Perimeter → 400d Cloud Audit Logs → SOAR → SRE Burn Gate"
+                      >
+                        <SecOpsSreForensicsPipelineBar
+                          projectId={selectedProjectId}
+                          activeTab={activeTab}
+                          onSelectTab={handleNavigateStudioTab}
+                          onRunInShell={handleRunInShell}
+                        />
+                      </CollapsibleArchitecturePipelineBar>
+                      <PersonaContextualHelper
+                        persona="SRE_ONCALL"
+                        projectId={selectedProjectId}
+                        studioContextLabel="Logs & Cloud Shell · Golden-Signal Change Correlator & SLO Burn Gate"
+                        defaultExpanded={false}
+                        onOpenFullBoard={(p) =>
+                          handleNavigateStudioTab(
+                            'INNOVATION_LAB',
+                            `FIVE_PERSONA_${p}`
+                          )
+                        }
+                        onRunInShell={handleRunInShell}
+                        onShowToast={showToast}
+                        onShowError={setErrorBanner}
+                      />
+                    </>
+                  }
+                />
               )}
 
               {activeTab === 'RECYCLE_BIN' && (
