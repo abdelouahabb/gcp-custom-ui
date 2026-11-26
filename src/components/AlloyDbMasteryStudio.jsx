@@ -2984,25 +2984,12 @@ GROUP BY 1 ORDER BY turns DESC;`;
                           <div className="flex flex-wrap items-center gap-2">
                             <button
                               type="button"
-                              disabled={!directHost}
-                              onClick={() => {
-                                if (!directHost) return;
-                                setCloudSqlHost(directHost);
-                                setCloudSqlPort("5432");
-                                notify(`Switched SQL Console to Direct Public DNS (${directHost}:5432)`);
-                              }}
-                              className={`px-2.5 py-1 rounded-md border text-[11px] font-bold cursor-pointer disabled:opacity-45 ${
-                                isDirectSelected
-                                  ? "border-amber-500 bg-amber-500/20 text-amber-800 dark:text-amber-200"
-                                  : "border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200"
-                              }`}
-                            >
-                              {isDirectSelected ? "✓ Using Public DNS (:5432)" : "Use Public DNS"}
-                            </button>
-                            <button
-                              type="button"
                               disabled={isAuthorizing}
-                              onClick={() =>
+                              onClick={() => {
+                                if (directHost) {
+                                  setCloudSqlHost(directHost);
+                                  setCloudSqlPort("5432");
+                                }
                                 executeAlloyAction(
                                   {
                                     action: "ENABLE_PUBLIC_IP_FOR_MY_IP",
@@ -3011,9 +2998,9 @@ GROUP BY 1 ORDER BY turns DESC;`;
                                     instanceId: targetCluster.primaryInstance.instanceId,
                                   },
                                   `PUBIP_${targetCluster.clusterId}`
-                                )
-                              }
-                              className={`px-2.5 py-1 rounded-md border text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer disabled:opacity-50 ${
+                                );
+                              }}
+                              className={`px-3 py-1.5 rounded-md border text-[11px] font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 ${
                                 hasAuthorizedIp
                                   ? "border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
                                   : "border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-200"
