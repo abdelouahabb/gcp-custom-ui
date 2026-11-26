@@ -427,6 +427,7 @@ export default function AlloyDbMasteryStudio({
   const [expressInitialPassword, setExpressInitialPassword] = useState('');
   const [showCreateClusterDrawer, setShowCreateClusterDrawer] = useState(false);
   const [showAlloyOpsHistory, setShowAlloyOpsHistory] = useState(false);
+  const [showExpressSnippets, setShowExpressSnippets] = useState(false);
   const [sqlConsoleClusterId, setSqlConsoleClusterId] = useState('');
   const [connectClusterId, setConnectClusterId] = useState('');
   const [cloudSqlHost, setCloudSqlHost] = useState('');
@@ -3160,95 +3161,114 @@ GROUP BY 1 ORDER BY turns DESC;`;
       </section>
 
       {/* =================================================================
-          PILLAR 1: DEVELOPER STARTER KITS & EQUIVALENT GCLOUD CLI (Topics 9 & 10)
+          PILLAR 1: COLLAPSED-BY-DEFAULT CLI & DEVELOPER STARTER KITS
          ================================================================= */}
       {activePillar === "EXPRESS_QUICKSTART" && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Left: Equivalent gcloud beta CLI */}
-            <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#10141d] space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
-                  Equivalent gcloud beta CLI (Create + Upgrade)
-                </span>
-                <div className="flex items-center gap-1.5">
-                  {typeof onRunInShell === "function" && (
+        <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#10141d] overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowExpressSnippets((v) => !v)}
+            className="w-full px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900/60 cursor-pointer"
+          >
+            <span className="inline-flex items-center gap-2">
+              <Terminal className="w-3.5 h-3.5 text-zinc-500" />
+              <span>CLI Reference &amp; App Starter Kits</span>
+              <span className="text-[11px] font-normal text-zinc-500">
+                (gcloud beta CLI · Next.js / Node.js / FastAPI snippets)
+              </span>
+            </span>
+            <span className="text-[11px] font-mono text-zinc-500">
+              {showExpressSnippets ? "Hide Snippets ▲" : "Show Snippets ▼"}
+            </span>
+          </button>
+
+          {showExpressSnippets && (
+            <div className="p-4 pt-2 border-t border-zinc-200 dark:border-zinc-800 grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Left: Equivalent gcloud beta CLI */}
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                    Equivalent gcloud beta CLI (Create + Upgrade)
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {typeof onRunInShell === "function" && (
+                      <button
+                        type="button"
+                        onClick={() => onRunInShell(expressGcloudSnippet.split("\n\n")[0])}
+                        className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+                      >
+                        <Terminal className="w-3 h-3" />
+                        Run in Shell
+                      </button>
+                    )}
                     <button
                       type="button"
-                      onClick={() => onRunInShell(expressGcloudSnippet.split("\n\n")[0])}
+                      onClick={() => copyText(expressGcloudSnippet, "express-cli", "AlloyDB Express CLI")}
                       className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
                     >
-                      <Terminal className="w-3 h-3" />
-                      Run in Shell
+                      {copiedKey === "express-cli" ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                      Copy
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => copyText(expressGcloudSnippet, "express-cli", "AlloyDB Express CLI")}
-                    className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    {copiedKey === "express-cli" ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
-                    Copy
-                  </button>
+                  </div>
                 </div>
-              </div>
-              <pre className="p-3 rounded-lg bg-zinc-950 text-emerald-300 font-mono text-[10.5px] overflow-x-auto whitespace-pre-wrap">
-                {expressGcloudSnippet}
-              </pre>
-            </div>
-
-            {/* Right: Hackathon-to-Production Starter Kit Generator */}
-            <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#10141d] space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
-                  Hackathon → Production Starter Kit (Zero Cluster Ops)
-                </span>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {typeof onNavigateTab === "function" && (
-                    <button
-                      type="button"
-                      onClick={() => onNavigateTab("CLOUD_RUN")}
-                      className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
-                    >
-                      Cloud Run Fleet
-                      <ArrowUpRight className="w-3 h-3" />
-                    </button>
-                  )}
-                  {[
-                    { id: "NEXTJS_CLOUDRUN", label: "Next.js + Cloud Run" },
-                    { id: "NODE_PG", label: "Node.js pg" },
-                    { id: "PYTHON_FASTAPI", label: "Python FastAPI" },
-                  ].map((s) => (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => setStarterStack(s.id)}
-                      className={`px-2 py-1 rounded text-[10px] font-mono font-bold border cursor-pointer ${
-                        starterStack === s.id
-                          ? "border-amber-500 bg-amber-500/15 text-amber-800 dark:text-amber-200"
-                          : "border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400"
-                      }`}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => copyText(starterKitCode, "starter-code", `${starterStack} Starter`)}
-                  className="absolute top-2 right-2 px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
-                >
-                  {copiedKey === "starter-code" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                  Copy
-                </button>
-                <pre className="p-3 rounded-lg bg-zinc-950 text-sky-300 font-mono text-[10.5px] overflow-x-auto whitespace-pre-wrap">
-                  {starterKitCode}
+                <pre className="p-3 rounded-lg bg-zinc-950 text-emerald-300 font-mono text-[10.5px] overflow-x-auto whitespace-pre-wrap">
+                  {expressGcloudSnippet}
                 </pre>
               </div>
+
+              {/* Right: Hackathon-to-Production Starter Kit Generator */}
+              <div className="space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                    App Starter Kit
+                  </span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {typeof onNavigateTab === "function" && (
+                      <button
+                        type="button"
+                        onClick={() => onNavigateTab("CLOUD_RUN")}
+                        className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+                      >
+                        Cloud Run Fleet
+                        <ArrowUpRight className="w-3 h-3" />
+                      </button>
+                    )}
+                    {[
+                      { id: "NEXTJS_CLOUDRUN", label: "Next.js + Cloud Run" },
+                      { id: "NODE_PG", label: "Node.js pg" },
+                      { id: "PYTHON_FASTAPI", label: "Python FastAPI" },
+                    ].map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setStarterStack(s.id)}
+                        className={`px-2 py-1 rounded text-[10px] font-mono font-bold border cursor-pointer ${
+                          starterStack === s.id
+                            ? "border-amber-500 bg-amber-500/15 text-amber-800 dark:text-amber-200"
+                            : "border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400"
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => copyText(starterKitCode, "starter-code", `${starterStack} Starter`)}
+                    className="absolute top-2 right-2 px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    {copiedKey === "starter-code" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    Copy
+                  </button>
+                  <pre className="p-3 rounded-lg bg-zinc-950 text-sky-300 font-mono text-[10.5px] overflow-x-auto whitespace-pre-wrap">
+                    {starterKitCode}
+                  </pre>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
