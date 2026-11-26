@@ -21,15 +21,23 @@
     font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
   }
 
-  code, pre, kbd, .xterm, .xterm * {
-    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  code, pre, pre *, code *, kbd, textarea.font-mono, .xterm, .xterm * {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace !important;
   }
 }
 
-/* Ban harsh monospace from UI labels, buttons, badges, tabs & tables; keep it strictly for code/CLI/terminals */
-.font-mono:not(code):not(pre):not(textarea):not(kbd) {
+/* Keep UI labels, buttons & badges in Inter sans-serif, while preserving JetBrains Mono on all code/CLI/SQL/terminal blocks */
+.font-mono:not(code):not(pre):not(textarea):not(kbd):not(.whitespace-pre):not(.whitespace-pre-wrap):not(.select-all) {
   font-family: 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
   font-variant-numeric: tabular-nums;
+}
+
+pre .font-mono,
+code .font-mono,
+.whitespace-pre.font-mono,
+.whitespace-pre-wrap.font-mono,
+.select-all.font-mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace !important;
 }
 
 /* Precision Architectural Scrollbars (7px Low-Profile) */
