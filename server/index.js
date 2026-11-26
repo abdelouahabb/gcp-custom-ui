@@ -6969,9 +6969,7 @@ app.post('/api/project/:projectId/vms/:vmName/cve-patch', async (req, res) => {
         patchJobId,
         state: jobRes?.state || 'STARTED',
         percentComplete: Number(jobRes?.percentComplete || 0),
-        consoleUrl: patchJobId
-          ? `https://console.cloud.google.com/compute/osconfig/patch/jobs/details/${encodeURIComponent(patchJobId)}?project=${encodeURIComponent(projectId)}`
-          : `https://console.cloud.google.com/compute/osconfig/patch/jobs?project=${encodeURIComponent(projectId)}`,
+        consoleUrl: `https://console.cloud.google.com/compute/vm-manager/patch?project=${encodeURIComponent(projectId)}`,
         output: `Submitted live OS Config Patch Job "${patchJobId}" (${jobRes?.state || 'STARTED'}) targeting zones/${zone}/instances/${vmName} with apt.type=UPGRADE${safePackages.length > 0 ? ` (${safePackages.join(', ')})` : ' (all upgradable packages)'}. Polling live VM Manager state…`,
         durationMs: Date.now() - startedAt,
       });
