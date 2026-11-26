@@ -7815,6 +7815,12 @@ export function classifyDestructiveAxiosConfig(config) {
             whatHappensNext: `1. Detects your current public IPv4 address.\n2. Calls PATCH alloydb.googleapis.com/v1beta/.../instances/${iId}?updateMask=networkConfig.enablePublicIp,networkConfig.authorizedExternalNetworks.\n3. Polls the LRO until Google Cloud assigns the Public IPv4 address.`,
             confirmLabel: `Enable Public IP for My IP`,
           },
+          RESET_POSTGRES_PASSWORD: {
+            title: `Set / Reset "${body.userId || 'postgres'}" Password on AlloyDB Cluster "${cId}" (${reg})?`,
+            laymanSummary: `In Plain English: Updates the built-in PostgreSQL password for "${body.userId || 'postgres'}" on cluster "${cId}" via the AlloyDB Users API and auto-fills it into your current SQL Console session so you can connect immediately without guessing.`,
+            whatHappensNext: `1. Calls PATCH alloydb.googleapis.com/v1beta/projects/${projectId}/locations/${reg}/clusters/${cId}/users/${body.userId || 'postgres'}?updateMask=password.\n2. Auto-fills the new password into the SQL Console Password field.\n3. Unlocks Step 3 (Run Live SQL) immediately.`,
+            confirmLabel: `Update "${body.userId || 'postgres'}" Password`,
+          },
           UPGRADE_EXPRESS_TO_ENTERPRISE: {
             title: `Upgrade AlloyDB Express Cluster "${cId}" In-Place to Enterprise AlloyDB (${reg})?`,
             laymanSummary: `In Plain English: Performs a zero-data-loss in-place upgrade of "${cId}" from AlloyDB Express to full Enterprise AlloyDB (sets expressConfig.enabled=false). Preserves all data, schemas, extensions, credentials, and DNS/PSC while upgrading RAM ratio from 1:4 to 1:8 and unlocking scaling up to 288 vCPUs. Note: disables scale-to-zero (always-on Enterprise billing applies).`,

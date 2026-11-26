@@ -12813,6 +12813,41 @@ app.post('/api/project/:projectId/alloydb/action', async (req, res) => {
       });
     }
 
+    if (action === 'RESET_POSTGRES_PASSWORD') {
+      if (!clusterId) return res.status(400).json({ error: 'clusterId is required.' });
+      const targetUser = String(req.body?.userId || 'postgres').trim() || 'postgres';
+      const newPassword =
+        String(password || '').trim() || `AlloyExpress2026!${Math.floor(1000 + Math.random() * 8999)}`;
+      await gcpFetch(
+        `https://alloydb.googleapis.com/v1beta/projects/${encProj}/locations/${encReg}/clusters/${encodeURIComponent(
+          clusterId
+        )}/users/${encodeURIComponent(targetUser)}?updateMask=password`,
+        token,
+        projectId,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: { password: newPassword },
+          timeout: 12000,
+        }
+      );
+      recordFlightEvent(projectId, {
+        action: 'ALLOYDB_PASSWORD_RESET',
+        resourceType: 'ALLOYDB_USER',
+        resourceName: `${clusterId}/${targetUser}`,
+        region,
+        summary: `Updated built-in password for "${targetUser}" on AlloyDB cluster "${clusterId}"`,
+      });
+      return res.json({
+        ok: true,
+        action,
+        clusterId,
+        userId: targetUser,
+        newPassword,
+        message: `Updated password for "${targetUser}" on "${clusterId}" and auto-filled it into SQL Console!`,
+      });
+    }
+
     if (action === 'GRANT_ALLOYDB_KMS_ROLE') {
       const projMeta = await gcpFetch(
         `https://cloudresourcemanager.googleapis.com/v1/projects/${encProj}`,

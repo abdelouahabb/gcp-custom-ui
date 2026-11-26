@@ -1049,6 +1049,9 @@ ${activeDemoTrack.beats
         payload
       );
       const opName = data.operation?.name || null;
+      if (data.generatedPassword || data.newPassword) {
+        setCloudSqlPassword(data.generatedPassword || data.newPassword);
+      }
       const lroClusterKey = payload.clusterId || data.clusterId || '';
       const lroLabelMap = {
         DELETE_CLUSTER: `Deleting cluster "${lroClusterKey}" & instances`,
@@ -3033,9 +3036,33 @@ GROUP BY 1 ORDER BY turns DESC;`;
                     />
                   </div>
                   <div className="lg:col-span-2">
-                    <label className="block text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 mb-0.5">
-                      {cloudSqlAuthMode === "IAM_TOKEN" ? "Token" : "Password"}
-                    </label>
+                    <div className="flex items-center justify-between gap-1 mb-0.5">
+                      <label className="block text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400">
+                        {cloudSqlAuthMode === "IAM_TOKEN" ? "Token" : "Password"}
+                      </label>
+                      {cloudSqlAuthMode === "PASSWORD" && targetCluster && (
+                        <button
+                          type="button"
+                          disabled={busyKey === `RSTPW_${targetCluster.clusterId}`}
+                          onClick={() =>
+                            executeAlloyAction(
+                              {
+                                action: "RESET_POSTGRES_PASSWORD",
+                                region: targetCluster.location,
+                                clusterId: targetCluster.clusterId,
+                                userId: cloudSqlUser.trim() || "postgres",
+                                ...(cloudSqlPassword.trim() ? { password: cloudSqlPassword.trim() } : {}),
+                              },
+                              `RSTPW_${targetCluster.clusterId}`
+                            )
+                          }
+                          title="Don't know the password? Click to set/reset it via AlloyDB Users API and auto-fill here"
+                          className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer disabled:opacity-50"
+                        >
+                          {busyKey === `RSTPW_${targetCluster.clusterId}` ? "Setting…" : "Reset / Set"}
+                        </button>
+                      )}
+                    </div>
                     {cloudSqlAuthMode === "IAM_TOKEN" ? (
                       <div className="px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[11px] font-mono text-emerald-700 dark:text-emerald-300 truncate">
                         Auto GCP OAuth
@@ -3045,7 +3072,7 @@ GROUP BY 1 ORDER BY turns DESC;`;
                         type="password"
                         value={cloudSqlPassword}
                         onChange={(e) => setCloudSqlPassword(e.target.value)}
-                        placeholder="Enter password"
+                        placeholder="Enter or click Reset / Set"
                         className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                       />
                     )}
