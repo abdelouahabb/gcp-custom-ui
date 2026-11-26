@@ -1665,7 +1665,7 @@ export default function VmFleetAndSsh({
             if (p.done || elapsedMs > 300000) {
               clearInterval(pollTimer);
               if (p.state === 'SUCCEEDED') {
-                onShowToast?.(`Zero-SSH Patch Job ${data.patchJobId} SUCCEEDED on ${vm.name}!`, 'success');
+                onShowToast?.(`VM Manager Patch Job ${data.patchJobId} SUCCEEDED on ${vm.name}!`, 'success');
                 handleScanVmCves(vm, false);
               }
             }
@@ -3095,7 +3095,7 @@ export default function VmFleetAndSsh({
                         Live CVE &amp; Installed Package Audit — {cveVm.name}
                       </h3>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                        Full-width OS Config + live OSV.dev vulnerability workbench with 1-click apt upgrade &amp; Zero-SSH Patch Jobs.
+                        Full-width OS Config + live OSV.dev vulnerability workbench with 1-click apt upgrade &amp; GCP VM Manager Patch Jobs.
                       </p>
                     </div>
                   </div>
@@ -3216,6 +3216,7 @@ export default function VmFleetAndSsh({
                               rep.upgradablePackages?.length > 0 ? rep.upgradablePackages : []
                             )
                           }
+                          title="Run an official Google Cloud VM Manager Patch Job (OS Config API: osconfig.googleapis.com/v1) via google-osconfig-agent without SSH"
                           className="px-3 py-1.5 rounded-md bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
                         >
                           {cvePatchBusyVm === `${cveVm.name}:OSCONFIG_PATCH_JOB` ? (
@@ -3223,7 +3224,7 @@ export default function VmFleetAndSsh({
                           ) : (
                             <ShieldCheck className="w-3.5 h-3.5 text-amber-500" />
                           )}
-                          <span>Zero-SSH Patch Job</span>
+                          <span>GCP VM Manager Patch</span>
                         </button>
                       </div>
                     </div>
@@ -3323,9 +3324,9 @@ export default function VmFleetAndSsh({
                               )}
                               <span>
                                 {isPatchJobRunning
-                                  ? `Zero-SSH OS Config Patch Job Running on ${cveVm.name}: ${receipt.instanceState || receipt.state || 'STARTED'} (${jobPct}%)`
+                                  ? `GCP VM Manager Patch Job Running on ${cveVm.name}: ${receipt.instanceState || receipt.state || 'STARTED'} (${jobPct}%)`
                                   : isAsyncPatchJob
-                                  ? `Zero-SSH Patch Job ${receipt.state || 'SUCCEEDED'} on ${cveVm.name} (${Math.max(1, Math.round((receipt.durationMs || 1000) / 1000))}s)`
+                                  ? `GCP VM Manager Patch Job ${receipt.state || 'SUCCEEDED'} on ${cveVm.name} (${Math.max(1, Math.round((receipt.durationMs || 1000) / 1000))}s)`
                                   : `Live Patch Completed on ${cveVm.name} (${Math.max(1, Math.round((receipt.durationMs || 1000) / 1000))}s) — 100%`}
                               </span>
                             </div>

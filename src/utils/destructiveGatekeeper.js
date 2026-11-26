@@ -5191,24 +5191,24 @@ export function classifyDestructiveAxiosConfig(config) {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
         title: isOsConfig
-          ? `Run Zero-SSH OS Config Patch Job on "${vmName}" (${zone})?`
+          ? `Run Google Cloud VM Manager Patch Job on "${vmName}" (${zone})?`
           : `Run Live "apt-get upgrade" on GCE VM "${vmName}" (${zone})?`,
         laymanSummary: isOsConfig
           ? `In Plain English: Submits a live Google Cloud VM Manager Patch Job (osconfig.googleapis.com/v1) via google-osconfig-agent to upgrade vulnerable apt packages on "${vmName}".`
           : `In Plain English: Connects to "${vmName}" (${zone}) over SSH/IAP and runs "sudo apt-get update && sudo apt-get upgrade -y"${pkgs.length > 0 ? ` targeting ${pkgs.length} vulnerable package(s): ${pkgs.slice(0, 8).join(', ')}${pkgs.length > 8 ? '...' : ''}` : ''} to remediate detected CVEs.`,
         headerBadge: isOsConfig
-          ? 'GCE VM Manager — Zero-SSH OS Config Patch Job'
+          ? 'Google Cloud VM Manager — OS Config Patch Job'
           : 'GCE Live CVE Remediation — apt-get upgrade',
         targetLabel: 'Target Compute Engine VM',
         resourceKind: isOsConfig
-          ? 'OS Config Patch Job (osconfig.googleapis.com/v1)'
+          ? 'Google Cloud VM Manager Patch Job (osconfig.googleapis.com/v1)'
           : 'GCE Guest OS Packages (apt-get upgrade via SSH/IAP)',
         targetName: `${vmName} (${zone})`,
         location: zone,
         projectId,
-        method: isOsConfig ? 'EXECUTE OS CONFIG PATCH' : 'RUN APT UPGRADE',
+        method: isOsConfig ? 'VM MANAGER PATCH' : 'RUN APT UPGRADE',
         endpoint: rawUrl,
-        confirmLabel: isOsConfig ? `Launch Patch Job on "${vmName}"` : `Run apt upgrade on "${vmName}"`,
+        confirmLabel: isOsConfig ? `Launch VM Manager Patch on "${vmName}"` : `Run apt upgrade on "${vmName}"`,
         cancelToast: `CVE remediation on "${vmName}" cancelled.`,
         whatHappensNext: isOsConfig
           ? `1. Calls POST osconfig.googleapis.com/v1/projects/${projectId}/patchJobs:execute with apt.type=UPGRADE.\n2. google-osconfig-agent upgrades vulnerable packages cleanly without SSH.`
