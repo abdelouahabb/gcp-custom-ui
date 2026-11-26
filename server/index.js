@@ -6550,6 +6550,7 @@ app.post('/api/project/:projectId/vms/:vmName/cve-scan', async (req, res) => {
 
     const vulnerabilities = [];
     const upgradableSet = new Set();
+    const seenOsConfigKeys = new Set();
 
     if (hasOsConfigVuln) {
       const rawVulns = Array.isArray(vulnRes.vulnerabilities) ? vulnRes.vulnerabilities : [];
@@ -6562,13 +6563,17 @@ app.post('/api/project/:projectId/vms/:vmName/cve-scan', async (req, res) => {
         const refUrl = d?.references?.[0]?.url || `https://nvd.nist.gov/vuln/detail/${encodeURIComponent(cveId)}`;
         const affected = Array.isArray(d.affectedPackages) ? d.affectedPackages : [];
         if (affected.length === 0) {
+          const dedupKey = `${cveId.toUpperCase()}|os-package`;
+          if (seenOsConfigKeys.has(dedupKey)) continue;
+          seenOsConfigKeys.add(dedupKey);
           vulnerabilities.push({
             cveId,
             severity,
             cvssV3Score,
             packageName: 'os-package',
             installedVersion: '—',
-            fixedVersion: 'available',
+            fixedVersion: 'No fix yet',
+            patchable: false,
             packageType: 'apt',
             source: 'OS_CONFIG',
             description: desc,
@@ -6577,14 +6582,23 @@ app.post('/api/project/:projectId/vms/:vmName/cve-scan', async (req, res) => {
         } else {
           for (const pkg of affected) {
             const pName = pkg.packageName || 'unknown';
-            if (pName && /^[a-z0-9][a-z0-9.+_-]*$/i.test(pName)) upgradableSet.add(pName);
+            const dedupKey = `${cveId.toUpperCase()}|${pName.toLowerCase()}`;
+            if (seenOsConfigKeys.has(dedupKey)) continue;
+            seenOsConfigKeys.add(dedupKey);
+            const rawFixed = String(pkg.fixedVersion || '').trim();
+            const rawInst = String(pkg.installedVersion || '').trim();
+            const isPatchable = Boolean(rawFixed && rawFixed !== rawInst && !/^(none|n\/a|unknown|unfixed)$/i.test(rawFixed));
+            if (isPatchable && pName && /^[a-z0-9][a-z0-9.+_-]*$/i.test(pName)) {
+              upgradableSet.add(pName);
+            }
             vulnerabilities.push({
               cveId,
               severity,
               cvssV3Score,
               packageName: pName,
-              installedVersion: pkg.installedVersion || '—',
-              fixedVersion: pkg.fixedVersion || 'latest',
+              installedVersion: rawInst || '—',
+              fixedVersion: isPatchable ? rawFixed : 'No fix yet',
+              patchable: isPatchable,
               packageType: pkg.packageType || 'apt',
               source: 'OS_CONFIG',
               description: desc,
@@ -6693,24 +6707,28 @@ app.post('/api/project/:projectId/vms/:vmName/cve-scan', async (req, res) => {
             const severity = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].includes(rawSev) ? rawSev : 'MEDIUM';
             const cvssScore =
               severity === 'CRITICAL' ? 9.1 : severity === 'HIGH' ? 7.5 : severity === 'MEDIUM' ? 5.3 : 3.1;
-            let fixedVer = 'check apt';
+            let fixedVer = '';
             for (const aff of Array.isArray(detail?.affected) ? detail.affected : []) {
               for (const rng of Array.isArray(aff?.ranges) ? aff.ranges : []) {
                 const fx = (rng?.events || []).find((ev) => ev?.fixed)?.fixed;
                 if (fx) {
-                  fixedVer = String(fx);
+                  fixedVer = String(fx).trim();
                   break;
                 }
               }
             }
-            if (/^[a-z0-9][a-z0-9.+_-]*$/i.test(item.pkg.name)) upgradableSet.add(item.pkg.name);
+            const isOsvPatchable = Boolean(fixedVer && fixedVer !== item.pkg.version);
+            if (isOsvPatchable && /^[a-z0-9][a-z0-9.+_-]*$/i.test(item.pkg.name)) {
+              upgradableSet.add(item.pkg.name);
+            }
             vulnerabilities.push({
               cveId: cveAlias,
               severity,
               cvssV3Score: cvssScore,
               packageName: item.pkg.name,
               installedVersion: item.pkg.version,
-              fixedVersion: fixedVer,
+              fixedVersion: isOsvPatchable ? fixedVer : 'No fix yet',
+              patchable: isOsvPatchable,
               packageType: 'apt',
               source: 'OSV_DEV',
               description: String(detail?.summary || detail?.details || `OSV advisory ${item.rawId}`).slice(0, 240),
@@ -6802,13 +6820,23 @@ app.post('/api/project/:projectId/vms/:vmName/cve-scan', async (req, res) => {
       }
     }
 
-    const finalVulns = hasOsConfigVuln ? vulnerabilities : sshAptPackages;
+    const rawFinalVulns = hasOsConfigVuln ? vulnerabilities : sshAptPackages;
+    const sevOrder = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
+    const finalVulns = [...rawFinalVulns].sort((a, b) => {
+      const pDiff = (b.patchable ? 1 : 0) - (a.patchable ? 1 : 0);
+      if (pDiff !== 0) return pDiff;
+      return (sevOrder[b.severity] || 0) - (sevOrder[a.severity] || 0);
+    });
+    const patchableCount = finalVulns.filter((v) => v.patchable).length;
+    const unfixedAdvisoryCount = finalVulns.length - patchableCount;
     const severityCounts = {
       CRITICAL: finalVulns.filter((v) => v.severity === 'CRITICAL').length,
       HIGH: finalVulns.filter((v) => v.severity === 'HIGH').length,
       MEDIUM: finalVulns.filter((v) => v.severity === 'MEDIUM').length,
       LOW: finalVulns.filter((v) => v.severity === 'LOW').length,
       TOTAL: finalVulns.length,
+      PATCHABLE: patchableCount,
+      UNFIXED: unfixedAdvisoryCount,
     };
 
     const agentStatus = hasOsConfigVuln
