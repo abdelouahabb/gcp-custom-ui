@@ -12291,10 +12291,31 @@ app.post('/api/project/:projectId/alloydb/action', async (req, res) => {
         .replace(/^-+|-+$/g, '')
         .slice(0, 50);
 
+      let detectedPublicIp = '';
+      if (publicDnsEnabled) {
+        try {
+          const ipRes = await axios.get('https://api.ipify.org?format=json', { timeout: 3000 });
+          if (/^\d{1,3}(\.\d{1,3}){3}$/.test(String(ipRes?.data?.ip || ''))) {
+            detectedPublicIp = String(ipRes.data.ip);
+          }
+        } catch {
+          // proceed with publicDnsEnabled without auto-CIDR
+        }
+      }
+
       const body = {
         instanceType: 'PRIMARY',
         machineConfig: { cpuCount: 1 },
-        ...(publicDnsEnabled ? { networkConfig: { publicDnsEnabled: true } } : {}),
+        ...(publicDnsEnabled
+          ? {
+              networkConfig: {
+                publicDnsEnabled: true,
+                ...(detectedPublicIp
+                  ? { authorizedExternalNetworks: [{ cidrRange: `${detectedPublicIp}/32` }] }
+                  : {}),
+              },
+            }
+          : {}),
         labels: {
           managed_by: 'cloudpulse_2026',
           tier: 'alloydb_express',
