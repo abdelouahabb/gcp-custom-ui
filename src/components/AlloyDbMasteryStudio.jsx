@@ -426,7 +426,60 @@ export default function AlloyDbMasteryStudio({
   const [expressPscEnabled, setExpressPscEnabled] = useState(true);
   const [showCreateClusterDrawer, setShowCreateClusterDrawer] = useState(false);
   const [showAlloyOpsHistory, setShowAlloyOpsHistory] = useState(false);
+  const [sqlConsoleClusterId, setSqlConsoleClusterId] = useState('');
+  const [connectClusterId, setConnectClusterId] = useState('');
+  const [cloudSqlDsn, setCloudSqlDsn] = useState('');
+  const [cloudSqlQuery, setCloudSqlQuery] = useState(
+    'SELECT version(), current_database(), current_user, inet_server_addr();'
+  );
+  const [cloudSqlBusy, setCloudSqlBusy] = useState(false);
+  const [cloudSqlResult, setCloudSqlResult] = useState(null);
   const [starterStack, setStarterStack] = useState('NEXTJS_CLOUDRUN'); // NODE_PG | PYTHON_FASTAPI | NEXTJS_CLOUDRUN
+
+  const resolveClusterHost = (c) => {
+    const p = c?.primaryInstance;
+    if (!p) return '';
+    return p.publicIpAddress || p.publicDnsName || p.ipAddress || p.pscDnsName || '';
+  };
+
+  const openClusterSqlConsole = (c) => {
+    if (!c) return;
+    if (sqlConsoleClusterId === c.clusterId) {
+      setSqlConsoleClusterId('');
+      return;
+    }
+    const host = resolveClusterHost(c) || '127.0.0.1';
+    const isLocal = host === '127.0.0.1' || host === 'localhost';
+    setCloudSqlDsn(
+      `postgresql://postgres:YOUR_PASSWORD@${host}:5432/postgres${isLocal ? '' : '?sslmode=require'}`
+    );
+    setCloudSqlResult(null);
+    setSqlConsoleClusterId(c.clusterId);
+  };
+
+  const runCloudClusterSql = async (mode = 'RUN_CUSTOM_SQL', overrideSql = null) => {
+    if (!projectId) return;
+    const sqlToRun = overrideSql !== null ? overrideSql : cloudSqlQuery;
+    if (overrideSql !== null) setCloudSqlQuery(overrideSql);
+    setCloudSqlBusy(true);
+    setCloudSqlResult(null);
+    try {
+      const { data } = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/alloydb/execute-sql`,
+        { dsn: cloudSqlDsn.trim(), sql: sqlToRun, mode }
+      );
+      setCloudSqlResult({ ok: true, ...data });
+    } catch (err) {
+      setCloudSqlResult({
+        ok: false,
+        error: err?.response?.data?.error || err.message || 'psql execution failed.',
+        stdout: err?.response?.data?.stdout || '',
+        durationMs: err?.response?.data?.durationMs || null,
+      });
+    } finally {
+      setCloudSqlBusy(false);
+    }
+  };
 
   // Pillar 2: Zero Lock-in & Omni State
   const [lockInLab, setLockInLab] = useState('PGLOGICAL_INBOUND'); // PGLOGICAL_INBOUND | ZERO_CODE_COMPAT | OMNI_LOCAL_CLOUD | STOCK_PG_EXIT_DR
@@ -2323,6 +2376,32 @@ GROUP BY 1 ORDER BY turns DESC;`;
                 )}
 
                 <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => openClusterSqlConsole(c)}
+                    className={`px-2.5 py-1 rounded text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer ${
+                      sqlConsoleClusterId === c.clusterId
+                        ? "border border-amber-500 bg-amber-500/20 text-amber-800 dark:text-amber-200"
+                        : c.primaryInstance
+                        ? "bg-blue-600 hover:bg-blue-500 text-white"
+                        : "bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200"
+                    }`}
+                  >
+                    <Terminal className="w-3 h-3" />
+                    {sqlConsoleClusterId === c.clusterId ? "Close SQL Console" : "SQL Console"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConnectClusterId(connectClusterId === c.clusterId ? "" : c.clusterId)}
+                    className={`px-2.5 py-1 rounded border text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer ${
+                      connectClusterId === c.clusterId
+                        ? "border-amber-500 bg-amber-500/15 text-amber-800 dark:text-amber-200"
+                        : "bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200"
+                    }`}
+                  >
+                    <Database className="w-3 h-3" />
+                    Connect (psql)
+                  </button>
                   {c.isExpress && (
                     <button
                       type="button"
@@ -2430,6 +2509,49 @@ GROUP BY 1 ORDER BY turns DESC;`;
                   </button>
                 </div>
 
+                {connectClusterId === c.clusterId && (() => {
+                  const host = resolveClusterHost(c) || "<PRIMARY_HOST_AFTER_STEP_2>";
+                  const dsnStr = `postgresql://postgres:<PASSWORD>@${host}:5432/postgres?sslmode=require`;
+                  const psqlCmd = `psql "${dsnStr}"`;
+                  return (
+                    <div className="pt-2.5 mt-1 border-t border-zinc-200 dark:border-zinc-800 space-y-2 text-[11px]">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                          Connect to {c.clusterId} ({c.location}) via psql or Application .env
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => copyText(dsnStr, `dsn_${c.clusterId}`, "DATABASE_URL")}
+                            className="px-2 py-0.5 rounded bg-zinc-200/80 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-mono text-[10px] font-bold cursor-pointer"
+                          >
+                            {copiedKey === `dsn_${c.clusterId}` ? "Copied!" : "Copy DATABASE_URL"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => copyText(psqlCmd, `psql_${c.clusterId}`, "psql command")}
+                            className="px-2 py-0.5 rounded bg-zinc-200/80 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-mono text-[10px] font-bold cursor-pointer"
+                          >
+                            {copiedKey === `psql_${c.clusterId}` ? "Copied!" : "Copy psql"}
+                          </button>
+                          {typeof onRunInShell === "function" && c.primaryInstance && (
+                            <button
+                              type="button"
+                              onClick={() => onRunInShell(psqlCmd)}
+                              className="px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white font-mono text-[10px] font-bold cursor-pointer"
+                            >
+                              Run in Shell
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <pre className="p-2.5 rounded-lg bg-zinc-950 text-emerald-300 font-mono text-[10.5px] overflow-x-auto whitespace-pre-wrap">
+                        {`# Direct PostgreSQL 18 CLI (psql)\n${psqlCmd}\n\n# App .env\nDATABASE_URL="${dsnStr}"`}
+                      </pre>
+                    </div>
+                  );
+                })()}
+
                 {iamUserCluster === c.clusterId && (
                   <div className="pt-2 mt-1 border-t border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center gap-2">
                     <input
@@ -2464,6 +2586,133 @@ GROUP BY 1 ORDER BY turns DESC;`;
             ))}
           </div>
         )}
+
+        {/* Inline Live Cloud AlloyDB SQL Console ("SSH" Equivalent for AlloyDB Clusters) */}
+        {sqlConsoleClusterId && (() => {
+          const targetCluster = (overview?.clusters || []).find((c) => c.clusterId === sqlConsoleClusterId);
+          return (
+            <div className="p-4 rounded-xl border border-blue-500/40 bg-blue-500/[0.04] space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Terminal className="w-4 h-4 text-blue-500" />
+                  <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                    Live Cloud AlloyDB SQL Console — <code className="font-mono">{sqlConsoleClusterId}</code>
+                  </span>
+                  {targetCluster && (
+                    <span className="px-1.5 py-0.5 rounded bg-zinc-200/80 dark:bg-zinc-800 text-[10px] font-mono text-zinc-700 dark:text-zinc-300">
+                      {targetCluster.databaseVersion} · {targetCluster.location}
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSqlConsoleClusterId("")}
+                  className="px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
+                >
+                  Close Console
+                </button>
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-[11px] font-mono text-zinc-600 dark:text-zinc-400">
+                  PostgreSQL Connection URI (replace YOUR_PASSWORD with cluster password, or use AlloyDB Auth Proxy 127.0.0.1:5432)
+                </label>
+                <input
+                  type="text"
+                  value={cloudSqlDsn}
+                  onChange={(e) => setCloudSqlDsn(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5">
+                {[
+                  {
+                    label: "Engine & Cloud IP",
+                    sql: "SELECT version(), current_database(), current_user, inet_server_addr();",
+                  },
+                  {
+                    label: "AlloyDB Extensions",
+                    sql: "SELECT extname, extversion FROM pg_extension ORDER BY extname;",
+                  },
+                  {
+                    label: "List Tables",
+                    sql: "SELECT table_schema, table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;",
+                  },
+                  {
+                    label: "Create & Seed Demo Table",
+                    sql: "CREATE TABLE IF NOT EXISTS cloudpulse_events (id SERIAL PRIMARY KEY, event TEXT, created_at TIMESTAMPTZ DEFAULT now());\nINSERT INTO cloudpulse_events (event) VALUES ('Live AlloyDB Express PG 18 check');\nSELECT * FROM cloudpulse_events ORDER BY id DESC LIMIT 10;",
+                  },
+                ].map((chip) => (
+                  <button
+                    key={chip.label}
+                    type="button"
+                    disabled={cloudSqlBusy}
+                    onClick={() => runCloudClusterSql("RUN_CUSTOM_SQL", chip.sql)}
+                    className="px-2.5 py-1 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-amber-500 text-[11px] font-semibold text-zinc-800 dark:text-zinc-200 cursor-pointer"
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                rows={4}
+                value={cloudSqlQuery}
+                onChange={(e) => setCloudSqlQuery(e.target.value)}
+                className="w-full p-3 rounded-lg bg-zinc-950 border border-zinc-800 text-emerald-300 font-mono text-xs"
+              />
+
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={cloudSqlBusy || !cloudSqlDsn.trim() || !cloudSqlQuery.trim()}
+                    onClick={() => runCloudClusterSql("RUN_CUSTOM_SQL")}
+                    className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                  >
+                    {cloudSqlBusy ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Terminal className="w-3.5 h-3.5" />}
+                    <span>{cloudSqlBusy ? "Running psql…" : "Run Live SQL (psql)"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={cloudSqlBusy || !cloudSqlDsn.trim()}
+                    onClick={() => runCloudClusterSql("INTROSPECT_ALLOYDB")}
+                    className="px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 text-xs font-semibold text-zinc-800 dark:text-zinc-200 cursor-pointer"
+                  >
+                    Deep Introspect (Extensions + Flags)
+                  </button>
+                </div>
+                {cloudSqlResult?.durationMs && (
+                  <span className="text-[11px] font-mono text-zinc-500 tabular-nums">
+                    Executed in {cloudSqlResult.durationMs}ms via /usr/bin/psql
+                  </span>
+                )}
+              </div>
+
+              {cloudSqlResult && (
+                <div
+                  className={`rounded-lg border p-3 space-y-2 ${
+                    cloudSqlResult.ok
+                      ? "border-emerald-500/35 bg-emerald-500/[0.06]"
+                      : "border-red-500/35 bg-red-500/[0.06]"
+                  }`}
+                >
+                  {!cloudSqlResult.ok && (
+                    <div className="text-xs text-red-700 dark:text-red-300 font-semibold">
+                      {cloudSqlResult.error}
+                    </div>
+                  )}
+                  {cloudSqlResult.stdout && (
+                    <pre className="p-3 rounded-lg bg-zinc-950 text-emerald-300 font-mono text-xs max-h-64 overflow-auto whitespace-pre-wrap">
+                      <code>{cloudSqlResult.stdout}</code>
+                    </pre>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Collapsible Recent AlloyDB Operations Bar */}
         {Array.isArray(overview?.operations) && overview.operations.length > 0 && (
