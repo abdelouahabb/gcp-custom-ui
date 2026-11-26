@@ -880,10 +880,9 @@ button.bg-blue-600:not([role="tab"]):not(.cp-nav-rail-item):hover:not(:disabled)
 
 /* ============================================================================
  * 2026 Spatial Breathing & Editorial Typography System
- * - Proportional root scale (17px desktop) so fonts, buttons & heights stay locked
- * - Readability floor: eliminates 9px-11px eyestrain across studios & tables
+ * - Clean 16px root (no double-scaling) with Inter + Plus Jakarta Sans
+ * - Balanced readability floor + generous card cushioning so text never crowds edges
  * - Anti-collision button/flex guardrails + zero horizontal scroll
- * - Refined Swiss/Linear surface hierarchy & tabular-nums precision
  * ============================================================================ */
 html {
   font-size: 16px;
@@ -892,15 +891,9 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
-@media (min-width: 1024px) {
-  html {
-    font-size: 17px;
-  }
-}
-
 body {
   overflow-x: hidden;
-  line-height: 1.5;
+  line-height: 1.55;
   background-color: #f6f8fb;
 }
 
@@ -913,7 +906,7 @@ body {
 #cloudpulse-main-workspace h2,
 #cloudpulse-main-workspace h3 {
   letter-spacing: -0.015em;
-  line-height: 1.3;
+  line-height: 1.32;
 }
 
 #cloudpulse-main-workspace .font-bold,
@@ -921,26 +914,26 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Readability Floor inside Main Workspace (no microscopic text) */
+/* Balanced Readability Scale inside Main Workspace (crisp, never bloated) */
 #cloudpulse-main-workspace .text-\[10px\] {
-  font-size: 0.72rem;
-  line-height: 1.35;
+  font-size: 0.71875rem; /* 11.5px */
+  line-height: 1.4;
 }
 
 #cloudpulse-main-workspace .text-\[10\.5px\],
 #cloudpulse-main-workspace .text-\[11px\] {
-  font-size: 0.78rem;
-  line-height: 1.4;
+  font-size: 0.78125rem; /* 12.5px */
+  line-height: 1.45;
 }
 
 #cloudpulse-main-workspace .text-xs {
-  font-size: 0.84rem;
-  line-height: 1.48;
+  font-size: 0.8125rem; /* 13px */
+  line-height: 1.5;
 }
 
 #cloudpulse-main-workspace .text-sm {
-  font-size: 0.94rem;
-  line-height: 1.5;
+  font-size: 0.90625rem; /* 14.5px */
+  line-height: 1.55;
 }
 
 /* Anti-Collision Button & Control Alignment */
@@ -948,64 +941,74 @@ body {
 #cloudpulse-main-workspace select,
 #cloudpulse-main-workspace input[type="text"],
 #cloudpulse-main-workspace input[type="search"] {
-  line-height: 1.25;
+  line-height: 1.3;
 }
 
 #cloudpulse-main-workspace .space-y-3 > :not([hidden]) ~ :not([hidden]) {
-  margin-top: 1.2rem;
+  margin-top: 1.15rem;
 }
 
 #cloudpulse-main-workspace .space-y-4 > :not([hidden]) ~ :not([hidden]) {
-  margin-top: 1.55rem;
+  margin-top: 1.5rem;
 }
 
 #cloudpulse-main-workspace .space-y-5 > :not([hidden]) ~ :not([hidden]) {
-  margin-top: 1.9rem;
+  margin-top: 1.85rem;
 }
 
 #cloudpulse-main-workspace .space-y-6 > :not([hidden]) ~ :not([hidden]) {
-  margin-top: 2.3rem;
+  margin-top: 2.25rem;
 }
 
 #cloudpulse-main-workspace .grid.gap-2 {
-  gap: 0.95rem;
+  gap: 0.9rem;
 }
 
 #cloudpulse-main-workspace .grid.gap-3 {
-  gap: 1.25rem;
+  gap: 1.2rem;
 }
 
 #cloudpulse-main-workspace .grid.gap-4 {
-  gap: 1.55rem;
+  gap: 1.5rem;
 }
 
 #cloudpulse-main-workspace table {
-  font-size: 0.84rem;
+  font-size: 0.8125rem;
 }
 
 #cloudpulse-main-workspace table th,
 #cloudpulse-main-workspace table td {
-  padding-top: 0.78rem;
-  padding-bottom: 0.78rem;
+  padding: 0.75rem 1rem;
 }
 
-/* Refined Card Surface Elevation */
+/* Generous Card Cushioning & Refined Elevation across ALL cards (divs & sections) */
 #cloudpulse-main-workspace section.rounded-xl,
-#cloudpulse-main-workspace section.rounded-2xl {
+#cloudpulse-main-workspace section.rounded-2xl,
+#cloudpulse-main-workspace div.rounded-xl.border:not(.overflow-x-auto):not(.overflow-hidden),
+#cloudpulse-main-workspace div.rounded-2xl.border:not(.overflow-x-auto):not(.overflow-hidden) {
+  padding: 1.35rem 1.5rem;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
+#cloudpulse-main-workspace div.rounded-lg.border.p-3,
+#cloudpulse-main-workspace div.rounded-lg.border.p-2\.5,
+#cloudpulse-main-workspace div.rounded-lg.border.p-2 {
+  padding: 1rem 1.15rem;
+}
+
 .dark #cloudpulse-main-workspace section.rounded-xl,
-.dark #cloudpulse-main-workspace section.rounded-2xl {
+.dark #cloudpulse-main-workspace section.rounded-2xl,
+.dark #cloudpulse-main-workspace div.rounded-xl.border:not(.overflow-x-auto):not(.overflow-hidden),
+.dark #cloudpulse-main-workspace div.rounded-2xl.border:not(.overflow-x-auto):not(.overflow-hidden) {
   background-color: #0e131e;
   border-color: rgba(148, 163, 184, 0.14);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.32);
 }
 
 @media (min-width: 768px) {
   #cloudpulse-main-workspace section.rounded-xl,
   #cloudpulse-main-workspace section.rounded-2xl {
-    padding: 1.6rem;
+    padding: 1.65rem 1.75rem;
   }
 }
 
