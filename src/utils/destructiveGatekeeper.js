@@ -7804,9 +7804,15 @@ export function classifyDestructiveAxiosConfig(config) {
           },
           CREATE_EXPRESS_PRIMARY_INSTANCE: {
             title: `Create 1-vCPU AlloyDB Express Primary Instance "${iId}" on "${cId}" (${reg})?`,
-            laymanSummary: `In Plain English: Attaches the 1-vCPU (4 GB RAM) primary compute instance "${iId}" to AlloyDB Express cluster "${cId}" in "${reg}" (${body.publicDnsEnabled ? 'with Public DNS enabled for instant app connectivity' : 'with private connectivity'}).`,
+            laymanSummary: `In Plain English: Attaches the 1-vCPU (4 GB RAM) primary compute instance "${iId}" to AlloyDB Express cluster "${cId}" in "${reg}" (${body.publicDnsEnabled ? 'with Public IP + your current /32 IP authorized for direct TLS psql connectivity' : 'with private connectivity'}).`,
             whatHappensNext: `1. Calls POST alloydb.googleapis.com/v1beta/projects/${projectId}/locations/${reg}/clusters/${cId}/instances?instanceId=${iId}.\n2. Provisions the PRIMARY compute node.\n3. Refreshes live AlloyDB instance telemetry.`,
             confirmLabel: `Create 1-vCPU Primary "${iId}"`,
+          },
+          ENABLE_PUBLIC_IP_FOR_MY_IP: {
+            title: `Enable Public IP & Authorize Your Current IP on "${cId}/${iId}" (${reg})?`,
+            laymanSummary: `In Plain English: Patches AlloyDB instance "${iId}" to assign a reachable Public IPv4 address (networkConfig.enablePublicIp=true) and authorizes ONLY your machine's current /32 public IP over encrypted TLS (sslmode=require) so you can run psql and SQL Console directly from your workstation.`,
+            whatHappensNext: `1. Detects your current public IPv4 address.\n2. Calls PATCH alloydb.googleapis.com/v1beta/.../instances/${iId}?updateMask=networkConfig.enablePublicIp,networkConfig.authorizedExternalNetworks.\n3. Polls the LRO until Google Cloud assigns the Public IPv4 address.`,
+            confirmLabel: `Enable Public IP for My IP`,
           },
           UPGRADE_EXPRESS_TO_ENTERPRISE: {
             title: `Upgrade AlloyDB Express Cluster "${cId}" In-Place to Enterprise AlloyDB (${reg})?`,

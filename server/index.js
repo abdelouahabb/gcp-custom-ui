@@ -12288,10 +12288,32 @@ app.post('/api/project/:projectId/alloydb/action', async (req, res) => {
         .replace(/^-+|-+$/g, '')
         .slice(0, 50);
 
+      let detectedPublicIp = '';
+      if (publicDnsEnabled) {
+        try {
+          const ipRes = await axios.get('https://api.ipify.org?format=json', { timeout: 3000 });
+          if (/^\d{1,3}(\.\d{1,3}){3}$/.test(String(ipRes?.data?.ip || ''))) {
+            detectedPublicIp = String(ipRes.data.ip);
+          }
+        } catch {
+          // proceed with enablePublicIp without auto-CIDR
+        }
+      }
+
       const body = {
         instanceType: 'PRIMARY',
         machineConfig: { cpuCount: 1 },
-        ...(publicDnsEnabled ? { networkConfig: { publicDnsEnabled: true } } : {}),
+        ...(publicDnsEnabled
+          ? {
+              networkConfig: {
+                enablePublicIp: true,
+                publicDnsEnabled: true,
+                ...(detectedPublicIp
+                  ? { authorizedExternalNetworks: [{ cidrRange: `${detectedPublicIp}/32` }] }
+                  : {}),
+              },
+            }
+          : {}),
         labels: {
           managed_by: 'cloudpulse_2026',
           tier: 'alloydb_express',
@@ -12325,7 +12347,72 @@ app.post('/api/project/:projectId/alloydb/action', async (req, res) => {
         action,
         clusterId,
         instanceId: cleanInst,
-        message: `Dispatched 1-vCPU AlloyDB Express primary instance "${cleanInst}" on cluster "${clusterId}" (${publicDnsEnabled ? 'Public DNS enabled' : 'Private connectivity'}).`,
+        message: `Dispatched 1-vCPU AlloyDB Express primary instance "${cleanInst}" on cluster "${clusterId}" (${publicDnsEnabled ? `Public IP${detectedPublicIp ? ` + authorized ${detectedPublicIp}/32` : ''}` : 'Private connectivity'}).`,
+        operation: op,
+      });
+    }
+
+    if (action === 'ENABLE_PUBLIC_IP_FOR_MY_IP') {
+      if (!clusterId || !instanceId) {
+        return res.status(400).json({ error: 'clusterId and instanceId are required.' });
+      }
+      let myIp = '';
+      try {
+        const ipRes = await axios.get('https://api.ipify.org?format=json', { timeout: 4000 });
+        if (/^\d{1,3}(\.\d{1,3}){3}$/.test(String(ipRes?.data?.ip || ''))) {
+          myIp = String(ipRes.data.ip);
+        }
+      } catch {
+        // handled below
+      }
+      if (!myIp) {
+        return res.status(400).json({ error: 'Could not detect your current public IPv4 address via api.ipify.org.' });
+      }
+      const instUrl = `https://alloydb.googleapis.com/v1beta/projects/${encProj}/locations/${encReg}/clusters/${encodeURIComponent(
+        clusterId
+      )}/instances/${encodeURIComponent(instanceId)}`;
+      const existingInst = await gcpFetch(instUrl, token, projectId, { timeout: 8000 }).catch(() => ({}));
+      const prevNets = Array.isArray(existingInst?.networkConfig?.authorizedExternalNetworks)
+        ? existingInst.networkConfig.authorizedExternalNetworks
+        : [];
+      const myCidr = `${myIp}/32`;
+      const mergedNets = prevNets.some((n) => n?.cidrRange === myCidr)
+        ? prevNets
+        : [...prevNets, { cidrRange: myCidr }];
+
+      const op = await gcpFetch(
+        `${instUrl}?updateMask=networkConfig.enablePublicIp,networkConfig.authorizedExternalNetworks`,
+        token,
+        projectId,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            networkConfig: {
+              enablePublicIp: true,
+              authorizedExternalNetworks: mergedNets,
+            },
+          },
+          timeout: 12000,
+        }
+      );
+
+      recordFlightEvent(projectId, {
+        action: 'ALLOYDB_ENABLE_PUBLIC_IP',
+        resourceType: 'ALLOYDB_INSTANCE',
+        resourceName: `${clusterId}/${instanceId}`,
+        region,
+        summary: `Enabled Public IP + authorized ${myCidr} on "${clusterId}/${instanceId}"`,
+      });
+
+      return res.json({
+        ok: true,
+        action,
+        clusterId,
+        instanceId,
+        region,
+        authorizedCidr: myCidr,
+        message: `Enabled Public IP & authorized your IP (${myCidr}) on "${clusterId}/${instanceId}" — polling Google Cloud LRO…`,
         operation: op,
       });
     }

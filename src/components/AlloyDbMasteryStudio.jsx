@@ -998,6 +998,7 @@ ${activeDemoTrack.beats
         SCALE_INSTANCE_CPU: `Scaling compute on "${lroClusterKey}"`,
         APPLY_INSTANCE_FLAGS: `Applying 10X PostgreSQL flags on "${lroClusterKey}"`,
         TRIGGER_ON_DEMAND_BACKUP: `Creating snapshot backup of "${lroClusterKey}"`,
+        ENABLE_PUBLIC_IP_FOR_MY_IP: `Enabling Public IP & authorizing your /32 IP on "${lroClusterKey}"`,
       };
       if (opName && lroClusterKey) {
         setLroClockMs(Date.now());
@@ -2720,6 +2721,34 @@ GROUP BY 1 ORDER BY turns DESC;`;
               </div>
 
               <div className="space-y-1">
+                {targetCluster?.primaryInstance && !targetCluster.primaryInstance.publicIpAddress && (
+                  <div className="mb-2 p-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200 text-xs flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                      <span>
+                        <strong>Private PSC-only endpoint</strong> (<code className="font-mono">*.alloydb-psc.goog</code> is only resolvable inside a GCP VPC). Enable Public IP + authorize your current <code className="font-mono">/32</code> IP to connect directly via <code className="font-mono">psql</code> from this machine.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={busyKey === `PUBIP_${targetCluster.clusterId}`}
+                      onClick={() =>
+                        executeAlloyAction(
+                          {
+                            action: "ENABLE_PUBLIC_IP_FOR_MY_IP",
+                            region: targetCluster.location,
+                            clusterId: targetCluster.clusterId,
+                            instanceId: targetCluster.primaryInstance.instanceId,
+                          },
+                          `PUBIP_${targetCluster.clusterId}`
+                        )
+                      }
+                      className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-[11px] font-bold shrink-0 cursor-pointer"
+                    >
+                      {busyKey === `PUBIP_${targetCluster.clusterId}` ? "Enabling Public IP…" : "Enable Public IP & Authorize My IP"}
+                    </button>
+                  </div>
+                )}
                 <label className="block text-[11px] font-mono text-zinc-600 dark:text-zinc-400">
                   PostgreSQL Connection URI (replace YOUR_PASSWORD with cluster password, or use AlloyDB Auth Proxy 127.0.0.1:5432)
                 </label>
