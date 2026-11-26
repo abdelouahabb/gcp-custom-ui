@@ -2565,142 +2565,172 @@ GROUP BY 1 ORDER BY turns DESC;`;
 
                 <fieldset
                   disabled={isDeletingCluster}
-                  className={`flex flex-wrap items-center gap-2 pt-1 border-0 p-0 m-0 ${
+                  className={`grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-zinc-200/80 dark:border-zinc-800/80 border-x-0 border-b-0 p-0 m-0 ${
                     isDeletingCluster ? "opacity-45 pointer-events-none select-none" : ""
                   }`}
                 >
-                  <button
-                    type="button"
-                    disabled={isDeletingCluster}
-                    onClick={() => openClusterSqlConsole(c)}
-                    className={`px-2.5 py-1 rounded text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer ${
-                      sqlConsoleClusterId === c.clusterId
-                        ? "border border-amber-500 bg-amber-500/20 text-amber-800 dark:text-amber-200"
-                        : c.primaryInstance
-                        ? "bg-blue-600 hover:bg-blue-500 text-white"
-                        : "bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200"
-                    }`}
-                  >
-                    <Terminal className="w-3 h-3" />
-                    {sqlConsoleClusterId === c.clusterId ? "Close SQL Console" : "SQL Console"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConnectClusterId(connectClusterId === c.clusterId ? "" : c.clusterId)}
-                    className={`px-2.5 py-1 rounded border text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer ${
-                      connectClusterId === c.clusterId
-                        ? "border-amber-500 bg-amber-500/15 text-amber-800 dark:text-amber-200"
-                        : "bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200"
-                    }`}
-                  >
-                    <Database className="w-3 h-3" />
-                    Connect (psql)
-                  </button>
-                  {c.isExpress && (
-                    <button
-                      type="button"
-                      disabled={busyKey === `UPGRADE_${c.clusterId}`}
-                      onClick={() =>
-                        executeAlloyAction(
-                          {
-                            action: "UPGRADE_EXPRESS_TO_ENTERPRISE",
-                            region: c.location,
-                            clusterId: c.clusterId,
-                          },
-                          `UPGRADE_${c.clusterId}`
-                        )
-                      }
-                      className="px-2.5 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-800 dark:text-amber-200 text-[11px] font-bold cursor-pointer"
-                    >
-                      Upgrade → Enterprise
-                    </button>
-                  )}
-                  {c.primaryInstance && (
-                    <>
+                  {/* Category 1: Connect & Query */}
+                  <div className="rounded-lg border border-zinc-200/80 dark:border-zinc-800 bg-white/70 dark:bg-zinc-950/50 p-2.5 space-y-1.5">
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                      Connect &amp; Query
+                    </div>
+                    <div className="grid grid-cols-1 gap-1.5">
                       <button
                         type="button"
-                        disabled={busyKey === `SCALE_${c.clusterId}`}
-                        onClick={() =>
-                          executeAlloyAction(
-                            {
-                              action: "SCALE_INSTANCE_CPU",
-                              region: c.location,
-                              clusterId: c.clusterId,
-                              instanceId: c.primaryInstance.instanceId,
-                              cpuCount: c.primaryInstance.cpuCount < 2 ? 2 : c.primaryInstance.cpuCount * 2,
-                            },
-                            `SCALE_${c.clusterId}`
-                          )
-                        }
-                        className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold cursor-pointer"
+                        disabled={isDeletingCluster}
+                        onClick={() => openClusterSqlConsole(c)}
+                        className={`w-full px-2.5 py-1.5 rounded-md text-[11px] font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer ${
+                          sqlConsoleClusterId === c.clusterId
+                            ? "border border-amber-500 bg-amber-500/20 text-amber-800 dark:text-amber-200"
+                            : c.primaryInstance
+                            ? "bg-blue-600 hover:bg-blue-500 text-white"
+                            : "bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200"
+                        }`}
                       >
-                        Scale → {c.primaryInstance.cpuCount < 2 ? 2 : c.primaryInstance.cpuCount * 2} vCPU
+                        <Terminal className="w-3.5 h-3.5 shrink-0" />
+                        <span>{sqlConsoleClusterId === c.clusterId ? "Close SQL Console" : "SQL Console"}</span>
                       </button>
                       <button
                         type="button"
-                        disabled={busyKey === `FLAGS10X_${c.clusterId}`}
+                        onClick={() => setConnectClusterId(connectClusterId === c.clusterId ? "" : c.clusterId)}
+                        className={`w-full px-2.5 py-1.5 rounded-md border text-[11px] font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer ${
+                          connectClusterId === c.clusterId
+                            ? "border-amber-500 bg-amber-500/15 text-amber-800 dark:text-amber-200"
+                            : "bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200"
+                        }`}
+                      >
+                        <Database className="w-3.5 h-3.5 shrink-0" />
+                        <span>Connect (psql)</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Category 2: Compute & Tuning */}
+                  <div className="rounded-lg border border-zinc-200/80 dark:border-zinc-800 bg-white/70 dark:bg-zinc-950/50 p-2.5 space-y-1.5">
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                      Compute &amp; Tuning
+                    </div>
+                    <div className="grid grid-cols-1 gap-1.5">
+                      {c.primaryInstance && (
+                        <>
+                          <button
+                            type="button"
+                            disabled={busyKey === `SCALE_${c.clusterId}`}
+                            onClick={() =>
+                              executeAlloyAction(
+                                {
+                                  action: "SCALE_INSTANCE_CPU",
+                                  region: c.location,
+                                  clusterId: c.clusterId,
+                                  instanceId: c.primaryInstance.instanceId,
+                                  cpuCount: c.primaryInstance.cpuCount < 2 ? 2 : c.primaryInstance.cpuCount * 2,
+                                },
+                                `SCALE_${c.clusterId}`
+                              )
+                            }
+                            className="w-full px-2.5 py-1.5 rounded-md bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-semibold cursor-pointer"
+                          >
+                            Scale → {c.primaryInstance.cpuCount < 2 ? 2 : c.primaryInstance.cpuCount * 2} vCPU
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busyKey === `FLAGS10X_${c.clusterId}`}
+                            onClick={() =>
+                              executeAlloyAction(
+                                {
+                                  action: "APPLY_INSTANCE_FLAGS",
+                                  region: c.location,
+                                  clusterId: c.clusterId,
+                                  instanceId: c.primaryInstance.instanceId,
+                                  flagPreset: "FULL_ALLOYDB_10X",
+                                },
+                                `FLAGS10X_${c.clusterId}`
+                              )
+                            }
+                            className="w-full px-2.5 py-1.5 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold cursor-pointer"
+                          >
+                            Enable 10X Flags
+                          </button>
+                        </>
+                      )}
+                      {c.isExpress && (
+                        <button
+                          type="button"
+                          disabled={busyKey === `UPGRADE_${c.clusterId}`}
+                          onClick={() =>
+                            executeAlloyAction(
+                              {
+                                action: "UPGRADE_EXPRESS_TO_ENTERPRISE",
+                                region: c.location,
+                                clusterId: c.clusterId,
+                              },
+                              `UPGRADE_${c.clusterId}`
+                            )
+                          }
+                          className="w-full px-2.5 py-1.5 rounded-md bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/35 text-amber-800 dark:text-amber-200 text-[11px] font-semibold cursor-pointer"
+                        >
+                          Upgrade → Enterprise
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Category 3: Access, Backup & Lifecycle */}
+                  <div className="rounded-lg border border-zinc-200/80 dark:border-zinc-800 bg-white/70 dark:bg-zinc-950/50 p-2.5 space-y-1.5">
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                      Access &amp; Lifecycle
+                    </div>
+                    <div className="grid grid-cols-1 gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setIamUserCluster(iamUserCluster === c.clusterId ? "" : c.clusterId)}
+                        className={`w-full px-2.5 py-1.5 rounded-md border text-[11px] font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer ${
+                          iamUserCluster === c.clusterId
+                            ? "border-amber-500 bg-amber-500/15 text-amber-800 dark:text-amber-200"
+                            : "bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200"
+                        }`}
+                      >
+                        <UserPlus className="w-3.5 h-3.5 shrink-0" />
+                        <span>+ IAM User</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyKey === `BK_${c.clusterId}`}
                         onClick={() =>
                           executeAlloyAction(
                             {
-                              action: "APPLY_INSTANCE_FLAGS",
+                              action: "TRIGGER_ON_DEMAND_BACKUP",
                               region: c.location,
                               clusterId: c.clusterId,
-                              instanceId: c.primaryInstance.instanceId,
-                              flagPreset: "FULL_ALLOYDB_10X",
                             },
-                            `FLAGS10X_${c.clusterId}`
+                            `BK_${c.clusterId}`
                           )
                         }
-                        className="px-2.5 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold cursor-pointer"
+                        className="w-full px-2.5 py-1.5 rounded-md bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer"
                       >
-                        Enable 10X Flags
+                        <HardDrive className="w-3.5 h-3.5 shrink-0" />
+                        <span>Snapshot Backup</span>
                       </button>
-                    </>
-                  )}
-                  <button
-                    type="button"
-                    disabled={busyKey === `BK_${c.clusterId}`}
-                    onClick={() =>
-                      executeAlloyAction(
-                        {
-                          action: "TRIGGER_ON_DEMAND_BACKUP",
-                          region: c.location,
-                          clusterId: c.clusterId,
-                        },
-                        `BK_${c.clusterId}`
-                      )
-                    }
-                    className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <HardDrive className="w-3 h-3" />
-                    Snapshot Backup
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIamUserCluster(iamUserCluster === c.clusterId ? "" : c.clusterId)}
-                    className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <UserPlus className="w-3 h-3" />
-                    + IAM User
-                  </button>
-                  <button
-                    type="button"
-                    disabled={isDeletingCluster}
-                    onClick={() =>
-                      executeAlloyAction(
-                        {
-                          action: "DELETE_CLUSTER",
-                          region: c.location,
-                          clusterId: c.clusterId,
-                        },
-                        `DEL_${c.clusterId}`
-                      )
-                    }
-                    className="px-2.5 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 disabled:opacity-60 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer ml-auto"
-                  >
-                    {isDeletingCluster ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-                    {isDeletingCluster ? "Deleting…" : "Delete"}
-                  </button>
+                      <button
+                        type="button"
+                        disabled={isDeletingCluster}
+                        onClick={() =>
+                          executeAlloyAction(
+                            {
+                              action: "DELETE_CLUSTER",
+                              region: c.location,
+                              clusterId: c.clusterId,
+                            },
+                            `DEL_${c.clusterId}`
+                          )
+                        }
+                        className="w-full px-2.5 py-1.5 rounded-md bg-rose-500/10 hover:bg-rose-500/20 disabled:opacity-60 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-[11px] font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        {isDeletingCluster ? <RefreshCw className="w-3.5 h-3.5 animate-spin shrink-0" /> : <Trash2 className="w-3.5 h-3.5 shrink-0" />}
+                        <span>{isDeletingCluster ? "Deleting…" : "Delete Cluster"}</span>
+                      </button>
+                    </div>
+                  </div>
                 </fieldset>
 
                 {connectClusterId === c.clusterId && (() => {
