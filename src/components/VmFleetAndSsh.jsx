@@ -38,6 +38,7 @@ import {
   Activity,
   Globe,
   Rocket,
+  History,
 } from 'lucide-react';
 import XtermWebSshTerminal from './XtermWebSshTerminal';
 import LocalDevTunnelBar from './LocalDevTunnelBar';
@@ -1569,6 +1570,56 @@ export default function VmFleetAndSsh({
   const [cveSortDir, setCveSortDir] = useState('desc');
   const cvePanelRef = useRef(null);
 
+  // Live GCP VM Manager Patch Job History state
+  const [patchJobHistory, setPatchJobHistory] = useState([]);
+  const [patchJobHistoryLoading, setPatchJobHistoryLoading] = useState(false);
+  const [patchJobHistoryError, setPatchJobHistoryError] = useState('');
+  const [patchJobHistoryOpen, setPatchJobHistoryOpen] = useState(false);
+  const [patchJobHistoryScope, setPatchJobHistoryScope] = useState('VM'); // 'VM' | 'ALL'
+  const [expandedPatchJobId, setExpandedPatchJobId] = useState('');
+  const [patchJobDetailsById, setPatchJobDetailsById] = useState({});
+  const [patchJobDetailsLoadingId, setPatchJobDetailsLoadingId] = useState('');
+
+  const loadPatchJobHistory = useCallback(async () => {
+    if (!projectId) return;
+    setPatchJobHistoryLoading(true);
+    setPatchJobHistoryError('');
+    try {
+      const { data } = await axios.get(
+        `/api/project/${encodeURIComponent(projectId)}/osconfig/patch-jobs?pageSize=25`
+      );
+      setPatchJobHistory(Array.isArray(data?.jobs) ? data.jobs : []);
+    } catch (err) {
+      setPatchJobHistoryError(err.response?.data?.error || err.message || 'Failed to load VM Manager Patch Job history.');
+    } finally {
+      setPatchJobHistoryLoading(false);
+    }
+  }, [projectId]);
+
+  const inspectPatchJobDetails = async (patchJobId) => {
+    if (!patchJobId || !projectId) return;
+    if (expandedPatchJobId === patchJobId) {
+      setExpandedPatchJobId('');
+      return;
+    }
+    setExpandedPatchJobId(patchJobId);
+    if (patchJobDetailsById[patchJobId]) return;
+    setPatchJobDetailsLoadingId(patchJobId);
+    try {
+      const { data } = await axios.get(
+        `/api/project/${encodeURIComponent(projectId)}/osconfig/patch-jobs/${encodeURIComponent(patchJobId)}`
+      );
+      setPatchJobDetailsById((prev) => ({ ...prev, [patchJobId]: data }));
+    } catch (err) {
+      setPatchJobDetailsById((prev) => ({
+        ...prev,
+        [patchJobId]: { error: err.response?.data?.error || err.message || 'Failed to load job details.' },
+      }));
+    } finally {
+      setPatchJobDetailsLoadingId('');
+    }
+  };
+
   useEffect(() => {
     if (!cvePatchBusyVm) {
       setCvePatchElapsedSec(0);
@@ -1600,6 +1651,7 @@ export default function VmFleetAndSsh({
     setOpenCveVm(vm.name);
     setCveSeverityFilter('ALL');
     setCveScanBusyVm(vm.name);
+    loadPatchJobHistory();
     setTimeout(() => cvePanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
     try {
       const { data } = await axios.post(
@@ -1664,6 +1716,7 @@ export default function VmFleetAndSsh({
             }));
             if (p.done || elapsedMs > 300000) {
               clearInterval(pollTimer);
+              loadPatchJobHistory();
               if (p.state === 'SUCCEEDED') {
                 onShowToast?.(`VM Manager Patch Job ${data.patchJobId} SUCCEEDED on ${vm.name}!`, 'success');
                 handleScanVmCves(vm, false);
@@ -3226,8 +3279,234 @@ export default function VmFleetAndSsh({
                           )}
                           <span>GCP VM Manager Patch</span>
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextOpen = !patchJobHistoryOpen;
+                            setPatchJobHistoryOpen(nextOpen);
+                            if (nextOpen) loadPatchJobHistory();
+                          }}
+                          title="Browse live Google Cloud VM Manager Patch Job history for this VM or the entire project"
+                          className={`px-3 py-1.5 rounded-md border text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors ${
+                            patchJobHistoryOpen
+                              ? 'border-amber-500 bg-amber-500/15 text-amber-800 dark:text-amber-300'
+                              : 'bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200'
+                          }`}
+                        >
+                          <History className="w-3.5 h-3.5" />
+                          <span>
+                            Patch History{patchJobHistory.length > 0 ? ` (${patchJobHistory.length})` : ''}
+                          </span>
+                          {patchJobHistoryOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        </button>
                       </div>
                     </div>
+
+                    {/* Live GCP VM Manager Patch Job History Drawer (osconfig.googleapis.com/v1 patchJobs.list) */}
+                    {patchJobHistoryOpen && (() => {
+                      const vmScopedJobs = patchJobHistory.filter(
+                        (j) =>
+                          j.targetsAll ||
+                          (Array.isArray(j.targetInstances) &&
+                            j.targetInstances.some((ti) => ti.name === cveVm.name))
+                      );
+                      const visibleJobs = patchJobHistoryScope === 'VM' ? vmScopedJobs : patchJobHistory;
+                      return (
+                        <div className="rounded-xl border border-zinc-200 dark:border-[#1e2433] bg-zinc-50/70 dark:bg-[#070b13] p-4 space-y-3 cp-studio-enter">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <History className="w-4 h-4 text-amber-500" />
+                              <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                                GCP VM Manager Patch Job History
+                              </span>
+                              <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                                Live from <code className="font-mono">osconfig.googleapis.com/v1</code>
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <div className="inline-flex rounded-md border border-zinc-200 dark:border-[#1e2433] bg-white dark:bg-[#0b101b] p-0.5 text-[11px]">
+                                <button
+                                  type="button"
+                                  onClick={() => setPatchJobHistoryScope('VM')}
+                                  className={`px-2.5 py-1 rounded font-semibold cursor-pointer ${
+                                    patchJobHistoryScope === 'VM'
+                                      ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300'
+                                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                                  }`}
+                                >
+                                  This VM ({vmScopedJobs.length})
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setPatchJobHistoryScope('ALL')}
+                                  className={`px-2.5 py-1 rounded font-semibold cursor-pointer ${
+                                    patchJobHistoryScope === 'ALL'
+                                      ? 'bg-amber-500/20 text-amber-800 dark:text-amber-300'
+                                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
+                                  }`}
+                                >
+                                  All Project ({patchJobHistory.length})
+                                </button>
+                              </div>
+                              <button
+                                type="button"
+                                disabled={patchJobHistoryLoading}
+                                onClick={loadPatchJobHistory}
+                                className="px-2.5 py-1 rounded-md border border-zinc-200 dark:border-[#1e2433] bg-white dark:bg-[#0b101b] text-[11px] font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <RefreshCw className={`w-3 h-3 ${patchJobHistoryLoading ? 'animate-spin' : ''}`} />
+                                <span>Refresh</span>
+                              </button>
+                              <a
+                                href={`https://console.cloud.google.com/compute/patch/jobs?project=${encodeURIComponent(projectId)}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-2.5 py-1 rounded-md border border-blue-500/30 bg-blue-500/10 text-[11px] font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-500/20 inline-flex items-center gap-1"
+                              >
+                                <span>All Jobs in GCP Console</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            </div>
+                          </div>
+
+                          {patchJobHistoryError && (
+                            <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-700 dark:text-red-300">
+                              {patchJobHistoryError}
+                            </div>
+                          )}
+
+                          {patchJobHistoryLoading && patchJobHistory.length === 0 ? (
+                            <div className="py-6 text-center text-xs text-zinc-500 flex items-center justify-center gap-2">
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-500" />
+                              <span>Loading live GCP VM Manager Patch Job history…</span>
+                            </div>
+                          ) : visibleJobs.length === 0 ? (
+                            <div className="p-4 rounded-lg border border-zinc-200 dark:border-[#1e2433] bg-white dark:bg-[#0b101b] text-xs text-zinc-500 text-center">
+                              No VM Manager Patch Jobs found for {patchJobHistoryScope === 'VM' ? cveVm.name : projectId} yet.
+                            </div>
+                          ) : (
+                            <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                              {visibleJobs.map((job) => {
+                                const isExpanded = expandedPatchJobId === job.patchJobId;
+                                const details = patchJobDetailsById[job.patchJobId];
+                                const isRunningJob = !job.done;
+                                const isSucceeded = job.state === 'SUCCEEDED';
+                                const isWarn = job.state === 'COMPLETED_WITH_ERRORS' || job.state === 'TIMED_OUT' || job.state === 'CANCELED';
+                                const succeededCnt = Number(job.summary?.succeededInstanceCount || 0);
+                                const failedCnt = Number(job.summary?.failedInstanceCount || 0);
+                                return (
+                                  <div
+                                    key={job.patchJobId}
+                                    className="rounded-lg border border-zinc-200 dark:border-[#1e2433] bg-white dark:bg-[#0b101b] p-3 space-y-2"
+                                  >
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                      <div className="flex flex-wrap items-center gap-2 min-w-0">
+                                        <span
+                                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide inline-flex items-center gap-1 ${
+                                            isSucceeded
+                                              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                                              : isRunningJob
+                                              ? 'bg-blue-500/15 text-blue-700 dark:text-blue-300'
+                                              : isWarn
+                                              ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                                              : 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-300'
+                                          }`}
+                                        >
+                                          {isRunningJob && <RefreshCw className="w-2.5 h-2.5 animate-spin" />}
+                                          {job.state}
+                                        </span>
+                                        <span className="font-mono text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                                          {job.patchJobId.slice(0, 12)}…
+                                        </span>
+                                        <span className="text-xs text-zinc-600 dark:text-zinc-400 truncate max-w-md">
+                                          {job.description || job.displayName || 'VM Manager Patch Job'}
+                                        </span>
+                                      </div>
+                                      <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                                        <span className="text-zinc-500 tabular-nums">
+                                          {job.createTime ? format(new Date(job.createTime), 'MMM d, HH:mm:ss') : '—'}
+                                          {job.durationSec ? ` · ${job.durationSec}s` : ''}
+                                        </span>
+                                        <span className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-mono text-[10px]">
+                                          {succeededCnt} ok{failedCnt > 0 ? ` / ${failedCnt} fail` : ''}
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={() => inspectPatchJobDetails(job.patchJobId)}
+                                          className="px-2 py-1 rounded-md border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 font-medium cursor-pointer"
+                                        >
+                                          {isExpanded ? 'Hide Details' : 'Inspect'}
+                                        </button>
+                                        <a
+                                          href={job.consoleUrl}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="px-2 py-1 rounded-md border border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300 hover:bg-blue-500/20 font-medium inline-flex items-center gap-1"
+                                        >
+                                          <span>GCP Console</span>
+                                          <ExternalLink className="w-3 h-3" />
+                                        </a>
+                                      </div>
+                                    </div>
+
+                                    {isExpanded && (
+                                      <div className="pt-2 border-t border-zinc-200 dark:border-[#1e2433] space-y-2 text-xs">
+                                        {patchJobDetailsLoadingId === job.patchJobId ? (
+                                          <div className="text-zinc-500 flex items-center gap-1.5">
+                                            <RefreshCw className="w-3 h-3 animate-spin" />
+                                            <span>Fetching live instanceDetails from OS Config API…</span>
+                                          </div>
+                                        ) : details?.error ? (
+                                          <div className="text-red-600 dark:text-red-400">{details.error}</div>
+                                        ) : (
+                                          <>
+                                            <div className="flex flex-wrap items-center gap-2 text-[11px] text-zinc-500">
+                                              <span>Full Job ID: <code className="font-mono text-zinc-800 dark:text-zinc-200">{job.patchJobId}</code></span>
+                                              {job.aptType && <span>· APT Mode: <code className="font-mono">{job.aptType}</code></span>}
+                                              {job.exclusivePackages?.length > 0 && (
+                                                <span>· Targeted Packages: <code className="font-mono">{job.exclusivePackages.slice(0, 8).join(', ')}{job.exclusivePackages.length > 8 ? '…' : ''}</code></span>
+                                              )}
+                                            </div>
+                                            {Array.isArray(details?.instances) && details.instances.length > 0 ? (
+                                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                {details.instances.map((inst) => (
+                                                  <div
+                                                    key={`${inst.zone}/${inst.name}`}
+                                                    className="p-2 rounded-md border border-zinc-200 dark:border-[#1e2433] bg-zinc-50 dark:bg-[#070b13] flex items-center justify-between gap-2"
+                                                  >
+                                                    <div className="min-w-0">
+                                                      <div className="font-mono font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                                                        {inst.name} <span className="text-zinc-500 font-normal">({inst.zone})</span>
+                                                      </div>
+                                                      {inst.failureReason && (
+                                                        <div className="text-[11px] text-red-600 dark:text-red-400 mt-0.5">
+                                                          {inst.failureReason}
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono text-[10px] shrink-0">
+                                                      {inst.state} · {inst.attemptCount} try
+                                                    </span>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            ) : (
+                                              <div className="text-[11px] text-zinc-500">
+                                                Target: {job.targetsAll ? 'All project VMs' : job.targetInstances?.map((t) => `${t.name} (${t.zone})`).join(', ') || '—'} · Progress: {Math.round(job.percentComplete || 0)}%
+                                              </div>
+                                            )}
+                                          </>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {/* Live CVE Patch Execution Progress Bar & 4-Stage Tracker */}
                     {cvePatchBusyVm.startsWith(`${cveVm.name}:`) && (() => {

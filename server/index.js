@@ -6873,6 +6873,76 @@ app.post('/api/project/:projectId/vms/:vmName/cve-scan', async (req, res) => {
   }
 });
 
+// Live OS Config Patch Job History (real osconfig.googleapis.com/v1 projects.patchJobs.list)
+app.get('/api/project/:projectId/osconfig/patch-jobs', async (req, res) => {
+  const { projectId } = req.params;
+  if (!/^[a-z0-9][-a-z0-9._]*$/i.test(projectId)) {
+    return res.status(400).json({ error: 'Invalid projectId.' });
+  }
+  const pageSize = Math.min(50, Math.max(5, Number(req.query.pageSize) || 25));
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+    const data = await gcpFetch(
+      `https://osconfig.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/patchJobs?pageSize=${pageSize}`,
+      token,
+      projectId,
+      { timeout: 12000 }
+    );
+    const rawJobs = Array.isArray(data?.patchJobs) ? data.patchJobs : [];
+    const jobs = rawJobs.map((j) => {
+      const patchJobId = String(j?.name || '').split('/').pop() || '';
+      const rawInstances = Array.isArray(j?.instanceFilter?.instances) ? j.instanceFilter.instances : [];
+      const targetInstances = rawInstances.map((instPath) => {
+        const parts = String(instPath || '').split('/');
+        return {
+          path: instPath,
+          zone: parts[1] || '',
+          name: parts[3] || parts[parts.length - 1] || instPath,
+        };
+      });
+      const createMs = j?.createTime ? Date.parse(j.createTime) : NaN;
+      const updateMs = j?.updateTime ? Date.parse(j.updateTime) : NaN;
+      const durationSec =
+        Number.isFinite(createMs) && Number.isFinite(updateMs) && updateMs >= createMs
+          ? Math.max(1, Math.round((updateMs - createMs) / 1000))
+          : null;
+      const state = String(j?.state || 'UNKNOWN');
+      const done = ['SUCCEEDED', 'COMPLETED_WITH_ERRORS', 'CANCELED', 'TIMED_OUT'].includes(state);
+      return {
+        patchJobId,
+        displayName: j?.displayName || '',
+        description: j?.description || '',
+        state,
+        done,
+        percentComplete: Number(j?.percentComplete ?? (done ? 100 : 0)),
+        createTime: j?.createTime || null,
+        updateTime: j?.updateTime || null,
+        durationSec,
+        targetsAll: Boolean(j?.instanceFilter?.all),
+        targetInstances,
+        aptType: j?.patchConfig?.apt?.type || '',
+        exclusivePackages: Array.isArray(j?.patchConfig?.apt?.exclusivePackages)
+          ? j.patchConfig.apt.exclusivePackages
+          : [],
+        summary: j?.instanceDetailsSummary || {},
+        consoleUrl: patchJobId
+          ? `https://console.cloud.google.com/compute/patch/jobs/${encodeURIComponent(patchJobId)}?project=${encodeURIComponent(projectId)}`
+          : `https://console.cloud.google.com/compute/patch/jobs?project=${encodeURIComponent(projectId)}`,
+      };
+    });
+    return res.json({
+      ok: true,
+      projectId,
+      total: jobs.length,
+      jobs,
+      consoleUrl: `https://console.cloud.google.com/compute/patch/jobs?project=${encodeURIComponent(projectId)}`,
+    });
+  } catch (err) {
+    return res.status(err?.status || 500).json({ error: err?.message || 'Failed to list OS Config Patch Jobs.' });
+  }
+});
+
 // Live OS Config Patch Job Status Poller (real osconfig.googleapis.com/v1 patchJobs + instanceDetails)
 app.get('/api/project/:projectId/osconfig/patch-jobs/:patchJobId', async (req, res) => {
   const { projectId, patchJobId } = req.params;
@@ -6887,7 +6957,18 @@ app.get('/api/project/:projectId/osconfig/patch-jobs/:patchJobId', async (req, r
       gcpFetch(base, token, projectId, { timeout: 10000 }),
       gcpFetch(`${base}/instanceDetails`, token, projectId, { timeout: 10000 }).catch(() => ({})),
     ]);
-    const inst = Array.isArray(details?.patchJobInstanceDetails) ? details.patchJobInstanceDetails[0] : null;
+    const rawList = Array.isArray(details?.patchJobInstanceDetails) ? details.patchJobInstanceDetails : [];
+    const inst = rawList[0] || null;
+    const instances = rawList.map((d) => {
+      const parts = String(d?.name || '').split('/');
+      return {
+        name: parts[3] || parts[parts.length - 1] || d?.name || 'instance',
+        zone: parts[1] || '',
+        state: String(d?.state || 'UNKNOWN'),
+        attemptCount: Number(d?.attemptCount || 0),
+        failureReason: d?.failureReason || null,
+      };
+    });
     const state = String(job?.state || 'STARTED');
     const instState = String(inst?.state || state);
     const done = ['SUCCEEDED', 'COMPLETED_WITH_ERRORS', 'CANCELED', 'TIMED_OUT'].includes(state);
@@ -6901,6 +6982,8 @@ app.get('/api/project/:projectId/osconfig/patch-jobs/:patchJobId', async (req, r
       failureReason: inst?.failureReason || null,
       updateTime: job?.updateTime || new Date().toISOString(),
       summary: job?.instanceDetailsSummary || {},
+      instances,
+      consoleUrl: `https://console.cloud.google.com/compute/patch/jobs/${encodeURIComponent(patchJobId)}?project=${encodeURIComponent(projectId)}`,
     });
   } catch (err) {
     return res.status(err?.status || 500).json({ error: err?.message || 'Failed to poll OS Config Patch Job.' });
@@ -6969,7 +7052,9 @@ app.post('/api/project/:projectId/vms/:vmName/cve-patch', async (req, res) => {
         patchJobId,
         state: jobRes?.state || 'STARTED',
         percentComplete: Number(jobRes?.percentComplete || 0),
-        consoleUrl: `https://console.cloud.google.com/compute/vm-manager/patch?project=${encodeURIComponent(projectId)}`,
+        consoleUrl: patchJobId
+          ? `https://console.cloud.google.com/compute/patch/jobs/${encodeURIComponent(patchJobId)}?project=${encodeURIComponent(projectId)}`
+          : `https://console.cloud.google.com/compute/patch/jobs?project=${encodeURIComponent(projectId)}`,
         output: `Submitted live OS Config Patch Job "${patchJobId}" (${jobRes?.state || 'STARTED'}) targeting zones/${zone}/instances/${vmName} with apt.type=UPGRADE${safePackages.length > 0 ? ` (${safePackages.join(', ')})` : ' (all upgradable packages)'}. Polling live VM Manager state…`,
         durationMs: Date.now() - startedAt,
       });
