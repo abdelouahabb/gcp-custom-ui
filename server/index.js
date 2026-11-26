@@ -12408,6 +12408,48 @@ app.post('/api/project/:projectId/alloydb/action', async (req, res) => {
       });
     }
 
+    if (action === 'REVOKE_AUTHORIZED_IPS') {
+      if (!clusterId || !instanceId) {
+        return res.status(400).json({ error: 'clusterId and instanceId are required.' });
+      }
+      const instUrl = `https://alloydb.googleapis.com/v1beta/projects/${encProj}/locations/${encReg}/clusters/${encodeURIComponent(
+        clusterId
+      )}/instances/${encodeURIComponent(instanceId)}`;
+      const op = await gcpFetch(
+        `${instUrl}?updateMask=networkConfig.authorizedExternalNetworks`,
+        token,
+        projectId,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            networkConfig: {
+              authorizedExternalNetworks: [],
+            },
+          },
+          timeout: 12000,
+        }
+      );
+
+      recordFlightEvent(projectId, {
+        action: 'ALLOYDB_REVOKE_AUTHORIZED_IPS',
+        resourceType: 'ALLOYDB_INSTANCE',
+        resourceName: `${clusterId}/${instanceId}`,
+        region,
+        summary: `Revoked all authorizedExternalNetworks (/32 IPs) on "${clusterId}/${instanceId}"`,
+      });
+
+      return res.json({
+        ok: true,
+        action,
+        clusterId,
+        instanceId,
+        region,
+        message: `Revoked all external /32 IP rules on "${clusterId}/${instanceId}" — polling Google Cloud LRO…`,
+        operation: op,
+      });
+    }
+
     if (action === 'UPGRADE_EXPRESS_TO_ENTERPRISE') {
       if (!clusterId) {
         return res.status(400).json({ error: 'clusterId is required.' });

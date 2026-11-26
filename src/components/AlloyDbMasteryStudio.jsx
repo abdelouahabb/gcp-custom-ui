@@ -1061,7 +1061,8 @@ ${activeDemoTrack.beats
         SCALE_INSTANCE_CPU: `Scaling compute on "${lroClusterKey}"`,
         APPLY_INSTANCE_FLAGS: `Applying 10X PostgreSQL flags on "${lroClusterKey}"`,
         TRIGGER_ON_DEMAND_BACKUP: `Creating snapshot backup of "${lroClusterKey}"`,
-        ENABLE_PUBLIC_IP_FOR_MY_IP: `Enabling Public IP & authorizing your /32 IP on "${lroClusterKey}"`,
+        ENABLE_PUBLIC_IP_FOR_MY_IP: `Authorizing your /32 IP on "${lroClusterKey}"`,
+        REVOKE_AUTHORIZED_IPS: `Revoking external /32 IP rules on "${lroClusterKey}"`,
       };
       if (opName && lroClusterKey) {
         setLroClockMs(Date.now());
@@ -2949,10 +2950,15 @@ GROUP BY 1 ORDER BY turns DESC;`;
                       const isAuthorizing =
                         busyKey === `PUBIP_${targetCluster.clusterId}` ||
                         pendingLroByCluster[targetCluster.clusterId]?.action === "ENABLE_PUBLIC_IP_FOR_MY_IP";
+                      const isRevoking =
+                        busyKey === `REVIP_${targetCluster.clusterId}` ||
+                        pendingLroByCluster[targetCluster.clusterId]?.action === "REVOKE_AUTHORIZED_IPS";
                       return (
                         <div
                           className={`p-3 rounded-lg border text-xs space-y-2 transition-colors ${
-                            isDirectSelected
+                            authProxyState.running
+                              ? "border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-950/50 opacity-75"
+                              : isDirectSelected
                               ? "border-amber-500 bg-amber-500/[0.08]"
                               : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950"
                           }`}
@@ -2963,16 +2969,24 @@ GROUP BY 1 ORDER BY turns DESC;`;
                             </span>
                             <span
                               className={`px-1.5 py-0.5 rounded font-mono text-[10px] font-bold ${
-                                isDirectSelected
+                                authProxyState.running
+                                  ? "bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500"
+                                  : isDirectSelected
                                   ? "bg-amber-500/20 text-amber-800 dark:text-amber-200"
                                   : "bg-zinc-200/70 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
                               }`}
                             >
-                              {isDirectSelected ? "● Active (:5432)" : "TLS + /32 IP"}
+                              {authProxyState.running
+                                ? "Disabled (Proxy Active)"
+                                : isDirectSelected
+                                ? "● Active (:5432)"
+                                : "TLS + /32 IP"}
                             </span>
                           </div>
                           <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
-                            Connects directly to <code className="font-mono">{directHost || "*.alloydb.s.cloud.goog"}:5432</code> over TLS. Requires authorizing your current <code className="font-mono">/32</code> IPv4.
+                            {authProxyState.running
+                              ? "Option A Auth Proxy is active — zero /32 firewall rules needed. Stop the tunnel to use direct Public DNS, or revoke any existing /32 rules below."
+                              : <>Connects directly to <code className="font-mono">{directHost || "*.alloydb.s.cloud.goog"}:5432</code> over TLS. Requires authorizing your current <code className="font-mono">/32</code> IPv4.</>}
                           </p>
                           {hasAuthorizedIp && (
                             <div className="flex flex-wrap items-center gap-1.5 text-[10.5px] font-mono">
@@ -2984,7 +2998,12 @@ GROUP BY 1 ORDER BY turns DESC;`;
                           <div className="flex flex-wrap items-center gap-2">
                             <button
                               type="button"
-                              disabled={isAuthorizing}
+                              disabled={isAuthorizing || isRevoking || authProxyState.running}
+                              title={
+                                authProxyState.running
+                                  ? "Stop Auth Proxy Tunnel first to use direct /32 IP access"
+                                  : "Authorize your current public /32 IPv4 for direct TLS psql"
+                              }
                               onClick={() => {
                                 if (directHost) {
                                   setCloudSqlHost(directHost);
@@ -3000,7 +3019,7 @@ GROUP BY 1 ORDER BY turns DESC;`;
                                   `PUBIP_${targetCluster.clusterId}`
                                 );
                               }}
-                              className={`px-3 py-1.5 rounded-md border text-[11px] font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 ${
+                              className={`px-3 py-1.5 rounded-md border text-[11px] font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed ${
                                 hasAuthorizedIp
                                   ? "border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
                                   : "border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-200"
@@ -3015,6 +3034,27 @@ GROUP BY 1 ORDER BY turns DESC;`;
                                   : "Authorize My /32 IP"}
                               </span>
                             </button>
+                            {hasAuthorizedIp && (
+                              <button
+                                type="button"
+                                disabled={isRevoking || isAuthorizing}
+                                onClick={() =>
+                                  executeAlloyAction(
+                                    {
+                                      action: "REVOKE_AUTHORIZED_IPS",
+                                      region: targetCluster.location,
+                                      clusterId: targetCluster.clusterId,
+                                      instanceId: targetCluster.primaryInstance.instanceId,
+                                    },
+                                    `REVIP_${targetCluster.clusterId}`
+                                  )
+                                }
+                                className="px-2.5 py-1.5 rounded-md border border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 disabled:opacity-50 text-rose-700 dark:text-rose-300 text-[11px] font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                              >
+                                {isRevoking && <RefreshCw className="w-3 h-3 animate-spin" />}
+                                <span>{isRevoking ? "Revoking…" : "Disable / Revoke /32 IP"}</span>
+                              </button>
+                            )}
                           </div>
                         </div>
                       );

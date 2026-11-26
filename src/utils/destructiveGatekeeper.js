@@ -7815,6 +7815,12 @@ export function classifyDestructiveAxiosConfig(config) {
             whatHappensNext: `1. Detects your current public IPv4 address.\n2. Calls PATCH alloydb.googleapis.com/v1beta/.../instances/${iId}?updateMask=networkConfig.enablePublicIp,networkConfig.authorizedExternalNetworks.\n3. Polls the LRO until Google Cloud assigns the Public IPv4 address.`,
             confirmLabel: `Enable Public IP for My IP`,
           },
+          REVOKE_AUTHORIZED_IPS: {
+            title: `Revoke All Authorized /32 IPs on "${cId}/${iId}" (${reg})?`,
+            laymanSummary: `In Plain English: Clears networkConfig.authorizedExternalNetworks on AlloyDB instance "${iId}" so direct public port 5432 access is closed. Use AlloyDB Auth Proxy (Option A) for zero-firewall mTLS access.`,
+            whatHappensNext: `1. Calls PATCH alloydb.googleapis.com/v1beta/.../instances/${iId}?updateMask=networkConfig.authorizedExternalNetworks with [].\n2. Closes direct external IPv4 access to port 5432.\n3. Polls the LRO and updates Option B status.`,
+            confirmLabel: `Revoke /32 IP(s)`,
+          },
           RESET_POSTGRES_PASSWORD: {
             title: `Set / Reset "${body.userId || 'postgres'}" Password on AlloyDB Cluster "${cId}" (${reg})?`,
             laymanSummary: `In Plain English: Updates the built-in PostgreSQL password for "${body.userId || 'postgres'}" on cluster "${cId}" via the AlloyDB Users API and auto-fills it into your current SQL Console session so you can connect immediately without guessing.`,
