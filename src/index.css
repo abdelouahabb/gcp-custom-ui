@@ -21,23 +21,30 @@
     font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
   }
 
-  code, pre, pre *, code *, kbd, textarea.font-mono, .xterm, .xterm * {
+  code, pre, pre *, code *, kbd, textarea.font-mono, input.font-mono, .xterm, .xterm * {
     font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace !important;
   }
 }
 
-/* Keep UI labels, buttons & badges in Inter sans-serif, while preserving JetBrains Mono on all code/CLI/SQL/terminal blocks */
-.font-mono:not(code):not(pre):not(textarea):not(kbd):not(.whitespace-pre):not(.whitespace-pre-wrap):not(.select-all) {
+/* Keep UI chrome (headings, nav rail, header, tabs, buttons) in clean Inter sans-serif,
+   while preserving JetBrains Mono on all terminals, Cloud Shell, log streams, SQL, CLI & code blocks */
+header .font-mono:not(code):not(pre):not(input):not(kbd),
+aside .font-mono:not(code):not(pre):not(input):not(kbd),
+h1.font-mono, h2.font-mono, h3.font-mono, h4.font-mono,
+button.font-mono:not(.whitespace-pre):not(.whitespace-pre-wrap) {
   font-family: 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
   font-variant-numeric: tabular-nums;
 }
 
 pre .font-mono,
 code .font-mono,
+input.font-mono,
+textarea.font-mono,
 .whitespace-pre.font-mono,
 .whitespace-pre-wrap.font-mono,
-.select-all.font-mono {
-  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace !important;
+.select-all.font-mono,
+.font-mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
 }
 
 /* Precision Architectural Scrollbars (7px Low-Profile) */
