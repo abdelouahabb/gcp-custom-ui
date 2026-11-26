@@ -424,16 +424,24 @@ export default function AlloyDbMasteryStudio({
   const [expressDbVersion, setExpressDbVersion] = useState('POSTGRES_18');
   const [expressPublicDns, setExpressPublicDns] = useState(true);
   const [expressPscEnabled, setExpressPscEnabled] = useState(true);
+  const [expressInitialPassword, setExpressInitialPassword] = useState('');
   const [showCreateClusterDrawer, setShowCreateClusterDrawer] = useState(false);
   const [showAlloyOpsHistory, setShowAlloyOpsHistory] = useState(false);
   const [sqlConsoleClusterId, setSqlConsoleClusterId] = useState('');
   const [connectClusterId, setConnectClusterId] = useState('');
-  const [cloudSqlDsn, setCloudSqlDsn] = useState('');
+  const [cloudSqlHost, setCloudSqlHost] = useState('');
+  const [cloudSqlPort, setCloudSqlPort] = useState('5432');
+  const [cloudSqlDb, setCloudSqlDb] = useState('postgres');
+  const [cloudSqlUser, setCloudSqlUser] = useState('postgres');
+  const [cloudSqlPassword, setCloudSqlPassword] = useState('');
+  const [cloudSqlAuthMode, setCloudSqlAuthMode] = useState('PASSWORD'); // 'PASSWORD' | 'IAM_TOKEN'
   const [cloudSqlQuery, setCloudSqlQuery] = useState(
     'SELECT version(), current_database(), current_user, inet_server_addr();'
   );
   const [cloudSqlBusy, setCloudSqlBusy] = useState(false);
   const [cloudSqlResult, setCloudSqlResult] = useState(null);
+  const [cloudSqlTables, setCloudSqlTables] = useState([]);
+  const [cloudSqlShowRaw, setCloudSqlShowRaw] = useState(false);
   const [pendingLroByCluster, setPendingLroByCluster] = useState({});
   const [lroClockMs, setLroClockMs] = useState(Date.now());
   const [starterStack, setStarterStack] = useState('NEXTJS_CLOUDRUN'); // NODE_PG | PYTHON_FASTAPI | NEXTJS_CLOUDRUN
@@ -457,26 +465,41 @@ export default function AlloyDbMasteryStudio({
       return;
     }
     const host = resolveClusterHost(c) || '127.0.0.1';
-    const isLocal = host === '127.0.0.1' || host === 'localhost';
-    setCloudSqlDsn(
-      `postgresql://postgres:YOUR_PASSWORD@${host}:5432/postgres${isLocal ? '' : '?sslmode=require'}`
-    );
+    setCloudSqlHost(host);
+    setCloudSqlPort('5432');
+    setCloudSqlDb('postgres');
     setCloudSqlResult(null);
+    setCloudSqlTables([]);
+    setCloudSqlShowRaw(false);
     setSqlConsoleClusterId(c.clusterId);
   };
 
   const runCloudClusterSql = async (mode = 'RUN_CUSTOM_SQL', overrideSql = null) => {
-    if (!projectId) return;
+    if (!projectId || !cloudSqlHost.trim()) return;
     const sqlToRun = overrideSql !== null ? overrideSql : cloudSqlQuery;
-    if (overrideSql !== null) setCloudSqlQuery(overrideSql);
+    if (overrideSql !== null && mode === 'RUN_CUSTOM_SQL') setCloudSqlQuery(overrideSql);
     setCloudSqlBusy(true);
-    setCloudSqlResult(null);
+    if (mode !== 'LIST_TABLES') setCloudSqlResult(null);
     try {
       const { data } = await axios.post(
         `/api/project/${encodeURIComponent(projectId)}/alloydb/execute-sql`,
-        { dsn: cloudSqlDsn.trim(), sql: sqlToRun, mode }
+        {
+          host: cloudSqlHost.trim(),
+          port: Number(cloudSqlPort) || 5432,
+          database: cloudSqlDb.trim() || 'postgres',
+          user: cloudSqlUser.trim() || 'postgres',
+          password: cloudSqlPassword,
+          authMode: cloudSqlAuthMode,
+          sql: sqlToRun,
+          mode,
+        }
       );
-      setCloudSqlResult({ ok: true, ...data });
+      if (mode === 'LIST_TABLES' && Array.isArray(data?.tables)) {
+        setCloudSqlTables(data.tables);
+        notify(`Loaded ${data.tables.length} table(s) from ${cloudSqlDb || 'postgres'}.`);
+      } else {
+        setCloudSqlResult({ ok: true, ...data });
+      }
     } catch (err) {
       setCloudSqlResult({
         ok: false,
@@ -2187,7 +2210,7 @@ GROUP BY 1 ORDER BY turns DESC;`;
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div>
                 <label className="block text-[11px] font-mono text-zinc-500 dark:text-zinc-400 mb-1">
                   Cluster ID
@@ -2196,6 +2219,18 @@ GROUP BY 1 ORDER BY turns DESC;`;
                   type="text"
                   value={expressClusterId}
                   onChange={(e) => setExpressClusterId(e.target.value)}
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-500 dark:text-zinc-400 mb-1">
+                  Initial postgres Password (optional)
+                </label>
+                <input
+                  type="password"
+                  value={expressInitialPassword}
+                  onChange={(e) => setExpressInitialPassword(e.target.value)}
+                  placeholder="Blank = auto-generate & show"
                   className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
                 />
               </div>
@@ -2310,6 +2345,7 @@ GROUP BY 1 ORDER BY turns DESC;`;
                             clusterId: expressClusterId,
                             databaseVersion: expressDbVersion,
                             pscEnabled: expressPscEnabled,
+                            ...(expressInitialPassword.trim() ? { password: expressInitialPassword.trim() } : {}),
                           },
                           "CREATE_EXPRESS"
                         )
@@ -2749,15 +2785,133 @@ GROUP BY 1 ORDER BY turns DESC;`;
                     </button>
                   </div>
                 )}
-                <label className="block text-[11px] font-mono text-zinc-600 dark:text-zinc-400">
-                  PostgreSQL Connection URI (replace YOUR_PASSWORD with cluster password, or use AlloyDB Auth Proxy 127.0.0.1:5432)
-                </label>
-                <input
-                  type="text"
-                  value={cloudSqlDsn}
-                  onChange={(e) => setCloudSqlDsn(e.target.value)}
-                  className="w-full px-3 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
-                />
+                {/* Structured Connection Fields (Env-Var PGPASSWORD / Zero-Password IAM Auth — Never Password-in-URL) */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
+                  <div className="inline-flex rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-0.5 text-[11px]">
+                    <button
+                      type="button"
+                      onClick={() => setCloudSqlAuthMode("PASSWORD")}
+                      className={`px-2.5 py-1 rounded-md font-semibold cursor-pointer ${
+                        cloudSqlAuthMode === "PASSWORD"
+                          ? "bg-amber-500/20 text-amber-800 dark:text-amber-200"
+                          : "text-zinc-600 dark:text-zinc-400"
+                      }`}
+                    >
+                      Password Auth (PGPASSWORD)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCloudSqlAuthMode("IAM_TOKEN")}
+                      className={`px-2.5 py-1 rounded-md font-semibold cursor-pointer ${
+                        cloudSqlAuthMode === "IAM_TOKEN"
+                          ? "bg-amber-500/20 text-amber-800 dark:text-amber-200"
+                          : "text-zinc-600 dark:text-zinc-400"
+                      }`}
+                    >
+                      Zero-Password IAM (OAuth Token)
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={cloudSqlBusy || !cloudSqlHost.trim()}
+                    onClick={() => runCloudClusterSql("LIST_TABLES")}
+                    className="px-2.5 py-1 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-blue-500 text-[11px] font-semibold text-zinc-800 dark:text-zinc-200 inline-flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  >
+                    <Database className="w-3 h-3 text-blue-500" />
+                    <span>Load Tables Explorer</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2">
+                  <div className="lg:col-span-5">
+                    <label className="block text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 mb-0.5">
+                      Host (Public DNS / Auth Proxy)
+                    </label>
+                    <input
+                      type="text"
+                      value={cloudSqlHost}
+                      onChange={(e) => setCloudSqlHost(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                    />
+                  </div>
+                  <div className="lg:col-span-1">
+                    <label className="block text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 mb-0.5">
+                      Port
+                    </label>
+                    <input
+                      type="text"
+                      value={cloudSqlPort}
+                      onChange={(e) => setCloudSqlPort(e.target.value)}
+                      className="w-full px-2 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                    />
+                  </div>
+                  <div className="lg:col-span-2">
+                    <label className="block text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 mb-0.5">
+                      Database
+                    </label>
+                    <input
+                      type="text"
+                      value={cloudSqlDb}
+                      onChange={(e) => setCloudSqlDb(e.target.value)}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                    />
+                  </div>
+                  <div className="lg:col-span-2">
+                    <label className="block text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 mb-0.5">
+                      {cloudSqlAuthMode === "IAM_TOKEN" ? "IAM User Email" : "User"}
+                    </label>
+                    <input
+                      type="text"
+                      value={cloudSqlUser}
+                      onChange={(e) => setCloudSqlUser(e.target.value)}
+                      placeholder={cloudSqlAuthMode === "IAM_TOKEN" ? "you@domain.com" : "postgres"}
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                    />
+                  </div>
+                  <div className="lg:col-span-2">
+                    <label className="block text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400 mb-0.5">
+                      {cloudSqlAuthMode === "IAM_TOKEN" ? "Token" : "Password"}
+                    </label>
+                    {cloudSqlAuthMode === "IAM_TOKEN" ? (
+                      <div className="px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[11px] font-mono text-emerald-700 dark:text-emerald-300 truncate">
+                        Auto GCP OAuth
+                      </div>
+                    ) : (
+                      <input
+                        type="password"
+                        value={cloudSqlPassword}
+                        onChange={(e) => setCloudSqlPassword(e.target.value)}
+                        placeholder="Enter password"
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* Clickable Live Tables Explorer Strip */}
+                {cloudSqlTables.length > 0 && (
+                  <div className="p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-wrap items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 mr-1">
+                      Tables ({cloudSqlTables.length}):
+                    </span>
+                    {cloudSqlTables.map((t) => (
+                      <button
+                        key={`${t.schema}.${t.name}`}
+                        type="button"
+                        disabled={cloudSqlBusy}
+                        onClick={() =>
+                          runCloudClusterSql(
+                            "RUN_CUSTOM_SQL",
+                            `SELECT * FROM "${t.schema}"."${t.name}" LIMIT 50;`
+                          )
+                        }
+                        className="px-2 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-700 dark:text-blue-300 font-mono text-[11px] font-semibold cursor-pointer"
+                      >
+                        {t.schema === "public" ? t.name : `${t.schema}.${t.name}`}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-wrap items-center gap-1.5">
@@ -2802,16 +2956,16 @@ GROUP BY 1 ORDER BY turns DESC;`;
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    disabled={cloudSqlBusy || !cloudSqlDsn.trim() || !cloudSqlQuery.trim()}
+                    disabled={cloudSqlBusy || !cloudSqlHost.trim() || !cloudSqlQuery.trim()}
                     onClick={() => runCloudClusterSql("RUN_CUSTOM_SQL")}
                     className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
                   >
                     {cloudSqlBusy ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Terminal className="w-3.5 h-3.5" />}
-                    <span>{cloudSqlBusy ? "Running psql…" : "Run Live SQL (psql)"}</span>
+                    <span>{cloudSqlBusy ? "Running SQL…" : "Run Live SQL"}</span>
                   </button>
                   <button
                     type="button"
-                    disabled={cloudSqlBusy || !cloudSqlDsn.trim()}
+                    disabled={cloudSqlBusy || !cloudSqlHost.trim()}
                     onClick={() => runCloudClusterSql("INTROSPECT_ALLOYDB")}
                     className="px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 text-xs font-semibold text-zinc-800 dark:text-zinc-200 cursor-pointer"
                   >
@@ -2858,11 +3012,72 @@ GROUP BY 1 ORDER BY turns DESC;`;
                       {cloudSqlResult.error}
                     </div>
                   )}
-                  {cloudSqlResult.stdout && (
-                    <pre className="p-3 rounded-lg bg-zinc-950 text-emerald-300 font-mono text-xs max-h-64 overflow-auto whitespace-pre-wrap">
-                      <code>{cloudSqlResult.stdout}</code>
-                    </pre>
-                  )}
+                  {cloudSqlResult.ok && Array.isArray(cloudSqlResult.columns) && cloudSqlResult.columns.length > 0 && !cloudSqlShowRaw ? (
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                        <span className="font-semibold text-emerald-700 dark:text-emerald-300">
+                          {cloudSqlResult.rowCount} row(s) returned · {cloudSqlResult.columns.length} column(s)
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => copyText(cloudSqlResult.stdout || "", "sql-csv", "CSV results")}
+                            className="px-2 py-0.5 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 font-semibold cursor-pointer"
+                          >
+                            {copiedKey === "sql-csv" ? "Copied CSV!" : "Copy CSV"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCloudSqlShowRaw(true)}
+                            className="px-2 py-0.5 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 font-semibold cursor-pointer"
+                          >
+                            Raw Output
+                          </button>
+                        </div>
+                      </div>
+                      <div className="max-h-72 overflow-auto rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+                        <table className="w-full text-left text-xs">
+                          <thead className="sticky top-0 bg-zinc-100 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300">
+                            <tr>
+                              {cloudSqlResult.columns.map((col, idx) => (
+                                <th key={`${col}-${idx}`} className="px-3 py-2 font-mono font-bold whitespace-nowrap">
+                                  {col}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-zinc-200/70 dark:divide-zinc-800/70 font-mono">
+                            {(cloudSqlResult.rows || []).map((row, rIdx) => (
+                              <tr key={rIdx} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/50">
+                                {row.map((cell, cIdx) => (
+                                  <td key={cIdx} className="px-3 py-1.5 text-zinc-800 dark:text-zinc-200 whitespace-nowrap max-w-md truncate" title={cell}>
+                                    {cell === "" ? <span className="text-zinc-400 italic">NULL</span> : cell}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ) : cloudSqlResult.stdout ? (
+                    <div className="space-y-1.5">
+                      {cloudSqlResult.ok && Array.isArray(cloudSqlResult.columns) && cloudSqlResult.columns.length > 0 && (
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => setCloudSqlShowRaw(false)}
+                            className="px-2 py-0.5 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-[11px] font-semibold text-zinc-700 dark:text-zinc-200 cursor-pointer"
+                          >
+                            View Structured Table
+                          </button>
+                        </div>
+                      )}
+                      <pre className="p-3 rounded-lg bg-zinc-950 text-emerald-300 font-mono text-xs max-h-64 overflow-auto whitespace-pre-wrap">
+                        <code>{cloudSqlResult.stdout}</code>
+                      </pre>
+                    </div>
+                  ) : null}
                 </div>
               )}
             </div>
