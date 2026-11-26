@@ -5264,6 +5264,7 @@ function CloudPulseCockpit() {
                         <IamPamGovernancePanel
                           projectId={selectedProjectId}
                           onRunInShell={handleRunInShell}
+                          onNavigateTab={handleNavigateStudioTab}
                           onShowToast={showToast}
                           onShowError={setErrorBanner}
                         />

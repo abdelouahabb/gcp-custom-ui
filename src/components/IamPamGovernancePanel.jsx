@@ -16,6 +16,7 @@ import MermaidArchitectureDiagram from './MermaidArchitectureDiagram';
 export default function IamPamGovernancePanel({
   projectId,
   onRunInShell,
+  onNavigateTab,
   onShowToast,
   onShowError,
 }) {
@@ -292,7 +293,21 @@ export default function IamPamGovernancePanel({
           )}
 
           {activeSubTab === 'PAM' && (
-            <div className="space-y-2">
+            <div className="space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500">
+                <span>
+                  Quick 30m JIT grants for existing entitlements — create or approve new PAM entitlements in Sovereign IAM Studio.
+                </span>
+                {onNavigateTab && (
+                  <button
+                    type="button"
+                    onClick={() => onNavigateTab('SOVEREIGN_STUDIO')}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-zinc-200 dark:border-[#242c3f] text-zinc-700 dark:text-zinc-200 hover:border-amber-500 text-[11px] font-medium cursor-pointer shrink-0"
+                  >
+                    Open Full PAM Builder →
+                  </button>
+                )}
+              </div>
               {data.entitlements.length === 0 ? (
                 <div className="p-3 rounded-lg border border-zinc-200 dark:border-[#1e2433] text-xs text-zinc-500 flex flex-wrap items-center justify-between gap-2">
                   <span>
