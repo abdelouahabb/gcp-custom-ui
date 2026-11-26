@@ -20,6 +20,8 @@ import {
   Smartphone,
   Monitor,
   ShieldCheck,
+  ShieldAlert,
+  Lock,
   Wifi,
   BatteryCharging,
   PlusCircle,
