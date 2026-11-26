@@ -122,6 +122,10 @@ import AgenticIncidentCommanderPanel from './components/AgenticIncidentCommander
 import SovereignComplianceBlueprintCompiler from './components/SovereignComplianceBlueprintCompiler';
 import KeynoteAutopilotModal from './components/KeynoteAutopilotModal';
 import SccVulnerabilityMissionControl from './components/SccVulnerabilityMissionControl';
+import LoggingFinOpsAuditorPanel from './components/LoggingFinOpsAuditorPanel';
+import FinOpsZombieExecutorPanel from './components/FinOpsZombieExecutorPanel';
+import BigQueryDataLineagePanel from './components/BigQueryDataLineagePanel';
+import IamPamGovernancePanel from './components/IamPamGovernancePanel';
 import GitOpsReleaseFactoryPipelineBar from './components/GitOpsReleaseFactoryPipelineBar';
 import MultiCloudGlobalParityPipelineBar from './components/MultiCloudGlobalParityPipelineBar';
 import EngineerWishlistWave2 from './components/EngineerWishlistWave2';
@@ -2307,6 +2311,10 @@ function classifyDestructiveAxiosConfig(config) {
       rawUrl.includes('/sovereign/compliance-blueprint') ||
       rawUrl.includes('/cve-scan') ||
       (rawUrl.includes('/scc/vulnerabilities') && body.action === 'SCAN') ||
+      (rawUrl.includes('/wave27/logging-finops') && String(body.action || 'AUDIT').toUpperCase() === 'AUDIT') ||
+      (rawUrl.includes('/wave27/bq-lineage') && ['LIST_ASSETS', 'TRACE'].includes(String(body.action || '').toUpperCase())) ||
+      (rawUrl.includes('/wave27/iam-pam') && String(body.action || 'AUDIT').toUpperCase() === 'AUDIT') ||
+      (rawUrl.includes('/wave27/zombie-reaper') && String(body.action || 'SCAN').toUpperCase() === 'SCAN') ||
       (rawUrl.includes('/alloydb/execute-sql') &&
         String(body.mode || '').toUpperCase() === 'INTROSPECT_ALLOYDB') ||
       (rawUrl.includes('/cloudrun-bridge/action') &&
@@ -5263,6 +5271,146 @@ function classifyDestructiveAxiosConfig(config) {
         costWarning: `ZERO EXTRA CLOUD COST ($0.00): OS package upgrades via apt or OS Config Patch Jobs are included at no extra charge.`,
         impactWarning: `Upgrades installed Linux packages on "${vmName}" (${zone}). Services using upgraded libraries may briefly restart.`,
       };
+    }
+
+    // 3G-12C. Wave 27 Governance, Lineage, Logging FinOps & Zombie Reaper Gatekeepers
+    if (rawUrl.includes('/wave27/logging-finops') && String(body.action || '').toUpperCase() === 'APPLY_EXCLUSION') {
+      const exName = body.exclusionName || 'cloudpulse_noise_filter';
+      const exFilter = body.filter || 'severity<WARNING';
+      const sink = body.sinkName || '_Default';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Apply Cloud Logging Exclusion "${exName}" on Sink "${sink}"?`,
+        laymanSummary: `In Plain English: Patches Cloud Logging sink "${sink}" in "${projectId}" to exclude noisy logs matching (${exFilter}) before ingestion, cutting $0.50/GiB overage charges while preserving WARNING/ERROR/AUDIT logs.`,
+        headerBadge: 'Logging FinOps Auditor — Live Log Sink Exclusion',
+        targetLabel: 'Target Cloud Logging Sink',
+        resourceKind: 'Cloud Logging Sink (logging.googleapis.com/v2)',
+        targetName: `projects/${projectId}/sinks/${sink}`,
+        location: 'global',
+        projectId,
+        method: 'PATCH LOG SINK',
+        endpoint: rawUrl,
+        confirmLabel: `Apply Exclusion "${exName}"`,
+        cancelToast: 'Cloud Logging exclusion update cancelled.',
+        whatHappensNext: `1. Fetches current exclusions on sink "${sink}".\n2. Appends exclusion "${exName}" (${exFilter}) via PATCH logging.googleapis.com/v2/projects/${projectId}/sinks/${sink}?updateMask=exclusions.`,
+        costWarning: `FINOPS SAVINGS ($0.50/GiB SAVED): Excluded entries are dropped prior to ingestion and incur $0.00 storage.`,
+        impactWarning: `Logs matching (${exFilter}) will no longer be ingested into "${sink}".`,
+      };
+    }
+
+    if (rawUrl.includes('/wave27/bq-lineage') && String(body.action || '').toUpperCase() === 'AI_IMPACT') {
+      const fqn = body.fqn || 'Selected BigQuery Asset';
+      const model = body.geminiModel || 'gemini-4-neon';
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Run Vertex AI (${model}) Breaking-Change Risk Brief for "${fqn}"?`,
+        laymanSummary: `In Plain English: Sends the table schema and upstream/downstream lineage metadata for "${fqn}" to Google Cloud Vertex AI (aiplatform.googleapis.com/v1) using "${model}" to generate a read-only breaking-change risk brief and safe migration plan. Makes zero edits to BigQuery.`,
+        headerBadge: 'BigQuery Data Lineage — Vertex AI Impact Analysis',
+        targetLabel: 'Target Asset & AI Model',
+        resourceKind: `Vertex AI Generative API (aiplatform.googleapis.com/v1 · ${model})`,
+        targetName: fqn,
+        location: 'global / us-central1 (Vertex AI)',
+        projectId,
+        method: 'VERTEX AI SYNTHESIS',
+        endpoint: rawUrl,
+        confirmLabel: `Run AI Impact Brief (${model})`,
+        cancelToast: 'Vertex AI lineage impact analysis cancelled.',
+        whatHappensNext: `1. Calls Vertex AI (aiplatform.googleapis.com/v1) with your active GCP OAuth2 credentials.\n2. Returns a risk rating, zero-downtime migration checklist, and verification SQL without modifying any table.`,
+        costWarning: `NEGLIGIBLE VERTEX AI COST (<$0.001): Short read-only prompt; zero BigQuery data scanned.`,
+        impactWarning: `Read-only AI synthesis on Vertex AI. Requires aiplatform.googleapis.com enabled on "${projectId}".`,
+      };
+    }
+
+    if (rawUrl.includes('/wave27/iam-pam') && String(body.action || '').toUpperCase() === 'REQUEST_PAM_GRANT') {
+      const entShort = body.entitlementShort || body.entitlementName || 'PAM Entitlement';
+      const mins = Math.round(Number(body.durationSeconds || 1800) / 60);
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: `Request ${mins}-Minute PAM Just-in-Time Grant for "${entShort}"?`,
+        laymanSummary: `In Plain English: Submits a live Privileged Access Manager (PAM) temporary access request for entitlement "${entShort}" in "${projectId}" lasting ${mins} minutes. Access automatically expires when the timer ends.`,
+        headerBadge: 'IAM & PAM — Just-in-Time Temporary Access Request',
+        targetLabel: 'Target PAM Entitlement',
+        resourceKind: 'Privileged Access Manager (privilegedaccessmanager.googleapis.com/v1)',
+        targetName: String(body.entitlementName || entShort),
+        location: 'global',
+        projectId,
+        method: 'CREATE PAM GRANT',
+        endpoint: rawUrl,
+        confirmLabel: `Request ${mins}m JIT Grant`,
+        cancelToast: 'PAM JIT grant request cancelled.',
+        whatHappensNext: `1. Calls POST privilegedaccessmanager.googleapis.com/v1/${body.entitlementName || '...'}/grants.\n2. Grants temporary IAM access (or routes to approver if approval workflow is required) and auto-revokes after ${mins} minutes.`,
+        costWarning: `ZERO COST ($0.00): PAM grant requests carry no additional infrastructure charge.`,
+        impactWarning: `Temporarily elevates caller permissions according to PAM entitlement "${entShort}".`,
+      };
+    }
+
+    if (rawUrl.includes('/wave27/zombie-reaper')) {
+      const zAct = String(body.action || '').toUpperCase();
+      const zName = body.name || 'resource';
+      const zLoc = body.zone || body.region || 'global';
+      const saveStr = body.monthlySavingsUsd ? `~$${Number(body.monthlySavingsUsd).toFixed(2)}/mo` : 'ongoing idle spend';
+      if (zAct === 'DELETE_DISK') {
+        return {
+          title: `Permanently Delete Unattached Persistent Disk "${zName}" (${zLoc})?`,
+          headerBadge: 'FinOps Zombie Executor — Permanent Disk Deletion',
+          targetLabel: 'Target Unattached Persistent Disk',
+          resourceKind: 'Compute Engine Disk (compute.googleapis.com/v1)',
+          targetName: zName,
+          location: zLoc,
+          projectId,
+          method: 'DELETE DISK',
+          endpoint: rawUrl,
+          confirmLabel: `Confirm & Delete Disk "${zName}"`,
+          cancelToast: `Disk "${zName}" deletion cancelled.`,
+          laymanSummary: `In Plain English: Permanently deletes the unattached Persistent Disk "${zName}" in ${zLoc}, saving ${saveStr}. Any data on this disk that is not snapshotted will be permanently lost.`,
+          whatHappensNext: `Calls DELETE compute.googleapis.com/compute/v1/projects/${projectId}/zones/${zLoc}/disks/${zName}.`,
+          costWarning: `FINOPS SAVINGS (${saveStr}): Stops monthly persistent disk storage billing immediately.`,
+          impactWarning: `IRREVERSIBLE: Permanently destroys disk "${zName}" in ${zLoc} (${projectId}).`,
+        };
+      }
+      if (zAct === 'RELEASE_IP') {
+        return {
+          title: `Release Unused Static External IP "${zName}" (${zLoc})?`,
+          headerBadge: 'FinOps Zombie Executor — Static IP Release',
+          targetLabel: 'Target Static External IP',
+          resourceKind: 'Compute Engine Address (compute.googleapis.com/v1)',
+          targetName: zName,
+          location: zLoc,
+          projectId,
+          method: 'RELEASE STATIC IP',
+          endpoint: rawUrl,
+          confirmLabel: `Confirm & Release IP "${zName}"`,
+          cancelToast: `Static IP "${zName}" release cancelled.`,
+          laymanSummary: `In Plain English: Releases the unused static external IP "${zName}" in ${zLoc} back to Google Cloud, immediately saving $7.30/mo.`,
+          whatHappensNext: `Calls DELETE compute.googleapis.com/compute/v1/projects/${projectId}/regions/${zLoc}/addresses/${zName}.`,
+          costWarning: `FINOPS SAVINGS ($7.30/mo): Eliminates Google Cloud's unused external static IP charge.`,
+          impactWarning: `The reserved IP address cannot be reclaimed once released.`,
+        };
+      }
+      if (zAct === 'STOP_VM') {
+        return {
+          gateType: 'ONE_TAP_CLOUD_ACTION',
+          releaseTrack: 'GA',
+          title: `Stop Idle Compute Engine VM "${zName}" (${zLoc})?`,
+          headerBadge: 'FinOps Zombie Executor — Stop Idle VM',
+          targetLabel: 'Target Idle VM Instance',
+          resourceKind: 'Compute Engine VM (compute.googleapis.com/v1)',
+          targetName: zName,
+          location: zLoc,
+          projectId,
+          method: 'STOP VM',
+          endpoint: rawUrl,
+          confirmLabel: `Stop VM "${zName}"`,
+          cancelToast: `Stop VM "${zName}" cancelled.`,
+          laymanSummary: `In Plain English: Gracefully stops the idle Compute Engine VM "${zName}" in ${zLoc} to stop vCPU/RAM billing (${saveStr}) while keeping its boot disk intact so you can restart it anytime.`,
+          whatHappensNext: `Calls POST compute.googleapis.com/compute/v1/projects/${projectId}/zones/${zLoc}/instances/${zName}/stop.`,
+          costWarning: `FINOPS SAVINGS (${saveStr}): Immediately halts vCPU/memory charges; boot disk storage remains preserved.`,
+          impactWarning: `Any running processes or ephemeral external IP on "${zName}" will stop.`,
+        };
+      }
     }
 
     if (rawUrl.includes('/finops/autopilot-matrix') && body.action === 'APPLY_LOG_EXCLUSION') {
@@ -9642,7 +9790,10 @@ function CloudPulseCockpit() {
   // Global Cmd+K / Ctrl+K shortcut + '[' Rail Toggle + '/' Studio Rail Filter
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      if (
+        ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') ||
+        (e.altKey && !e.metaKey && !e.ctrlKey && e.key.toLowerCase() === 'p')
+      ) {
         e.preventDefault();
         setCommandPaletteOpen((prev) => !prev);
         return;
@@ -12743,6 +12894,11 @@ function CloudPulseCockpit() {
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
+                  <BigQueryDataLineagePanel
+                    projectId={selectedProjectId}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
                   <StudioGcpAdvantageBar
                     projectId={selectedProjectId}
                     studioDomain="BIGQUERY"
@@ -13209,6 +13365,12 @@ function CloudPulseCockpit() {
                     onNavigateTab={handleNavigateStudioTab}
                     onRunInShell={handleRunInShell}
                   />
+                  <IamPamGovernancePanel
+                    projectId={selectedProjectId}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
                   <SreWarRoomPerimeterStudio
                     projectId={selectedProjectId}
                     initialSubTab={sreSubTab}
@@ -13580,6 +13742,19 @@ function CloudPulseCockpit() {
                   <AutonomousFinOpsAutopilotMatrix
                     projectId={selectedProjectId}
                     onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <LoggingFinOpsAuditorPanel
+                    projectId={selectedProjectId}
+                    onRunInShell={handleRunInShell}
+                    onShowToast={showToast}
+                    onShowError={setErrorBanner}
+                  />
+                  <FinOpsZombieExecutorPanel
+                    projectId={selectedProjectId}
+                    onRunInShell={handleRunInShell}
+                    onNavigateTab={handleNavigateStudioTab}
                     onShowToast={showToast}
                     onShowError={setErrorBanner}
                   />
@@ -14118,7 +14293,7 @@ function CloudPulseCockpit() {
                 |
               </span>
               <span className="hidden lg:inline text-[10px]">
-                ⌘K Search · [ Rail · / Filter · Alt+G Shield · Alt+K Keynote
+                ⌘K / Alt+P Search · [ Rail · / Filter · Alt+G Shield · Alt+K Keynote
               </span>
             </div>
           </footer>

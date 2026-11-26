@@ -26,6 +26,8 @@ export default function CommandPaletteModal({
   const [executingId, setExecutingId] = useState(null);
   const [toastMsg, setRawToastMsg] = useState(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [liveResources, setLiveResources] = useState([]);
+  const [liveSearchLoading, setLiveSearchLoading] = useState(false);
   const inputRef = useRef(null);
   const recognitionRef = useRef(null);
 
@@ -49,8 +51,16 @@ export default function CommandPaletteModal({
       setQuery('');
       setSelectedIndex(0);
       setToastMsg(null);
+      if (projectId) {
+        setLiveSearchLoading(true);
+        axios
+          .get(`/api/project/${encodeURIComponent(projectId)}/wave27/live-search`)
+          .then((res) => setLiveResources(res.data?.items || []))
+          .catch(() => setLiveResources([]))
+          .finally(() => setLiveSearchLoading(false));
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, projectId]);
 
   const toggleVoiceInput = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -136,6 +146,76 @@ export default function CommandPaletteModal({
     const crServices = overview?.cloudRunServices || overview?.cloudRun || [];
 
     const baseActions = [
+      {
+        id: 'wave27-logging-finops',
+        category: 'Wave 27 · Governance, Lineage & FinOps',
+        title: 'Open Cloud Logging FinOps Auditor & Log-Sink Exclusion Studio',
+        subtitle: 'Inspect live Cloud Monitoring bytes_ingested, noisy INFO/DEBUG streams, and apply 1-click _Default log-sink exclusions',
+        keywords: 'logging finops log spend bytes_ingested exclusion filter _default sink noisy logs audit',
+        badge: 'LOG FINOPS',
+        badgeColor: 'text-blue-700 dark:text-blue-300 bg-blue-500/15 border-blue-500/30',
+        icon: DollarSign,
+        run: () => {
+          onSelectTab('FINOPS');
+          onClose();
+        },
+      },
+      {
+        id: 'wave27-zombie-reaper',
+        category: 'Wave 27 · Governance, Lineage & FinOps',
+        title: 'Open FinOps Idle-Zombie Executor (Live Disk, IP & Idle VM Cleanup)',
+        subtitle: 'Scan unattached Persistent Disks, unused Static External IPs, Compute Idle Recommender VMs & always-on Cloud SQL with 1-click gated cleanup',
+        keywords: 'zombie reaper idle disk unattached static ip recommender cleanup savings finops delete disk release ip',
+        badge: 'ZOMBIE EXECUTOR',
+        badgeColor: 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border-emerald-500/30',
+        icon: PowerOff,
+        run: () => {
+          onSelectTab('FINOPS');
+          onClose();
+        },
+      },
+      {
+        id: 'wave27-bq-lineage',
+        category: 'Wave 27 · Governance, Lineage & FinOps',
+        title: 'Open BigQuery Data Lineage & Downstream Blast-Radius Studio',
+        subtitle: 'Trace live Data Lineage API + INFORMATION_SCHEMA.VIEWS dependencies, inspect lineage DAG & run Vertex AI gemini-4-neon breaking-change brief',
+        keywords: 'bigquery data lineage blast radius upstream downstream schema breaking change gemini-4-neon impact dag',
+        badge: 'BQ LINEAGE',
+        badgeColor: 'text-blue-700 dark:text-blue-300 bg-blue-500/15 border-blue-500/30',
+        icon: Database,
+        run: () => {
+          onSelectTab('BIGQUERY_STUDIO');
+          onClose();
+        },
+      },
+      {
+        id: 'wave27-iam-pam',
+        category: 'Wave 27 · Governance, Lineage & FinOps',
+        title: 'Open IAM Least-Privilege & PAM Just-in-Time Access Control',
+        subtitle: 'Audit standing Owner/Editor principals, GCP IAM Recommender findings, stale >90d SA keys, and request 30m PAM JIT grants',
+        keywords: 'iam pam privileged access manager jit least privilege recommender stale keys owner editor security',
+        badge: 'IAM + PAM JIT',
+        badgeColor: 'text-amber-700 dark:text-amber-300 bg-amber-500/15 border-amber-500/30',
+        icon: ShieldCheck,
+        run: () => {
+          onSelectTab('SRE_WAR_ROOM');
+          onClose();
+        },
+      },
+      ...(liveResources || []).map((lr) => ({
+        id: `live-res-${lr.id}`,
+        category: `Live GCP ${lr.type}`,
+        title: `${lr.name} (${lr.region})`,
+        subtitle: lr.subtitle,
+        keywords: `${lr.name} ${lr.type} ${lr.region} ${lr.subtitle} live resource`,
+        badge: lr.type.toUpperCase(),
+        badgeColor: 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border-emerald-500/30',
+        icon: Database,
+        run: () => {
+          onSelectTab(lr.targetTab || 'BIGQUERY_STUDIO');
+          onClose();
+        },
+      })),
       {
         id: 'open-managed-spark-studio',
         category: 'Data, Lakehouse & Managed Spark',
@@ -1058,7 +1138,7 @@ export default function CommandPaletteModal({
       ...entry.item,
       nlpMatchPct: Math.min(99, Math.round(entry.coverage * 75 + Math.min(24, entry.score))),
     }));
-  }, [query, vms, overview, projectId]);
+  }, [query, vms, overview, projectId, liveResources]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -1155,12 +1235,12 @@ export default function CommandPaletteModal({
               Quick Prompts:
             </span>
             {[
+              { label: 'Log FinOps', q: 'logging finops' },
+              { label: 'Idle Zombies', q: 'zombie' },
+              { label: 'BQ Lineage', q: 'lineage' },
+              { label: 'IAM + PAM', q: 'iam pam' },
               { label: 'Park for night', q: 'park night' },
-              { label: 'Blast Radius Map', q: 'topology' },
               { label: 'Export Terraform', q: 'terraform' },
-              { label: 'Security Audit', q: 'security' },
-              { label: 'Deploy GPU Cloud Run', q: 'deploy gpu' },
-              { label: 'Burn-Rate Radar', q: 'burn rate' },
             ].map((chip) => (
               <button
                 key={chip.label}
@@ -1176,7 +1256,7 @@ export default function CommandPaletteModal({
             ))}
           </div>
           <span className="hidden sm:inline text-[10px] font-mono text-zinc-400 dark:text-[#647087] shrink-0 tabular-nums">
-            {actions.length} actions
+            {liveSearchLoading ? 'Indexing live GCP…' : `${liveResources.length} live · `}{actions.length} actions
           </span>
         </div>
 

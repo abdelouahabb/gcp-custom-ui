@@ -2334,6 +2334,35 @@ const DOC_SECTIONS = [
     billingImpact:
       'SCC v2 reads, Mute/Resolve updates, and BigQuery exports (within 10 GiB Always-Free) incur $0.00 extra API cost; mutating actions are gated by bespoke confirmation modals.',
   },
+  {
+    id: 'wave27-governance-lineage-finops-command',
+    wave: 'Wave 27 · Governance, Lineage, FinOps & Command',
+    title:
+      '63. Wave 27 Suite — Logging FinOps Auditor, Idle-Zombie Executor, BigQuery Data Lineage, IAM/PAM JIT & Live Command Palette',
+    badge: 'FINOPS · BIGQUERY_STUDIO · SRE_WAR_ROOM · Cmd+K / Alt+P',
+    badgeColor:
+      'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30',
+    icon: Database,
+    targetTab: 'FINOPS',
+    problemSolved:
+      'Unifies five live operational gaps across CloudPulse 2026: runaway Cloud Logging ingestion bills, unattached idle disks/IPs/VMs, unknown BigQuery downstream schema blast radius, standing Owner/Editor IAM privileges without PAM JIT, and cross-studio live GCP asset search.',
+    howItWorks: [
+      'Cloud Logging FinOps Auditor (LoggingFinOpsAuditorPanel.jsx · POST /wave27/logging-finops): Queries live Cloud Monitoring bytes_ingested and log_entry_count (7d/14d/30d), renders a daily ECharts ingestion bar chart, ranks noisy INFO/DEBUG streams, and applies 1-click _Default log-sink exclusions behind a bespoke modal.',
+      'FinOps Idle-Zombie Executor (FinOpsZombieExecutorPanel.jsx · POST /wave27/zombie-reaper): Scans live unattached Persistent Disks, unused Static External IPs ($7.30/mo), Compute Idle Recommender VMs, and always-on Cloud SQL with 1-click gated Disk Delete, IP Release, and VM Stop actions.',
+      'BigQuery Data Lineage & Blast-Radius Studio (BigQueryDataLineagePanel.jsx · POST /wave27/bq-lineage): Queries live Data Lineage API + INFORMATION_SCHEMA.VIEWS SQL dependency fallback, renders a collapsed-by-default Mermaid lineage DAG, and runs a Vertex AI gemini-4-neon breaking-change risk brief.',
+      'IAM Least-Privilege & PAM JIT Control (IamPamGovernancePanel.jsx · POST /wave27/iam-pam): Audits standing Owner/Editor principals, IAM Recommender findings, stale >90d SA keys, and PAM entitlements with 1-click 30m JIT grant requests.',
+      'Global Live Command Palette (CommandPaletteModal.jsx · Cmd+K / Alt+P · GET /wave27/live-search): Indexes live BigQuery datasets, GCS buckets, AlloyDB clusters, Cloud SQL instances, and GKE clusters alongside all studio actions.',
+    ],
+    apisUsed: [
+      'POST /api/project/:id/wave27/logging-finops (monitoring.googleapis.com/v3 + logging.googleapis.com/v2)',
+      'POST /api/project/:id/wave27/zombie-reaper (compute.googleapis.com/v1 + recommender.googleapis.com/v1 + sqladmin.googleapis.com/v1)',
+      'POST /api/project/:id/wave27/bq-lineage (datalineage.googleapis.com/v1 + bigquery.googleapis.com/v2 + aiplatform.googleapis.com/v1 gemini-4-neon)',
+      'POST /api/project/:id/wave27/iam-pam (cloudresourcemanager + recommender + iam + privilegedaccessmanager.googleapis.com/v1)',
+      'GET /api/project/:id/wave27/live-search (BigQuery, GCS, AlloyDB, Cloud SQL, GKE)',
+    ],
+    billingImpact:
+      'All discovery/audit endpoints are read-only ($0.00). Mutating actions (Log Exclusion PATCH, Disk Delete, IP Release, VM Stop, PAM Grant, and Vertex AI Impact Brief) are gated by bespoke plain-English confirmation modals.',
+  },
 ];
 
 export default function InteractiveDocsGuide({
