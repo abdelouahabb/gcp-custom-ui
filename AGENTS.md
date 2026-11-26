@@ -11,7 +11,7 @@
 2. **Dynamic Multi-Project Discovery & Zero Hardcoding**: Never hardcode any GCP project ID, personal username, or machine-specific absolute path anywhere in frontend, backend, or docs.
 3. **Zero Astral Emojis in UI**: Use `lucide-react` SVG icons only.
 4. **Selection & Button Color Discipline**: Warm-Amber (`#f59e0b`) for active tabs/selections/left nav rail; solid blue (`bg-blue-600 text-white`) strictly for enabled primary CTAs.
-5. **Mandatory Destructive Action Gatekeeper**: Every mutating `DELETE`/`POST`/`PATCH` endpoint must have a bespoke plain-English modal in `classifyDestructiveAxiosConfig` ([src/App.jsx](src/App.jsx)); non-mutating read-only `POST` endpoints must be explicitly exempted.
+5. **Mandatory Destructive Action Gatekeeper**: Every mutating `DELETE`/`POST`/`PATCH` endpoint must have a bespoke plain-English modal in `classifyDestructiveAxiosConfig` ([src/utils/destructiveGatekeeper.js](src/utils/destructiveGatekeeper.js)); non-mutating read-only `POST` endpoints must be explicitly exempted.
 6. **Official Gemini 4 Family**: Default to `gemini-4-carbon`, `gemini-4-argon`, `gemini-4-neon`, `gemini-4-hydrogen` (+ `gemini-3.8-flash-cyber`). Never use legacy Gemini 1.5/2.x IDs.
 7. **Mermaid Single-Line Labels & Collapsed-by-Default Graphs**: `parseMermaidFlowchart` in [MermaidArchitectureDiagram.jsx](src/components/MermaidArchitectureDiagram.jsx) parses line-by-line—never put raw `\n` inside `["..."]` Mermaid node labels. Every `<MermaidArchitectureDiagram />` defaults to `defaultExpanded={false}` so graphs stay collapsed into a compact 1-line bar until the user explicitly clicks **Show Graph** (freeing vertical workspace across all studios).
 
