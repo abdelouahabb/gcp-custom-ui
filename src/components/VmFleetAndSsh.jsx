@@ -1559,6 +1559,7 @@ export default function VmFleetAndSsh({
   const [openCveVm, setOpenCveVm] = useState('');
   const [cveScanBusyVm, setCveScanBusyVm] = useState('');
   const [cvePatchBusyVm, setCvePatchBusyVm] = useState('');
+  const [cvePatchElapsedSec, setCvePatchElapsedSec] = useState(0);
   const [cveReportByVm, setCveReportByVm] = useState({});
   const [cvePatchReceiptByVm, setCvePatchReceiptByVm] = useState({});
   const [cveFilterText, setCveFilterText] = useState('');
@@ -1566,6 +1567,18 @@ export default function VmFleetAndSsh({
   const [cveSortField, setCveSortField] = useState('severity');
   const [cveSortDir, setCveSortDir] = useState('desc');
   const cvePanelRef = useRef(null);
+
+  useEffect(() => {
+    if (!cvePatchBusyVm) {
+      setCvePatchElapsedSec(0);
+      return;
+    }
+    setCvePatchElapsedSec(0);
+    const timer = setInterval(() => {
+      setCvePatchElapsedSec((s) => s + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cvePatchBusyVm]);
 
   const toggleCveSort = (field) => {
     if (cveSortField === field) {
@@ -3172,6 +3185,58 @@ export default function VmFleetAndSsh({
                       </div>
                     </div>
 
+                    {/* Live CVE Patch Execution Progress Bar & 4-Stage Tracker */}
+                    {cvePatchBusyVm.startsWith(`${cveVm.name}:`) && (() => {
+                      const isOsConfigJob = cvePatchBusyVm.endsWith(':OSCONFIG_PATCH_JOB');
+                      const stageIdx = isOsConfigJob
+                        ? cvePatchElapsedSec < 2 ? 0 : cvePatchElapsedSec < 5 ? 1 : 2
+                        : cvePatchElapsedSec < 3 ? 0 : cvePatchElapsedSec < 8 ? 1 : cvePatchElapsedSec < 18 ? 2 : 3;
+                      const pct = Math.min(94, isOsConfigJob
+                        ? [22, 58, 86][stageIdx]
+                        : Math.round(14 + Math.min(80, cvePatchElapsedSec * 3.8)));
+                      const stages = isOsConfigJob
+                        ? ['Dispatching OS Config Patch Job', 'Contacting google-osconfig-agent', 'Queuing APT Upgrade']
+                        : ['Connecting SSH / Cloud IAP', 'Running apt-get update', 'Upgrading Vulnerable Packages', 'Finalizing & Re-Scanning CVEs'];
+                      return (
+                        <div className="rounded-xl border border-blue-500/40 bg-blue-500/[0.06] p-4 space-y-3 cp-studio-enter">
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                            <span className="inline-flex items-center gap-2 font-semibold text-blue-700 dark:text-blue-300">
+                              <RefreshCw className="w-4 h-4 animate-spin shrink-0" />
+                              <span>
+                                {stages[stageIdx]} on <strong>{cveVm.name}</strong>…
+                              </span>
+                            </span>
+                            <span className="font-mono text-xs font-semibold text-blue-600 dark:text-blue-300 tabular-nums">
+                              {pct}% · {cvePatchElapsedSec}s elapsed
+                            </span>
+                          </div>
+                          <div className="h-2.5 w-full rounded-full bg-blue-950/15 dark:bg-blue-950/60 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-blue-600 transition-all duration-700 ease-out"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                            {stages.map((st, idx) => (
+                              <div
+                                key={st}
+                                className={`px-2.5 py-1.5 rounded-md border flex items-center gap-1.5 ${
+                                  idx < stageIdx
+                                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                                    : idx === stageIdx
+                                    ? 'border-amber-500 bg-amber-500/15 text-amber-800 dark:text-amber-200 font-semibold'
+                                    : 'border-zinc-200 dark:border-[#1e2433] text-zinc-400 dark:text-zinc-500'
+                                }`}
+                              >
+                                <span className="font-mono">{idx + 1}.</span>
+                                <span className="truncate">{st}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     {/* Interactive Severity Filter KPI Strip */}
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                       {[
@@ -3298,10 +3363,19 @@ export default function VmFleetAndSsh({
                       </div>
                     )}
 
-                    {receipt?.output && (
-                      <pre className="p-3.5 rounded-xl bg-zinc-950 text-emerald-300 font-mono text-xs max-h-48 overflow-auto whitespace-pre-wrap">
-                        <code>{receipt.output}</code>
-                      </pre>
+                    {receipt?.output && !cvePatchBusyVm.startsWith(`${cveVm.name}:`) && (
+                      <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/[0.06] p-3.5 space-y-2.5 cp-studio-enter">
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                          <span className="inline-flex items-center gap-1.5">
+                            <CheckCircle2 className="w-4 h-4" />
+                            Live Patch Completed on {cveVm.name} ({Math.max(1, Math.round((receipt.durationMs || 1000) / 1000))}s) — 100%
+                          </span>
+                          <span className="text-[11px] font-mono">APT Transcript</span>
+                        </div>
+                        <pre className="p-3.5 rounded-lg bg-zinc-950 text-emerald-300 font-mono text-xs max-h-56 overflow-auto whitespace-pre-wrap">
+                          <code>{receipt.output}</code>
+                        </pre>
+                      </div>
                     )}
                   </div>
                 ) : null}
