@@ -12090,7 +12090,7 @@ app.get('/api/project/:projectId/alloydb/overview', async (req, res) => {
         createTime: meta.createTime || null,
         endTime: meta.endTime || null,
       };
-    });
+    }).sort((a, b) => Date.parse(b.createTime || 0) - Date.parse(a.createTime || 0));
 
     const expressCount = clusters.filter((c) => c.isExpress).length;
     const enterpriseCount = clusters.length - expressCount;

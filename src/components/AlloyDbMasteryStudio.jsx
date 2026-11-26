@@ -2444,7 +2444,7 @@ GROUP BY 1 ORDER BY turns DESC;`;
                 </div>
 
                 {/* Live Inline LRO Progress Bar (Deleting / Creating Primary / Upgrading / Scaling) */}
-                {activeLro && (
+                {(activeLro || isDeletingCluster) && (
                   <div
                     className={`p-2.5 rounded-lg border space-y-1.5 text-xs ${
                       isDeletingCluster
@@ -2455,25 +2455,31 @@ GROUP BY 1 ORDER BY turns DESC;`;
                     <div className="flex items-center justify-between gap-2">
                       <span className="inline-flex items-center gap-1.5 font-semibold">
                         <RefreshCw className="w-3.5 h-3.5 animate-spin shrink-0" />
-                        <span>{activeLro.label}…</span>
+                        <span>
+                          {activeLro
+                            ? `${activeLro.label}…`
+                            : `Deleting cluster "${c.clusterId}" & attached instances on Google Cloud (typically 2–5 min)…`}
+                        </span>
                       </span>
-                      <span className="font-mono text-[11px] tabular-nums shrink-0">
-                        {lroPct}% · {lroElapsedSec}s
-                      </span>
+                      {activeLro && (
+                        <span className="font-mono text-[11px] tabular-nums shrink-0">
+                          {lroPct}% · {lroElapsedSec}s
+                        </span>
+                      )}
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-black/15 dark:bg-white/10 overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-700 ${
-                          isDeletingCluster ? "bg-rose-500" : "bg-blue-500"
+                          isDeletingCluster ? "bg-rose-500 animate-pulse" : "bg-blue-500"
                         }`}
-                        style={{ width: `${lroPct}%` }}
+                        style={{ width: `${activeLro ? lroPct : 65}%` }}
                       />
                     </div>
                   </div>
                 )}
 
                 {/* Clear 2-Step Cluster -> Primary Instance Readiness Indicator */}
-                {c.instanceCount === 0 ? (
+                {isDeletingCluster ? null : c.instanceCount === 0 ? (
                   <div className="p-2.5 rounded-lg border border-amber-500/35 bg-amber-500/10 flex flex-wrap items-center justify-between gap-2 text-xs">
                     <span className="text-amber-800 dark:text-amber-200 font-medium">
                       <strong>0 instances attached</strong> — Cluster is ready; add a 1-vCPU Primary Instance to connect via SQL.
@@ -2518,9 +2524,15 @@ GROUP BY 1 ORDER BY turns DESC;`;
                   </div>
                 )}
 
-                <div className="flex flex-wrap items-center gap-2 pt-1">
+                <fieldset
+                  disabled={isDeletingCluster}
+                  className={`flex flex-wrap items-center gap-2 pt-1 border-0 p-0 m-0 ${
+                    isDeletingCluster ? "opacity-45 pointer-events-none select-none" : ""
+                  }`}
+                >
                   <button
                     type="button"
+                    disabled={isDeletingCluster}
                     onClick={() => openClusterSqlConsole(c)}
                     className={`px-2.5 py-1 rounded text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer ${
                       sqlConsoleClusterId === c.clusterId
@@ -2650,7 +2662,7 @@ GROUP BY 1 ORDER BY turns DESC;`;
                     {isDeletingCluster ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
                     {isDeletingCluster ? "Deleting…" : "Delete"}
                   </button>
-                </div>
+                </fieldset>
 
                 {connectClusterId === c.clusterId && (() => {
                   const host = resolveClusterHost(c) || "<PRIMARY_HOST_AFTER_STEP_2>";
