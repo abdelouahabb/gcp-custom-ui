@@ -447,7 +447,7 @@ export default function AlloyDbMasteryStudio({
   const resolveClusterHost = (c) => {
     const p = c?.primaryInstance;
     if (!p) return '';
-    return p.publicIpAddress || p.publicDnsName || p.ipAddress || p.pscDnsName || '';
+    return String(p.publicDnsName || p.publicIpAddress || p.ipAddress || p.pscDnsName || '').replace(/\.$/, '');
   };
 
   const openClusterSqlConsole = (c) => {
@@ -2721,7 +2721,7 @@ GROUP BY 1 ORDER BY turns DESC;`;
               </div>
 
               <div className="space-y-1">
-                {targetCluster?.primaryInstance && !targetCluster.primaryInstance.publicIpAddress && (
+                {targetCluster?.primaryInstance && !targetCluster.primaryInstance.publicDnsName && !targetCluster.primaryInstance.publicIpAddress && (
                   <div className="mb-2 p-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200 text-xs flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
                       <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />

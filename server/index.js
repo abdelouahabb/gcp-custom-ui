@@ -12005,7 +12005,7 @@ app.get('/api/project/:projectId/alloydb/overview', async (req, res) => {
         availabilityType: inst.availabilityType || 'ZONAL',
         ipAddress: inst.ipAddress || null,
         publicIpAddress: inst.publicIpAddress || null,
-        publicDnsName: inst.publicIpAddress || inst.outboundPublicIpAddresses?.[0] || inst.ipAddress || null,
+        publicDnsName: String(inst.networkInfo?.publicDnsName || inst.publicIpAddress || inst.outboundPublicIpAddresses?.[0] || inst.ipAddress || '').replace(/\.$/, '') || null,
         publicDnsEnabled: Boolean(inst.networkConfig?.publicDnsEnabled || inst.networkConfig?.enablePublicIp),
         pscEnabled: Boolean(inst.pscInstanceConfig?.pscDnsName || inst.pscInstanceConfig?.allowedConsumerProjects?.length),
         pscDnsName: inst.pscInstanceConfig?.pscDnsName || null,
@@ -12288,32 +12288,10 @@ app.post('/api/project/:projectId/alloydb/action', async (req, res) => {
         .replace(/^-+|-+$/g, '')
         .slice(0, 50);
 
-      let detectedPublicIp = '';
-      if (publicDnsEnabled) {
-        try {
-          const ipRes = await axios.get('https://api.ipify.org?format=json', { timeout: 3000 });
-          if (/^\d{1,3}(\.\d{1,3}){3}$/.test(String(ipRes?.data?.ip || ''))) {
-            detectedPublicIp = String(ipRes.data.ip);
-          }
-        } catch {
-          // proceed with enablePublicIp without auto-CIDR
-        }
-      }
-
       const body = {
         instanceType: 'PRIMARY',
         machineConfig: { cpuCount: 1 },
-        ...(publicDnsEnabled
-          ? {
-              networkConfig: {
-                enablePublicIp: true,
-                publicDnsEnabled: true,
-                ...(detectedPublicIp
-                  ? { authorizedExternalNetworks: [{ cidrRange: `${detectedPublicIp}/32` }] }
-                  : {}),
-              },
-            }
-          : {}),
+        ...(publicDnsEnabled ? { networkConfig: { publicDnsEnabled: true } } : {}),
         labels: {
           managed_by: 'cloudpulse_2026',
           tier: 'alloydb_express',
@@ -12347,7 +12325,7 @@ app.post('/api/project/:projectId/alloydb/action', async (req, res) => {
         action,
         clusterId,
         instanceId: cleanInst,
-        message: `Dispatched 1-vCPU AlloyDB Express primary instance "${cleanInst}" on cluster "${clusterId}" (${publicDnsEnabled ? `Public IP${detectedPublicIp ? ` + authorized ${detectedPublicIp}/32` : ''}` : 'Private connectivity'}).`,
+        message: `Dispatched 1-vCPU AlloyDB Express primary instance "${cleanInst}" on cluster "${clusterId}" (${publicDnsEnabled ? 'Public DNS enabled' : 'Private connectivity'}).`,
         operation: op,
       });
     }
