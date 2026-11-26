@@ -10,6 +10,7 @@ import {
   PlusCircle,
   Copy,
   Check,
+  CheckCircle2,
   HardDrive,
   RefreshCw,
   Wifi,
@@ -3148,6 +3149,11 @@ export default function VmFleetAndSsh({
                               rep.upgradablePackages?.length > 0 ? rep.upgradablePackages : []
                             )
                           }
+                          title={
+                            rep.upgradablePackages?.length > 0
+                              ? `Upgrades these ${rep.upgradablePackages.length} affected Linux packages via apt: ${rep.upgradablePackages.slice(0, 10).join(', ')}${rep.upgradablePackages.length > 10 ? '…' : ''}`
+                              : 'Runs sudo apt-get update && sudo apt-get upgrade -y over SSH/IAP'
+                          }
                           className="px-3.5 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
                         >
                           {cvePatchBusyVm === `${cveVm.name}:APT_UPGRADE_SSH` ? (
@@ -3158,8 +3164,10 @@ export default function VmFleetAndSsh({
                           <span>
                             {cvePatchBusyVm === `${cveVm.name}:APT_UPGRADE_SSH`
                               ? 'Running apt-get upgrade...'
+                              : rep.upgradablePackages?.length > 0 && sc.TOTAL > 0
+                              ? `Upgrade ${rep.upgradablePackages.length} Vulnerable Packages (${sc.TOTAL} CVEs)`
                               : rep.upgradablePackages?.length > 0
-                              ? `Fix ${rep.upgradablePackages.length} Pkg(s) via apt upgrade`
+                              ? `Upgrade ${rep.upgradablePackages.length} Outdated Packages via apt`
                               : 'Run Live apt-get upgrade -y'}
                           </span>
                         </button>
