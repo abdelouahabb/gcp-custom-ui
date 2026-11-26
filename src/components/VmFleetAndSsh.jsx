@@ -3245,16 +3245,24 @@ export default function VmFleetAndSsh({
                       );
                     })()}
 
-                    {/* Same-Spot 100% Completion Card + Parsed APT Summary (replaces progress bar in-place!) */}
+                    {/* Same-Spot 100% Completion Card + Real Parsed APT Breakdown (Patched / Already Latest / Remaining) */}
                     {receipt?.output && !cvePatchBusyVm.startsWith(`${cveVm.name}:`) && (() => {
-                      const aptMatch = String(receipt.output || '').match(
+                      const rawOut = String(receipt.output || '');
+                      const aptMatch = rawOut.match(
                         /(\d+)\s+upgraded,\s+(\d+)\s+newly installed,\s+(\d+)\s+to remove\s+and\s+(\d+)\s+not upgraded/i
                       );
                       const upgradedCnt = aptMatch ? Number(aptMatch[1]) : null;
                       const newlyCnt = aptMatch ? Number(aptMatch[2]) : null;
                       const notUpgradedCnt = aptMatch ? Number(aptMatch[4]) : null;
+
+                      // Parse real per-package outcomes straight from live apt transcript
+                      const alreadyLatest = [...rawOut.matchAll(/^([a-z0-9][a-z0-9.+_-]*)\s+is already the newest version\s+\(([^)]+)\)/gim)]
+                        .map((m) => ({ name: m[1], version: m[2] }));
+                      const unpackedPkgs = [...rawOut.matchAll(/^Unpacking\s+([a-z0-9][a-z0-9.+_-]*)(?::\S+)?\s+\(([^)]+)\)/gim)]
+                        .map((m) => ({ name: m[1], version: m[2] }));
+
                       return (
-                        <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/[0.06] p-4 space-y-3 cp-studio-enter">
+                        <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/[0.05] p-4 space-y-3.5 cp-studio-enter">
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
                               <CheckCircle2 className="w-4 h-4 shrink-0" />
@@ -3263,15 +3271,10 @@ export default function VmFleetAndSsh({
                               </span>
                             </div>
                             <div className="flex items-center gap-2">
-                              {upgradedCnt !== null && (
-                                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold">
-                                  {upgradedCnt} upgraded · {newlyCnt} new · {notUpgradedCnt} held
-                                </span>
-                              )}
                               <button
                                 type="button"
                                 onClick={() => {
-                                  navigator.clipboard?.writeText(receipt.output || '');
+                                  navigator.clipboard?.writeText(rawOut);
                                   onShowToast?.('Copied APT patch transcript.');
                                 }}
                                 className="px-2 py-1 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-[11px] font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
@@ -3299,14 +3302,85 @@ export default function VmFleetAndSsh({
                             <div className="h-full w-full rounded-full bg-emerald-500" />
                           </div>
 
-                          {upgradedCnt === 0 && (
-                            <div className="text-xs text-zinc-600 dark:text-zinc-300">
-                              All targeted packages are already at the latest version available in this VM&apos;s configured <code className="font-mono">apt</code> repositories (0 new updates available).
+                          {/* 3-Column Real Outcome Breakdown: Patched | Already Latest (Awaiting Distro Fix) | Remaining on VM */}
+                          {aptMatch && (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                              <div className="rounded-lg border border-emerald-500/30 bg-white dark:bg-[#0b101b] p-3 space-y-1.5">
+                                <div className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+                                  Patched / Upgraded Now
+                                </div>
+                                <div className="text-lg font-bold text-zinc-900 dark:text-zinc-50 tabular-nums">
+                                  {upgradedCnt} upgraded {newlyCnt > 0 ? `· ${newlyCnt} new` : ''}
+                                </div>
+                                {unpackedPkgs.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1">
+                                    {unpackedPkgs.slice(0, 6).map((p, i) => (
+                                      <span key={i} className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono text-[10px]">
+                                        {p.name} ({p.version})
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="text-[11px] text-zinc-500">
+                                    No newer version existed for the targeted packages.
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="rounded-lg border border-zinc-200 dark:border-[#1e2433] bg-white dark:bg-[#0b101b] p-3 space-y-1.5">
+                                <div className="text-[11px] font-semibold text-zinc-700 dark:text-zinc-300">
+                                  Already at Latest Distro Version ({alreadyLatest.length})
+                                </div>
+                                {alreadyLatest.length > 0 ? (
+                                  <>
+                                    <div className="flex flex-wrap gap-1">
+                                      {alreadyLatest.slice(0, 6).map((p) => (
+                                        <span key={p.name} className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-mono text-[10px]">
+                                          {p.name} {p.version}
+                                        </span>
+                                      ))}
+                                    </div>
+                                    <div className="text-[11px] text-zinc-500">
+                                      Open OSV.dev advisories here are awaiting a newer upstream distro security release.
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="text-[11px] text-zinc-500">
+                                    All targeted packages were processed.
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="rounded-lg border border-amber-500/35 bg-white dark:bg-[#0b101b] p-3 flex flex-col justify-between gap-2">
+                                <div>
+                                  <div className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+                                    Remaining System Updates on VM
+                                  </div>
+                                  <div className="text-lg font-bold text-zinc-900 dark:text-zinc-50 tabular-nums mt-0.5">
+                                    {notUpgradedCnt} not upgraded
+                                  </div>
+                                  <div className="text-[11px] text-zinc-500">
+                                    {notUpgradedCnt > 0
+                                      ? 'Other system packages on this VM have apt updates available now.'
+                                      : 'Entire VM is 100% up to date with apt repositories.'}
+                                  </div>
+                                </div>
+                                {notUpgradedCnt > 0 && (
+                                  <button
+                                    type="button"
+                                    disabled={Boolean(cvePatchBusyVm) || cveVm.status !== 'RUNNING'}
+                                    onClick={() => handlePatchVmCves(cveVm, 'APT_UPGRADE_SSH', [])}
+                                    className="w-full px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold cursor-pointer"
+                                  >
+                                    Upgrade All {notUpgradedCnt} Remaining Packages
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           )}
 
                           <pre className="p-3.5 rounded-lg bg-zinc-950 text-emerald-300 font-mono text-xs max-h-48 overflow-auto whitespace-pre-wrap">
-                            <code>{receipt.output}</code>
+                            <code>{rawOut}</code>
                           </pre>
                         </div>
                       );
