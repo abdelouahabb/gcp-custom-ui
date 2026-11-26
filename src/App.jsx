@@ -55,6 +55,7 @@ import {
   Activity,
   Boxes,
   Compass,
+  Maximize2,
 } from 'lucide-react';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import {
@@ -3028,6 +3029,16 @@ function CloudPulseCockpit() {
                 <span>Keynote</span>
               </button>
 
+              <button
+                type="button"
+                onClick={() => setZenMode((v) => !v)}
+                title="Enter Full-Width Zen Canvas (Shortcut: Alt+Z)"
+                className="hidden md:inline-flex items-center gap-1.5 text-[11px] font-medium text-zinc-600 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white bg-zinc-100/80 hover:bg-zinc-200/80 dark:bg-[#151a25] dark:hover:bg-[#1e2636] border border-zinc-200 dark:border-[#262e42] px-2.5 h-8 rounded-md shrink-0 cursor-pointer transition-colors"
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+                <span>Zen</span>
+              </button>
+
               {gdePrivacyConfig.enabled && (
                 <span
                   title="GDE Streamer & Tutorial Privacy Mode is active (Shortcut: Alt+G)"
@@ -3790,8 +3801,10 @@ function CloudPulseCockpit() {
           {/* Main Content Body */}
           <main
             id="cloudpulse-main-workspace"
-            className={`min-w-0 flex-1 overflow-x-hidden px-5 sm:px-8 lg:px-10 py-6 sm:py-8 space-y-7 ${
-              zenMode ? 'max-w-[1600px] mx-auto pb-28' : ''
+            className={`min-w-0 flex-1 overflow-x-hidden py-6 sm:py-8 space-y-7 ${
+              zenMode
+                ? 'w-full max-w-none px-4 sm:px-6 lg:px-8 pb-28'
+                : 'px-5 sm:px-8 lg:px-10'
             }`}
           >
             {/* Architectural Workspace Context, Studio History & Telemetry Header */}
