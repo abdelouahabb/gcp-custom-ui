@@ -37,7 +37,7 @@ export default function StudioWorkspaceTabs({
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="min-w-0 space-y-1.5">
             {studioTitle && (
-              <h1 className="text-2xl sm:text-[1.85rem] font-bold tracking-tight text-zinc-950 dark:text-zinc-50 leading-tight">
+              <h1 className="text-xl sm:text-[1.45rem] font-bold tracking-tight text-zinc-950 dark:text-zinc-50 leading-tight">
                 {studioTitle}
               </h1>
             )}

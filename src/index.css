@@ -922,26 +922,26 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Balanced Readability Scale inside Main Workspace (crisp, never bloated) */
+/* Refined Inter Typographic Scale (Inter's tall x-height reads crisply at compact sizes) */
 #cloudpulse-main-workspace .text-\[10px\] {
-  font-size: 0.71875rem; /* 11.5px */
-  line-height: 1.4;
+  font-size: 0.6875rem; /* 11px */
+  line-height: 1.38;
 }
 
 #cloudpulse-main-workspace .text-\[10\.5px\],
 #cloudpulse-main-workspace .text-\[11px\] {
-  font-size: 0.78125rem; /* 12.5px */
-  line-height: 1.45;
+  font-size: 0.71875rem; /* 11.5px */
+  line-height: 1.42;
 }
 
 #cloudpulse-main-workspace .text-xs {
-  font-size: 0.8125rem; /* 13px */
-  line-height: 1.5;
+  font-size: 0.75rem; /* 12px */
+  line-height: 1.48;
 }
 
 #cloudpulse-main-workspace .text-sm {
-  font-size: 0.90625rem; /* 14.5px */
-  line-height: 1.55;
+  font-size: 0.84375rem; /* 13.5px */
+  line-height: 1.5;
 }
 
 /* Anti-Collision Button & Control Alignment */
@@ -981,12 +981,12 @@ body {
 }
 
 #cloudpulse-main-workspace table {
-  font-size: 0.8125rem;
+  font-size: 0.78125rem; /* 12.5px */
 }
 
 #cloudpulse-main-workspace table th,
 #cloudpulse-main-workspace table td {
-  padding: 0.75rem 1rem;
+  padding: 0.65rem 0.9rem;
 }
 
 /* Generous Card Cushioning & Refined Elevation across ALL cards (divs & sections) */

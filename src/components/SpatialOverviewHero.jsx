@@ -112,7 +112,7 @@ export default function SpatialOverviewHero({
               <Cloud className="w-3.5 h-3.5 text-blue-500" />
               Active Fleet
             </div>
-            <div className="mt-1.5 text-3xl sm:text-4xl font-bold tracking-tight text-zinc-950 dark:text-white tabular-nums group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+            <div className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight text-zinc-950 dark:text-white tabular-nums group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
               {totalResources}
             </div>
             <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
@@ -129,7 +129,7 @@ export default function SpatialOverviewHero({
               <DollarSign className="w-3.5 h-3.5 text-emerald-500" />
               Projected Run-Rate
             </div>
-            <div className="mt-1.5 text-3xl sm:text-4xl font-bold tracking-tight text-zinc-950 dark:text-white tabular-nums group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+            <div className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight text-zinc-950 dark:text-white tabular-nums group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
               ${monthlyBurn.toFixed(0)}
               <span className="text-base font-medium text-zinc-400">/mo</span>
             </div>
@@ -147,7 +147,7 @@ export default function SpatialOverviewHero({
               <Activity className="w-3.5 h-3.5 text-amber-500" />
               Reliability &amp; SLOs
             </div>
-            <div className="mt-1.5 text-3xl sm:text-4xl font-bold tracking-tight text-zinc-950 dark:text-white tabular-nums group-hover:text-amber-500 transition-colors">
+            <div className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight text-zinc-950 dark:text-white tabular-nums group-hover:text-amber-500 transition-colors">
               Live
             </div>
             <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
@@ -160,7 +160,7 @@ export default function SpatialOverviewHero({
               <Layers className="w-3.5 h-3.5 text-zinc-400" />
               Enabled GCP APIs
             </div>
-            <div className="mt-1.5 text-3xl sm:text-4xl font-bold tracking-tight text-zinc-950 dark:text-white tabular-nums">
+            <div className="mt-1.5 text-2xl sm:text-3xl font-bold tracking-tight text-zinc-950 dark:text-white tabular-nums">
               {apiCount}
             </div>
             <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400 font-mono truncate">
