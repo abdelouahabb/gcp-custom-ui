@@ -1,15 +1,17 @@
 import React from 'react';
 import {
-  LayoutDashboard,
-  Server,
-  Database,
-  Activity,
-  DollarSign,
-  Terminal,
   Search,
   Maximize2,
   Minimize2,
 } from 'lucide-react';
+import {
+  GcpLogoIcon,
+  GcpComputeEngineIcon,
+  GcpBigQueryIcon,
+  GcpSecurityIcon,
+  GcpBillingIcon,
+  GcpLoggingIcon,
+} from './GcpProductIcons';
 
 /**
  * 2026 Floating Frosted-Glass Spatial Dock.
@@ -24,12 +26,12 @@ export default function FloatingSpatialDock({
   onToggleZenMode,
 }) {
   const dockItems = [
-    { id: 'OVERVIEW', label: 'Overview', icon: LayoutDashboard },
-    { id: 'VM_SSH', label: 'GCE VMs', icon: Server },
-    { id: 'BIGQUERY_STUDIO', label: 'BigQuery', icon: Database },
-    { id: 'SRE_WAR_ROOM', label: 'SRE & SLOs', icon: Activity },
-    { id: 'FINOPS', label: 'FinOps', icon: DollarSign },
-    { id: 'LOGS_SHELL', label: 'Logs & Shell', icon: Terminal },
+    { id: 'OVERVIEW', label: 'Overview', icon: GcpLogoIcon },
+    { id: 'VM_SSH', label: 'GCE VMs', icon: GcpComputeEngineIcon },
+    { id: 'BIGQUERY_STUDIO', label: 'BigQuery', icon: GcpBigQueryIcon },
+    { id: 'SRE_WAR_ROOM', label: 'SRE & SLOs', icon: GcpSecurityIcon },
+    { id: 'FINOPS', label: 'FinOps', icon: GcpBillingIcon },
+    { id: 'LOGS_SHELL', label: 'Logs & Shell', icon: GcpLoggingIcon },
   ];
 
   return (

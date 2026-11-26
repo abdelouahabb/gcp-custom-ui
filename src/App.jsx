@@ -134,6 +134,24 @@ import StudioWorkspaceTabs from './components/StudioWorkspaceTabs';
 import SpatialOverviewHero from './components/SpatialOverviewHero';
 import FloatingSpatialDock from './components/FloatingSpatialDock';
 import LocalAuditLogPanel from './components/LocalAuditLogPanel';
+import {
+  GcpLogoIcon,
+  GcpComputeEngineIcon,
+  GcpCloudRunIcon,
+  GcpGkeIcon,
+  GcpBigQueryIcon,
+  GcpCloudStorageIcon,
+  GcpCloudSqlIcon,
+  GcpAlloyDbIcon,
+  GcpVpcNetworkIcon,
+  GcpCloudFunctionsIcon,
+  GcpSecurityIcon,
+  GcpLoggingIcon,
+  GcpBillingIcon,
+  GcpSpannerIcon,
+  GcpDataprocSparkIcon,
+  GcpCloudBuildIcon,
+} from './components/GcpProductIcons';
 import { classifyDestructiveAxiosConfig } from './utils/destructiveGatekeeper';
 import GitOpsReleaseFactoryPipelineBar from './components/GitOpsReleaseFactoryPipelineBar';
 import MultiCloudGlobalParityPipelineBar from './components/MultiCloudGlobalParityPipelineBar';
@@ -2539,7 +2557,7 @@ function CloudPulseCockpit() {
       group: 'COMMAND',
       label: 'Overview',
       tip: 'Project Overview & Resource Lineage: Live Project KPIs, Stale/Orphaned Resource Detector, Live Resource Inventory, 5-Domain Architecture Hub & API Kill-Switch',
-      icon: LayoutDashboard,
+      icon: GcpLogoIcon,
     },
     {
       id: 'INNOVATION_LAB',
@@ -2595,49 +2613,49 @@ function CloudPulseCockpit() {
       group: 'INFRA_COMPUTE',
       label: 'VM (GCE)',
       tip: 'Compute Engine (GCE) VM Fleet & Browser Web-SSH Terminal: Provision 1 GB to 32 TB RAM VMs, start, stop, resize, or SSH directly into your Linux VMs',
-      icon: Server,
+      icon: GcpComputeEngineIcon,
     },
     {
       id: 'VPC_NETWORKS',
       group: 'INFRA_COMPUTE',
       label: 'VPC',
       tip: 'VPC Backbone & Firewall Perimeter Manager: Inspect subnets, BGP routing, MTU, and audit or lock 0.0.0.0/0 ingress rules to IAP',
-      icon: Network,
+      icon: GcpVpcNetworkIcon,
     },
     {
       id: 'CLOUD_RUN',
       group: 'INFRA_COMPUTE',
       label: 'Cloud Run',
       tip: 'Cloud Run Serverless Fleet Manager: Deploy containers, attach NVIDIA L4 GPUs, 1-Click Direct Cloud IAP ($0/mo Zero-LB), App Engine Service Exterminator & $0/mo Default Neutralizer, and Request vs Instance billing',
-      icon: Rocket,
+      icon: GcpCloudRunIcon,
     },
     {
       id: 'GKE_STUDIO',
       group: 'INFRA_COMPUTE',
       label: 'GKE',
       tip: 'Google Kubernetes Engine (GKE) Studio: 1-Click Autopilot & Spot GPU Cluster Provisioner, compliance locks & K8s YAML Composer',
-      icon: Cpu,
+      icon: GcpGkeIcon,
     },
     {
       id: 'FUNCTIONS_STUDIO',
       group: 'INFRA_COMPUTE',
       label: 'Functions',
       tip: 'Cloud Functions (1st Gen v1 & 2nd Gen v2) + Eventarc Trigger Studio & Cloud Workflows / Messaging Decision Matrix (Eventarc vs Pub/Sub vs Tasks vs Workflows)',
-      icon: Zap,
+      icon: GcpCloudFunctionsIcon,
     },
     {
       id: 'WAVE9_STUDIO',
       group: 'INFRA_COMPUTE',
       label: 'Cloud Build',
       tip: 'Cloud Build GitHub CI/CD + Artifact Registry SLSA-3 Supply-Chain Studio: Buildpacks/Dockerfiles, Auto-Deploy & Orphan Digest Sweeper',
-      icon: PackageCheck,
+      icon: GcpCloudBuildIcon,
     },
     {
       id: 'CLOUD_STORAGE',
       group: 'INFRA_COMPUTE',
       label: 'Cloud Storage',
       tip: 'Cloud Storage Studio: 5-Step Compliance Bucket Wizard, strict SEC/GDPR/HIPAA locks, Soft-Delete & WORM retention, and live object explorer',
-      icon: HardDrive,
+      icon: GcpCloudStorageIcon,
     },
 
     // III. Databases, Data Engineering & Lakehouse
@@ -2646,14 +2664,14 @@ function CloudPulseCockpit() {
       group: 'DATA_AI',
       label: 'Cloud SQL',
       tip: 'Cloud SQL (MySQL 8.4 & PostgreSQL 16/17) + AlloyDB Studio: Architecture Fork, AI Vector (alloydb_scann / pgvector) Surgeon & IAM Auth Proxy v2',
-      icon: Database,
+      icon: GcpCloudSqlIcon,
     },
     {
       id: 'ALLOYDB_STUDIO',
       group: 'DATA_AI',
       label: 'AlloyDB',
       tip: 'AlloyDB Mastery & Express Studio: AlloyDB Express (PG 18) 1-Click Provisioner & In-Place Enterprise Upgrade, Zero Lock-in pglogical + Omni + Stock PG DR Exit, SCaNN Vector RAG & Beyond Aurora AI Agents',
-      icon: Database,
+      icon: GcpAlloyDbIcon,
     },
     {
       id: 'DATA_ENGINEER_STUDIO',
@@ -2667,14 +2685,14 @@ function CloudPulseCockpit() {
       group: 'DATA_AI',
       label: 'Managed Spark',
       tip: 'Google Cloud Managed Service for Apache Spark & Dataproc Serverless Studio: Serverless Spark 3.5 Batches ($0/hr Idle), Interactive ManagedSparkSession (Spark Connect) Notebooks, sparkApplications Stage/SQL Diagnostics, GCS Driver Output RCA & 7-Role Spark IAM Doctor',
-      icon: Flame,
+      icon: GcpDataprocSparkIcon,
     },
     {
       id: 'BIGQUERY_STUDIO',
       group: 'DATA_AI',
       label: 'BigQuery',
       tip: 'BigQuery Capacitor Warehouse & SQL Optimizer Studio: Dataset Compliance Hardener, Physical Billing (-54%), Dry-Run SQL X-Ray, Slot FinOps & 168h Time-Machine',
-      icon: Database,
+      icon: GcpBigQueryIcon,
     },
     {
       id: 'BIGLAKE_STUDIO',
@@ -2688,7 +2706,7 @@ function CloudPulseCockpit() {
       group: 'DATA_AI',
       label: 'Spanner',
       tip: 'Cloud Spanner Unified Database Studio: Granular 100-PU Sizer ($65.70/mo), Spanner Graph (ISO GQL) & Interleaved Schema Architect, ScaNN Vector Search & Hybrid GraphRAG, and 99.999% TrueTime Change Streams CDC',
-      icon: Database,
+      icon: GcpSpannerIcon,
     },
 
     // IV. Security, Incident SRE, FinOps, Logs & Docs
@@ -2698,14 +2716,14 @@ function CloudPulseCockpit() {
       label: 'Cloud SOC',
       isStar: true,
       tip: 'Wave 16 Next-Gen Autonomous Google Cloud SOC & SOAR War-Room ($0/mo SIEM Tax): Live cloudaudit MITRE ATT&CK Kill-Chains, 3-Vector Toxic Combinations Graph, @sha256 Supply-Chain & .json Key Disabler, $0/mo Active Canary Deception Grid, and Gemini 3.8/3.1 Incident Commander + Ed25519 Ledger',
-      icon: ShieldCheck,
+      icon: GcpSecurityIcon,
     },
     {
       id: 'SOVEREIGN_STUDIO',
       group: 'SECURITY_SRE',
       label: 'IAM',
       tip: 'Autonomous IAM Least-Privilege Surgeon (24h JIT CEL + Service Account Key & OAuth2 Token Kill-Switch), SHA-256 Merkle Drift Radar & Secret/KMS/WAF Vault',
-      icon: ShieldCheck,
+      icon: GcpSecurityIcon,
     },
     {
       id: 'AWS_AZURE_PARITY',
@@ -2735,14 +2753,14 @@ function CloudPulseCockpit() {
       group: 'OPS_DOCS',
       label: 'Finops',
       tip: 'Real-Time Cloud Monitoring Metrics, CPU/Memory/Network Telemetry Charts & FinOps Footprint',
-      icon: BarChart3,
+      icon: GcpBillingIcon,
     },
     {
       id: 'LOGS_SHELL',
       group: 'OPS_DOCS',
       label: 'Logs',
       tip: '2026 Neural Chrono-Log & Trace Studio (Drain3 Clustering, Trace Waterfall, NL-to-LQL, Log FinOps, DLP Shield & Cloud Shell)',
-      icon: Terminal,
+      icon: GcpLoggingIcon,
     },
     {
       id: 'RECYCLE_BIN',
@@ -2862,8 +2880,8 @@ function CloudPulseCockpit() {
                 title="CloudPulse 2026 — Return to Project Overview & Resource Control Center"
                 className="flex items-center gap-2 min-w-0 text-left bg-transparent border-none p-0 shadow-none cursor-pointer group"
               >
-                <div className="w-8 h-8 rounded bg-blue-600/10 dark:bg-blue-500/15 border border-blue-500/30 group-hover:border-blue-500/60 flex items-center justify-center shrink-0 transition-colors">
-                  <Cloud className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <div className="w-8 h-8 rounded bg-white dark:bg-[#131926] border border-zinc-200 dark:border-[#242c3f] group-hover:border-blue-500/60 flex items-center justify-center shrink-0 transition-colors shadow-2xs">
+                  <GcpLogoIcon className="w-5 h-5" />
                 </div>
                 <div className="hidden sm:block min-w-0">
                   <div className="flex items-center gap-1.5">

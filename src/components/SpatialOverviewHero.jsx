@@ -1,9 +1,5 @@
 import React from 'react';
 import {
-  Server,
-  Database,
-  ShieldCheck,
-  DollarSign,
   ArrowUpRight,
   PlusCircle,
   Search,
@@ -11,7 +7,14 @@ import {
   Activity,
   Cloud,
   Layers,
+  DollarSign,
 } from 'lucide-react';
+import {
+  GcpComputeEngineIcon,
+  GcpBigQueryIcon,
+  GcpSecurityIcon,
+  GcpBillingIcon,
+} from './GcpProductIcons';
 
 /**
  * 2026 Spatial Mission Control Hero for OVERVIEW.
@@ -42,7 +45,7 @@ export default function SpatialOverviewHero({
       id: 'VM_SSH',
       title: 'Compute & Global Edge',
       tagline: 'GCE VMs, IAP SSH, Cloud Run, GKE & VPC Firewalls',
-      icon: Server,
+      icon: GcpComputeEngineIcon,
       accent: 'from-blue-500/10 via-transparent to-transparent',
       iconColor: 'text-blue-600 dark:text-blue-400',
       metrics: `${vmCount} VMs · ${runCount} Cloud Run · ${vpcCount} VPCs`,
@@ -57,7 +60,7 @@ export default function SpatialOverviewHero({
       id: 'BIGQUERY_STUDIO',
       title: 'Data, Lakehouse & Gemini AI',
       tagline: 'BigQuery SQL & Lineage, AlloyDB, Managed Spark & Storage',
-      icon: Database,
+      icon: GcpBigQueryIcon,
       accent: 'from-emerald-500/10 via-transparent to-transparent',
       iconColor: 'text-emerald-600 dark:text-emerald-400',
       metrics: `${bucketCount} Buckets · Gemini 4 · Live Lineage`,
@@ -72,7 +75,7 @@ export default function SpatialOverviewHero({
       id: 'SRE_WAR_ROOM',
       title: 'SRE Reliability & Security',
       tagline: 'Live SLI/SLO Attainment, SCC v2 Vulnerabilities & IAM/PAM JIT',
-      icon: ShieldCheck,
+      icon: GcpSecurityIcon,
       accent: 'from-amber-500/10 via-transparent to-transparent',
       iconColor: 'text-amber-600 dark:text-amber-400',
       metrics: 'SLI/SLO Fuel Gauge · Zero-Org SCC · PAM JIT',
@@ -86,7 +89,7 @@ export default function SpatialOverviewHero({
       id: 'FINOPS',
       title: 'FinOps, Logging & Operations',
       tagline: 'Burn-Rate Guardian, Logging Spend Auditor & Idle-Zombie Executor',
-      icon: DollarSign,
+      icon: GcpBillingIcon,
       accent: 'from-sky-500/10 via-transparent to-transparent',
       iconColor: 'text-sky-600 dark:text-sky-400',
       metrics: `$${monthlyBurn.toFixed(2)}/mo Run-Rate · ${apiCount} Active APIs`,
