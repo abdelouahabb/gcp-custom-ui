@@ -26,6 +26,7 @@ export default function LoggingFinOpsAuditorPanel({
   const [applyingId, setApplyingId] = useState(null);
   const [data, setData] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
+  const [showSinksDrawer, setShowSinksDrawer] = useState(false);
   const chartRef = useRef(null);
   const chartInstanceRef = useRef(null);
 
@@ -198,16 +199,30 @@ export default function LoggingFinOpsAuditorPanel({
       {data && (
         <div className="space-y-4">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="rounded-lg border border-zinc-200 dark:border-[#1e2433] bg-zinc-50 dark:bg-[#0a0e17] p-3">
+            <button
+              type="button"
+              onClick={() => {
+                const next = days === 7 ? 14 : days === 14 ? 30 : 7;
+                setDays(next);
+                runAudit(next);
+              }}
+              className="text-left rounded-lg border border-zinc-200 dark:border-[#1e2433] hover:border-blue-500/50 bg-zinc-50 dark:bg-[#0a0e17] p-3 transition cursor-pointer"
+              title="Click to cycle lookback window (7d → 14d → 30d)"
+            >
               <div className="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
                 <Database className="w-3.5 h-3.5" /> Projected 30d Volume
               </div>
               <div className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">
                 {data.summary.projected30dGb} GiB
               </div>
-              <div className="text-[11px] text-zinc-500">Free tier: 50 GiB/mo</div>
-            </div>
-            <div className="rounded-lg border border-zinc-200 dark:border-[#1e2433] bg-zinc-50 dark:bg-[#0a0e17] p-3">
+              <div className="text-[11px] text-zinc-500">Free tier: 50 GiB/mo · Cycle {days}d</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => runAudit(days)}
+              className="text-left rounded-lg border border-zinc-200 dark:border-[#1e2433] hover:border-blue-500/50 bg-zinc-50 dark:bg-[#0a0e17] p-3 transition cursor-pointer"
+              title="Click to refresh live Cloud Logging cost estimate"
+            >
               <div className="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
                 <DollarSign className="w-3.5 h-3.5" /> Est. Monthly Bill
               </div>
@@ -217,8 +232,17 @@ export default function LoggingFinOpsAuditorPanel({
               <div className="text-[11px] text-zinc-500">
                 Billable: {data.summary.billable30dGb} GiB @ $0.50/GiB
               </div>
-            </div>
-            <div className="rounded-lg border border-zinc-200 dark:border-[#1e2433] bg-zinc-50 dark:bg-[#0a0e17] p-3">
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (onRunInShell) {
+                  onRunInShell(`gcloud logging read --project=${projectId} --limit=25`);
+                }
+              }}
+              className="text-left rounded-lg border border-zinc-200 dark:border-[#1e2433] hover:border-blue-500/50 bg-zinc-50 dark:bg-[#0a0e17] p-3 transition cursor-pointer"
+              title="Click to tail recent log entries in Cloud Shell"
+            >
               <div className="text-[11px] text-zinc-500 dark:text-zinc-400">
                 Window Entries ({data.days}d)
               </div>
@@ -226,21 +250,52 @@ export default function LoggingFinOpsAuditorPanel({
                 {Number(data.summary.totalEntriesWindow || 0).toLocaleString()}
               </div>
               <div className="text-[11px] text-zinc-500">
-                {data.summary.totalGbWindow} GiB ingested
+                {data.summary.totalGbWindow} GiB · Tail in Shell →
               </div>
-            </div>
-            <div className="rounded-lg border border-zinc-200 dark:border-[#1e2433] bg-zinc-50 dark:bg-[#0a0e17] p-3">
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowSinksDrawer((v) => !v)}
+              className={`text-left rounded-lg border p-3 transition cursor-pointer ${
+                showSinksDrawer
+                  ? 'border-amber-500 bg-amber-500/12'
+                  : 'border-zinc-200 dark:border-[#1e2433] hover:border-amber-500/60 bg-zinc-50 dark:bg-[#0a0e17]'
+              }`}
+              title="Click to inspect active Cloud Logging sinks and exclusion rules"
+            >
               <div className="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-                <Filter className="w-3.5 h-3.5" /> Sinks & Exclusions
+                <Filter className="w-3.5 h-3.5" /> Sinks &amp; Exclusions
               </div>
               <div className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">
                 {data.summary.activeSinks} sinks · {data.summary.activeExclusions} rules
               </div>
               <div className="text-[11px] text-zinc-500">
-                Buckets: {(data.buckets || []).length}
+                Buckets: {(data.buckets || []).length} · {showSinksDrawer ? 'Hide details' : 'Inspect →'}
               </div>
-            </div>
+            </button>
           </div>
+
+          {showSinksDrawer && (
+            <div className="rounded-lg border border-zinc-200 dark:border-[#1e2433] bg-zinc-50/70 dark:bg-[#080b12] p-3.5 space-y-2 cp-studio-enter">
+              <div className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                Active Cloud Logging Sinks ({(data.sinks || []).length})
+              </div>
+              {(data.sinks || []).map((sk) => (
+                <div
+                  key={sk.name}
+                  className="text-xs rounded-md border border-zinc-200 dark:border-[#1e2433] bg-white dark:bg-[#0d111a] p-2.5 flex flex-wrap items-center justify-between gap-2"
+                >
+                  <div>
+                    <span className="font-semibold text-zinc-900 dark:text-zinc-100">{sk.name}</span>
+                    <span className="text-zinc-500 ml-2">{sk.destination}</span>
+                  </div>
+                  <span className="text-[11px] text-zinc-500">
+                    {(sk.exclusions || []).length} exclusion{(sk.exclusions || []).length === 1 ? '' : 's'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
 
           {data.dailySeries?.length > 0 && (
             <div className="rounded-lg border border-zinc-200 dark:border-[#1e2433] p-3 bg-zinc-50/50 dark:bg-[#080b12]">

@@ -109,38 +109,59 @@ export default function IamPamGovernancePanel({
       {data && (
         <div className="space-y-4">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="rounded-lg border border-zinc-200 dark:border-[#1e2433] bg-zinc-50 dark:bg-[#0a0e17] p-3">
-              <div className="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-                <UserCheck className="w-3.5 h-3.5" /> Standing High-Priv
-              </div>
-              <div className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">
-                {data.summary.standingPrivilegedCount}
-              </div>
-            </div>
-            <div className="rounded-lg border border-zinc-200 dark:border-[#1e2433] bg-zinc-50 dark:bg-[#0a0e17] p-3">
-              <div className="text-[11px] text-zinc-500 dark:text-zinc-400">IAM Recommender</div>
-              <div className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">
-                {data.summary.recommenderFindings}
-              </div>
-              <div className="text-[11px] text-zinc-500">{data.apiStatus?.iamRecommender}</div>
-            </div>
-            <div className="rounded-lg border border-zinc-200 dark:border-[#1e2433] bg-zinc-50 dark:bg-[#0a0e17] p-3">
-              <div className="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-                <KeyRound className="w-3.5 h-3.5" /> Stale SA Keys (&gt;90d)
-              </div>
-              <div className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">
-                {data.summary.staleKeysOver90d} / {data.summary.userManagedKeys}
-              </div>
-            </div>
-            <div className="rounded-lg border border-zinc-200 dark:border-[#1e2433] bg-zinc-50 dark:bg-[#0a0e17] p-3">
-              <div className="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5" /> PAM JIT Entitlements
-              </div>
-              <div className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">
-                {data.summary.pamEntitlementsCount}
-              </div>
-              <div className="text-[11px] text-zinc-500">{data.apiStatus?.pamEntitlements}</div>
-            </div>
+            {[
+              {
+                id: 'STANDING',
+                label: 'Standing High-Priv',
+                icon: UserCheck,
+                value: data.summary.standingPrivilegedCount,
+                sub: 'Click to inspect bindings',
+              },
+              {
+                id: 'RECOMMENDER',
+                label: 'IAM Recommender',
+                icon: ShieldCheck,
+                value: data.summary.recommenderFindings,
+                sub: data.apiStatus?.iamRecommender,
+              },
+              {
+                id: 'KEYS',
+                label: 'Stale SA Keys (>90d)',
+                icon: KeyRound,
+                value: `${data.summary.staleKeysOver90d} / ${data.summary.userManagedKeys}`,
+                sub: 'Click to inspect keys',
+              },
+              {
+                id: 'PAM',
+                label: 'PAM JIT Entitlements',
+                icon: Clock,
+                value: data.summary.pamEntitlementsCount,
+                sub: data.apiStatus?.pamEntitlements,
+              },
+            ].map((card) => {
+              const Icon = card.icon;
+              const active = activeSubTab === card.id;
+              return (
+                <button
+                  key={card.id}
+                  type="button"
+                  onClick={() => setActiveSubTab(card.id)}
+                  className={`text-left rounded-lg border p-3 transition cursor-pointer ${
+                    active
+                      ? 'border-amber-500 bg-amber-500/12'
+                      : 'border-zinc-200 dark:border-[#1e2433] bg-zinc-50 dark:bg-[#0a0e17] hover:border-zinc-300 dark:hover:border-[#2c364d]'
+                  }`}
+                >
+                  <div className="text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                    <Icon className="w-3.5 h-3.5" /> {card.label}
+                  </div>
+                  <div className="text-lg font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">
+                    {card.value}
+                  </div>
+                  <div className="text-[11px] text-zinc-500">{card.sub}</div>
+                </button>
+              );
+            })}
           </div>
 
           <MermaidArchitectureDiagram

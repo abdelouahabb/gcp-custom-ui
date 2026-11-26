@@ -110,6 +110,7 @@ export default function SreSliSloCockpitPanel({
   const [advising, setAdvising] = useState(false);
   const [data, setData] = useState(null);
   const [advice, setAdvice] = useState(null);
+  const [onlyBreachedServices, setOnlyBreachedServices] = useState(false);
   const chartRef = useRef(null);
   const chartInstanceRef = useRef(null);
 
@@ -332,10 +333,19 @@ export default function SreSliSloCockpitPanel({
         </div>
       )}
 
-      {/* Row 1: 3-Card Plain-English SRE Translation + Live Fuel Gauge */}
+      {/* Row 1: 3-Card Interactive Plain-English SRE Translation + Live Fuel Gauge */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="rounded-xl border border-zinc-200 dark:border-[#1e2433] bg-white dark:bg-[#0d111a] p-5 shadow-2xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-xs font-medium text-zinc-500 dark:text-zinc-400">
+        <button
+          type="button"
+          onClick={() => setOnlyBreachedServices((v) => !v)}
+          title="Click to toggle filtering per-service scorecards (All Services vs. Breached/Erroring Only)"
+          className={`text-left rounded-xl border p-5 shadow-2xs flex flex-col justify-between transition cursor-pointer ${
+            onlyBreachedServices
+              ? 'border-amber-500 bg-amber-500/10'
+              : 'border-zinc-200 dark:border-[#1e2433] bg-white dark:bg-[#0d111a] hover:border-blue-500/50'
+          }`}
+        >
+          <div className="flex items-center justify-between text-xs font-medium text-zinc-500 dark:text-zinc-400 w-full">
             <span>Live Performance (SLI)</span>
             <span
               className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
@@ -350,16 +360,30 @@ export default function SreSliSloCockpitPanel({
           <div className="mt-2 text-3xl font-bold text-zinc-900 dark:text-zinc-50 tabular-nums">
             {overall.sliPercent.toFixed(2)}%
           </div>
-          <div className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">
-            {overall.goodEvents.toLocaleString()} succeeded ·{' '}
-            <span className={overall.errorEvents > 0 ? 'font-semibold text-red-600 dark:text-red-400' : ''}>
-              {overall.errorEvents.toLocaleString()} error{overall.errorEvents === 1 ? '' : 's'}
+          <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400 w-full">
+            <span>
+              {overall.goodEvents.toLocaleString()} succeeded ·{' '}
+              <span className={overall.errorEvents > 0 ? 'font-semibold text-red-600 dark:text-red-400' : ''}>
+                {overall.errorEvents.toLocaleString()} error{overall.errorEvents === 1 ? '' : 's'}
+              </span>
+            </span>
+            <span className="text-[11px] font-medium text-blue-600 dark:text-blue-400">
+              {onlyBreachedServices ? 'Showing errors only' : 'Click to filter'}
             </span>
           </div>
-        </div>
+        </button>
 
-        <div className="rounded-xl border border-zinc-200 dark:border-[#1e2433] bg-white dark:bg-[#0d111a] p-5 shadow-2xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-xs font-medium text-zinc-500 dark:text-zinc-400">
+        <button
+          type="button"
+          onClick={() => {
+            const idx = PROMISE_TIERS.findIndex((t) => t.slo === targetSlo);
+            const nextTier = PROMISE_TIERS[(idx + 1) % PROMISE_TIERS.length];
+            setTargetSlo(nextTier.slo);
+          }}
+          title="Click to cycle SLO Promise Tier (99.0% → 99.5% → 99.9% → 99.95%)"
+          className="text-left rounded-xl border border-zinc-200 dark:border-[#1e2433] hover:border-amber-500/60 bg-white dark:bg-[#0d111a] p-5 shadow-2xs flex flex-col justify-between transition cursor-pointer"
+        >
+          <div className="flex items-center justify-between text-xs font-medium text-zinc-500 dark:text-zinc-400 w-full">
             <span>Allowed Downtime (SLO)</span>
             <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 text-[10px] font-semibold">
               {selectedTier.name} · {selectedTier.label}
@@ -368,13 +392,22 @@ export default function SreSliSloCockpitPanel({
           <div className="mt-2 text-3xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">
             {formatAllowedDowntime(selectedTier.slo, hours).short}
           </div>
-          <div className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">
-            {formatAllowedDowntime(selectedTier.slo, hours).long}
+          <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400 w-full">
+            <span>{formatAllowedDowntime(selectedTier.slo, hours).long}</span>
+            <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
+              Cycle tier →
+            </span>
           </div>
-        </div>
+        </button>
 
-        <div className="rounded-xl border border-zinc-200 dark:border-[#1e2433] bg-white dark:bg-[#0d111a] p-5 shadow-2xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-xs font-medium text-zinc-500 dark:text-zinc-400">
+        <button
+          type="button"
+          disabled={advising || !data}
+          onClick={handleAskAdvisor}
+          title="Click to run Vertex AI (gemini-4-neon) Ship vs. Stabilize Advisor"
+          className="text-left rounded-xl border border-zinc-200 dark:border-[#1e2433] hover:border-blue-500/60 bg-white dark:bg-[#0d111a] p-5 shadow-2xs flex flex-col justify-between transition cursor-pointer disabled:opacity-60"
+        >
+          <div className="flex items-center justify-between text-xs font-medium text-zinc-500 dark:text-zinc-400 w-full">
             <span>Safety Cushion (Error Budget)</span>
             <span
               className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
@@ -392,7 +425,7 @@ export default function SreSliSloCockpitPanel({
                   : 'Stabilize First'}
             </span>
           </div>
-          <div className="mt-2 flex items-baseline justify-between gap-2">
+          <div className="mt-2 flex items-baseline justify-between gap-2 w-full">
             <span className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 tabular-nums">
               {overallCushion.isOverBudget
                 ? `${overallCushion.burnMultiplier}x over`
@@ -418,16 +451,16 @@ export default function SreSliSloCockpitPanel({
               }}
             />
           </div>
-          <div className="mt-1.5 flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400">
+          <div className="mt-1.5 flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400 w-full">
             <span className="inline-flex items-center gap-1">
               <Flame className="w-3 h-3" /> 1h: {burnRates.h1Burn}x · 6h: {burnRates.h6Burn}x
             </span>
-            <span className="inline-flex items-center gap-1">
+            <span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 font-medium">
               <Clock className="w-3 h-3" />{' '}
-              {burnRates.daysToExhaust ? `~${burnRates.daysToExhaust}d runway` : 'Infinite runway'}
+              {burnRates.daysToExhaust ? `~${burnRates.daysToExhaust}d` : 'Ask AI Verdict →'}
             </span>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Row 2: Interactive Uptime Promise Simulator + Actions */}
@@ -596,7 +629,9 @@ export default function SreSliSloCockpitPanel({
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {(data?.services || []).map((svc) => {
+            {(data?.services || [])
+              .filter((svc) => !onlyBreachedServices || svc.errorEvents > 0 || svc.sliPercent < targetSlo)
+              .map((svc) => {
               const cushion = computeCushion(
                 svc.sliPercent,
                 targetSlo,

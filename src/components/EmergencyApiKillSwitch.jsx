@@ -135,6 +135,9 @@ export default function EmergencyApiKillSwitch({
   const [loadingQuotas, setLoadingQuotas] = useState(false);
   const [copiedQuotaId, setCopiedQuotaId] = useState(null);
   const [showAllQuotas, setShowAllQuotas] = useState(false);
+  const [telemetryDrawerOpen, setTelemetryDrawerOpen] = useState(false);
+  const [quotaStatusFilter, setQuotaStatusFilter] = useState('ALL');
+  const [selectedQuotaId, setSelectedQuotaId] = useState(null);
 
   // Sync when parent overview updates enabledApis
   useEffect(() => {
@@ -1661,85 +1664,225 @@ export default function EmergencyApiKillSwitch({
           </div>
         </div>
 
-        {/* Live 24h Cloud Monitoring serviceruntime.googleapis.com/api/request_count & HTTP 429 Telemetry Bar */}
+        {/* Interactive Live 24h Cloud Monitoring serviceruntime.googleapis.com/api/request_count & HTTP 429 Telemetry Bar */}
         {quotaRadar?.liveTraffic24h && (
-          <div className="p-3 rounded-lg bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1 font-extrabold text-zinc-800 dark:text-zinc-200">
-                <Activity className="w-3.5 h-3.5 text-blue-500" />
-                <span>24h Cloud Monitoring API Runtime Telemetry:</span>
-              </span>
-              <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 font-bold">
-                {(quotaRadar.liveTraffic24h.totalRequests24h || 0).toLocaleString()} API Calls (24h)
-              </span>
-              <span
-                className={`px-2 py-0.5 rounded font-extrabold ${
-                  quotaRadar.liveTraffic24h.total429Count24h > 0
-                    ? 'bg-red-600 text-white'
-                    : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                }`}
-              >
-                {quotaRadar.liveTraffic24h.total429Count24h || 0} HTTP 429 Throttled (24h)
-              </span>
-              <span className="text-zinc-500">
-                4xx/5xx Errors: {quotaRadar.liveTraffic24h.totalError4xx5xx24h || 0}
-              </span>
+          <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-900/90 border border-zinc-200 dark:border-zinc-800 space-y-3 text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setTelemetryDrawerOpen((v) => !v)}
+                  className="inline-flex items-center gap-1.5 font-semibold text-zinc-800 dark:text-zinc-200 hover:text-blue-600 dark:hover:text-blue-400 transition cursor-pointer"
+                  title="Click to expand per-service 24h API Runtime breakdown"
+                >
+                  <Activity className="w-4 h-4 text-blue-500" />
+                  <span>24h Cloud Monitoring API Runtime Telemetry</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTelemetryDrawerOpen((v) => !v)}
+                  className={`px-2.5 py-1 rounded-md border text-xs font-semibold transition cursor-pointer ${
+                    telemetryDrawerOpen
+                      ? 'bg-amber-500 text-zinc-950 border-amber-500'
+                      : 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/25'
+                  }`}
+                  title="Inspect live 24h API call breakdown by service"
+                >
+                  {(quotaRadar.liveTraffic24h.totalRequests24h || 0).toLocaleString()} API Calls (24h)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuotaStatusFilter((prev) => (prev === 'AT_RISK' ? 'ALL' : 'AT_RISK'));
+                    if (onRunInShell && quotaRadar.liveTraffic24h.total429Count24h > 0) {
+                      onRunInShell(
+                        `gcloud logging read 'httpRequest.status=429 OR protoPayload.status.code=8' --project=${projectId} --limit=20`
+                      );
+                    }
+                  }}
+                  className={`px-2.5 py-1 rounded-md border text-xs font-semibold transition cursor-pointer ${
+                    quotaStatusFilter === 'AT_RISK'
+                      ? 'bg-amber-500 text-zinc-950 border-amber-500'
+                      : quotaRadar.liveTraffic24h.total429Count24h > 0
+                      ? 'bg-red-600 hover:bg-red-700 text-white border-red-600'
+                      : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                  }`}
+                  title="Click to filter high-utilization quotas (or tail HTTP 429 logs when throttled)"
+                >
+                  {quotaRadar.liveTraffic24h.total429Count24h || 0} HTTP 429 Throttled (24h)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onRunInShell) {
+                      onRunInShell(
+                        `gcloud logging read 'severity>=ERROR' --project=${projectId} --limit=25`
+                      );
+                    } else if (onNavigateTab) {
+                      onNavigateTab('LOGS_SHELL');
+                    }
+                  }}
+                  className="px-2.5 py-1 rounded-md border border-zinc-200 dark:border-zinc-700 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800/80 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-xs font-medium transition cursor-pointer"
+                  title="Click to tail 4xx/5xx & ERROR logs in Cloud Shell"
+                >
+                  4xx/5xx Errors: <strong>{quotaRadar.liveTraffic24h.totalError4xx5xx24h || 0}</strong> →
+                </button>
+              </div>
+
+              {Array.isArray(quotaRadar.liveTraffic24h.topServices) &&
+                quotaRadar.liveTraffic24h.topServices.length > 0 && (
+                  <div className="flex items-center gap-1.5 flex-wrap text-xs text-zinc-500">
+                    <span>Top Active:</span>
+                    {quotaRadar.liveTraffic24h.topServices.slice(0, 4).map((st) => {
+                      const shortSvc = st.service.replace('.googleapis.com', '');
+                      const isFiltered = searchQuery.toLowerCase() === shortSvc.toLowerCase();
+                      return (
+                        <button
+                          key={st.service}
+                          type="button"
+                          onClick={() => {
+                            setSearchQuery(isFiltered ? '' : shortSvc);
+                            setTelemetryDrawerOpen(true);
+                            if (onShowToast) {
+                              onShowToast(
+                                isFiltered
+                                  ? 'Cleared API service filter.'
+                                  : `Filtered Enabled APIs to "${shortSvc}" (${st.totalRequests24h.toLocaleString()} calls/24h).`
+                              );
+                            }
+                          }}
+                          className={`px-2 py-0.5 rounded-md border text-xs font-medium transition cursor-pointer ${
+                            isFiltered
+                              ? 'bg-amber-500 text-zinc-950 border-amber-500 font-semibold'
+                              : 'bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200'
+                          }`}
+                          title={`Click to filter APIs & inspect 24h telemetry for ${st.service}`}
+                        >
+                          {shortSvc}: {st.totalRequests24h.toLocaleString()}
+                          {st.http429Count24h > 0 ? ` (${st.http429Count24h} 429s)` : ''}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
             </div>
-            {Array.isArray(quotaRadar.liveTraffic24h.topServices) &&
-              quotaRadar.liveTraffic24h.topServices.length > 0 && (
-                <div className="flex items-center gap-1.5 flex-wrap text-[10px] text-zinc-500">
-                  <span>Top Active:</span>
-                  {quotaRadar.liveTraffic24h.topServices.slice(0, 3).map((st) => (
-                    <span
-                      key={st.service}
-                      className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+
+            {/* Expandable Interactive Per-Service 24h Telemetry Drawer */}
+            {telemetryDrawerOpen && Array.isArray(quotaRadar.liveTraffic24h.topServices) && (
+              <div className="pt-3 border-t border-zinc-200/80 dark:border-zinc-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 cp-studio-enter">
+                {quotaRadar.liveTraffic24h.topServices.slice(0, 6).map((st) => {
+                  const shortSvc = st.service.replace('.googleapis.com', '');
+                  return (
+                    <div
+                      key={`drawer-${st.service}`}
+                      className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-[#0b0f18] p-3 flex items-center justify-between gap-2"
                     >
-                      {st.service.replace('.googleapis.com', '')}:{' '}
-                      {st.totalRequests24h.toLocaleString()}
-                      {st.http429Count24h > 0 ? ` (${st.http429Count24h} 429s)` : ''}
-                    </span>
-                  ))}
-                </div>
-              )}
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                          {shortSvc}
+                        </div>
+                        <div className="text-[11px] text-zinc-500">
+                          {st.totalRequests24h.toLocaleString()} calls · {st.http429Count24h || 0} 429s
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setSearchQuery(shortSvc)}
+                          className="px-2 py-1 rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-[11px] font-medium text-zinc-700 dark:text-zinc-200 hover:border-amber-500 cursor-pointer"
+                        >
+                          Filter
+                        </button>
+                        {onRunInShell && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onRunInShell(
+                                `gcloud logging read 'protoPayload.serviceName="${st.service}"' --project=${projectId} --limit=15`
+                              )
+                            }
+                            className="p-1.5 rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 hover:text-blue-500 cursor-pointer"
+                            title={`Tail recent ${st.service} audit logs in Cloud Shell`}
+                          >
+                            <Terminal className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
         {Array.isArray(quotaRadar?.quotas) && quotaRadar.quotas.length > 0 && (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-              {(showAllQuotas
-                ? quotaRadar.quotas
-                : quotaRadar.quotas.slice(0, 9)
-              ).map((q) => {
+            {quotaStatusFilter === 'AT_RISK' && (
+              <div className="flex items-center justify-between text-xs text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">
+                <span>Filtering to elevated / high-utilization quotas (≥50%).</span>
+                <button
+                  type="button"
+                  onClick={() => setQuotaStatusFilter('ALL')}
+                  className="font-semibold underline cursor-pointer"
+                >
+                  Show All Quotas
+                </button>
+              </div>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {(() => {
+                const filtered =
+                  quotaStatusFilter === 'AT_RISK'
+                    ? quotaRadar.quotas.filter((q) => q.utilizationPct >= 50 || q.status !== 'HEALTHY')
+                    : quotaRadar.quotas;
+                const list = showAllQuotas ? filtered : filtered.slice(0, 9);
+                return list;
+              })().map((q) => {
                 const isCrit = q.status === 'CRITICAL_429_RISK';
                 const isWarn = q.status === 'ELEVATED_WARNING';
+                const isSelected = selectedQuotaId === q.id;
                 return (
                   <div
                     key={q.id}
-                    className={`p-3 rounded-lg border space-y-2 ${
-                      isCrit
-                        ? 'bg-red-500/10 border-red-500/40'
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setSelectedQuotaId(isSelected ? null : q.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setSelectedQuotaId(isSelected ? null : q.id);
+                      }
+                    }}
+                    className={`p-3.5 rounded-xl border space-y-2.5 transition-all cursor-pointer ${
+                      isSelected
+                        ? 'border-amber-500 bg-amber-500/10 shadow-sm'
+                        : isCrit
+                        ? 'bg-red-500/10 border-red-500/40 hover:border-red-500'
                         : isWarn
-                        ? 'bg-amber-500/10 border-amber-500/40'
-                        : 'bg-white dark:bg-zinc-900/80 border-zinc-200 dark:border-zinc-800'
+                        ? 'bg-amber-500/10 border-amber-500/40 hover:border-amber-500'
+                        : 'bg-white dark:bg-zinc-900/80 border-zinc-200 dark:border-zinc-800 hover:border-blue-500/50'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="text-[11px] font-mono font-extrabold text-zinc-900 dark:text-zinc-100 truncate">
+                        <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
                           {q.metric}
                         </div>
-                        <div className="text-[10px] font-mono text-zinc-500 truncate">
+                        <div className="text-[11px] text-zinc-500 truncate">
                           {q.serviceLabel}
                         </div>
                       </div>
                       <span
-                        className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold shrink-0 ${
+                        className={`px-2 py-0.5 rounded-full text-[11px] font-bold shrink-0 ${
                           isCrit
                             ? 'bg-red-600 text-white'
                             : isWarn
-                            ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                            : 'bg-emerald-500/15 text-emerald-500'
+                            ? 'bg-amber-500/20 text-amber-500 border border-amber-500/40'
+                            : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
                         }`}
                       >
                         {q.utilizationPct}%
@@ -1762,16 +1905,16 @@ export default function EmergencyApiKillSwitch({
                       />
                     </div>
 
-                    <div className="flex items-center justify-between gap-2 text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
+                    <div className="flex items-center justify-between gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
                       <span>
                         Usage: <strong>{q.usage}</strong> / {q.limit} {q.unit}
                       </span>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                         {onRunInShell && q.cliIncreaseCmd && (
                           <button
                             type="button"
                             onClick={() => onRunInShell(q.cliIncreaseCmd)}
-                            className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:underline font-bold cursor-pointer"
+                            className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 hover:underline font-semibold cursor-pointer"
                             title="Execute quota inspection / increase CLI directly in Cloud Shell"
                           >
                             <Terminal className="w-3 h-3" />
@@ -1788,12 +1931,43 @@ export default function EmergencyApiKillSwitch({
                             }
                             setTimeout(() => setCopiedQuotaId(null), 1800);
                           }}
-                          className="text-blue-600 dark:text-blue-400 hover:underline font-bold cursor-pointer"
+                          className="text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer"
                         >
-                          {copiedQuotaId === q.id ? '✓ Copied CLI' : 'Copy CLI'}
+                          {copiedQuotaId === q.id ? 'Copied' : 'Copy CLI'}
                         </button>
                       </div>
                     </div>
+
+                    {isSelected && q.cliIncreaseCmd && (
+                      <div
+                        className="pt-2 border-t border-zinc-200/80 dark:border-zinc-800 space-y-2 cp-studio-enter"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <pre className="p-2 rounded bg-zinc-100 dark:bg-[#070a11] text-[11px] font-mono text-zinc-800 dark:text-zinc-200 overflow-x-auto whitespace-pre-wrap break-all">
+                          <code>{q.cliIncreaseCmd}</code>
+                        </pre>
+                        <div className="flex items-center justify-end gap-2">
+                          {onNavigateTab && (
+                            <button
+                              type="button"
+                              onClick={() => onNavigateTab('STARTUP_10X')}
+                              className="px-2.5 py-1 rounded-md border border-zinc-200 dark:border-zinc-700 text-[11px] font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                            >
+                              Draft Quota Increase
+                            </button>
+                          )}
+                          {onRunInShell && (
+                            <button
+                              type="button"
+                              onClick={() => onRunInShell(q.cliIncreaseCmd)}
+                              className="px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-medium cursor-pointer"
+                            >
+                              Run in Shell
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
