@@ -424,6 +424,8 @@ export default function AlloyDbMasteryStudio({
   const [expressDbVersion, setExpressDbVersion] = useState('POSTGRES_18');
   const [expressPublicDns, setExpressPublicDns] = useState(true);
   const [expressPscEnabled, setExpressPscEnabled] = useState(true);
+  const [showCreateClusterDrawer, setShowCreateClusterDrawer] = useState(false);
+  const [showAlloyOpsHistory, setShowAlloyOpsHistory] = useState(false);
   const [starterStack, setStarterStack] = useState('NEXTJS_CLOUDRUN'); // NODE_PG | PYTHON_FASTAPI | NEXTJS_CLOUDRUN
 
   // Pillar 2: Zero Lock-in & Omni State
@@ -2017,95 +2019,123 @@ GROUP BY 1 ORDER BY turns DESC;`;
       </div>
 
       {/* =================================================================
-          PILLAR 1: ALLOYDB EXPRESS QUICKSTART & LIVE FLEET (Topics 9 & 10)
+          ALWAYS-VISIBLE LIVE ALLOYDB CLUSTERS FIRST (CONSOLE-GRADE)
          ================================================================= */}
-      {activePillar === 'EXPRESS_QUICKSTART' && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Left: 1-Click Live AlloyDB Express Provisioner */}
-            <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#10141d] space-y-3.5">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Rocket className="w-4 h-4 text-amber-500" />
-                  <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-                    Zero to Running in Minutes: Live AlloyDB Express Provisioner
-                  </h3>
-                </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
-                  1 vCPU · 4 GB RAM · Scale-to-Zero
-                </span>
-              </div>
-              <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                Creates a real <strong className="text-zinc-900 dark:text-zinc-200">AlloyDB Express</strong> cluster via{' '}
-                <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">alloydb.googleapis.com/v1beta</code>{' '}
-                with <code className="px-1 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 font-mono text-[0.92em]">expressConfig.enabled=true</code>, auto-scaling storage up to 20 GB, and a 1-click in-place upgrade path to 288-vCPU Enterprise AlloyDB.
-              </p>
+      <section className="p-4 sm:p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#10141d] space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Server className="w-4 h-4 text-blue-500" />
+            <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
+              Live AlloyDB Clusters ({overview?.clusters?.length || 0})
+            </h3>
+            <span className="text-[11px] font-mono text-zinc-500">
+              {projectId} · locations/-/clusters
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={loading}
+              onClick={fetchOverview}
+              className="px-2.5 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-200 inline-flex items-center gap-1.5 cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+              <span>Refresh</span>
+            </button>
+            <a
+              href={`https://console.cloud.google.com/alloydb/clusters?project=${encodeURIComponent(projectId)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="px-2.5 py-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-xs font-semibold text-blue-700 dark:text-blue-300 inline-flex items-center gap-1"
+            >
+              <span>GCP Console</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </a>
+            <button
+              type="button"
+              onClick={() => setShowCreateClusterDrawer((v) => !v)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer transition-colors ${
+                showCreateClusterDrawer
+                  ? "border border-amber-500 bg-amber-500/15 text-amber-800 dark:text-amber-200"
+                  : "bg-blue-600 hover:bg-blue-500 text-white"
+              }`}
+            >
+              <PlusCircle className="w-3.5 h-3.5" />
+              <span>{showCreateClusterDrawer ? "Close Create Drawer" : "+ Create AlloyDB Express Cluster"}</span>
+            </button>
+          </div>
+        </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-mono text-zinc-500 dark:text-zinc-400 mb-1">
-                    Cluster ID
-                  </label>
+        {/* Collapsible Express Cluster Provisioner Drawer */}
+        {showCreateClusterDrawer && (
+          <div className="p-4 rounded-xl border border-blue-500/30 bg-blue-500/[0.04] space-y-3.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Rocket className="w-4 h-4 text-amber-500" />
+                <h4 className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                  Create New AlloyDB Express Cluster (PostgreSQL 18 · Scale-to-Zero)
+                </h4>
+              </div>
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                1 vCPU · 4 GB RAM · Auto-Storage up to 20 GB
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-500 dark:text-zinc-400 mb-1">
+                  Cluster ID
+                </label>
+                <input
+                  type="text"
+                  value={expressClusterId}
+                  onChange={(e) => setExpressClusterId(e.target.value)}
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-500 dark:text-zinc-400 mb-1">
+                  PostgreSQL Engine Version
+                </label>
+                <select
+                  value={expressDbVersion}
+                  onChange={(e) => setExpressDbVersion(e.target.value)}
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                >
+                  <option value="POSTGRES_18">POSTGRES_18 (Express Default)</option>
+                  <option value="POSTGRES_17">POSTGRES_17</option>
+                  <option value="POSTGRES_16">POSTGRES_16</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-500 dark:text-zinc-400 mb-1">
+                  Region
+                </label>
+                <select
+                  value={expressRegion}
+                  onChange={(e) => setExpressRegion(e.target.value)}
+                  className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                >
+                  {ALLOYDB_EXPRESS_REGIONS.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 p-2.5 rounded-lg bg-white/80 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800 text-xs">
+              <div className="flex flex-wrap items-center gap-4">
+                <label className="inline-flex items-center gap-2 cursor-pointer text-zinc-700 dark:text-zinc-300">
                   <input
-                    type="text"
-                    value={expressClusterId}
-                    onChange={(e) => setExpressClusterId(e.target.value)}
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                    type="checkbox"
+                    checked={expressPscEnabled}
+                    onChange={(e) => setExpressPscEnabled(e.target.checked)}
+                    className="rounded border-zinc-400"
                   />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-mono text-zinc-500 dark:text-zinc-400 mb-1">
-                    PostgreSQL Engine Version
-                  </label>
-                  <select
-                    value={expressDbVersion}
-                    onChange={(e) => setExpressDbVersion(e.target.value)}
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
-                  >
-                    <option value="POSTGRES_18">POSTGRES_18 (Express Default)</option>
-                    <option value="POSTGRES_17">POSTGRES_17</option>
-                    <option value="POSTGRES_16">POSTGRES_16</option>
-                  </select>
-                </div>
-                <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-mono text-zinc-500 dark:text-zinc-400 mb-1">
-                    Region (C4A-capable regions support 1-vCPU in-place Enterprise upgrade)
-                  </label>
-                  <select
-                    value={expressRegion}
-                    onChange={(e) => setExpressRegion(e.target.value)}
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
-                  >
-                    {ALLOYDB_EXPRESS_REGIONS.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-2 p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800 text-xs">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <label className="inline-flex items-center gap-2 cursor-pointer text-zinc-700 dark:text-zinc-300">
-                    <input
-                      type="checkbox"
-                      checked={expressPscEnabled}
-                      onChange={(e) => setExpressPscEnabled(e.target.checked)}
-                      className="rounded border-zinc-400"
-                    />
-                    <span>Enable Private Service Connect (<code className="font-mono text-[11px]">--enable-private-service-connect</code>, zero VPC peering)</span>
-                  </label>
-                  {selectedExpressRegionMeta?.c4aReady ? (
-                    <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                      C4A 1-vCPU Upgrade Ready
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400">
-                      Resize to 2 vCPU before upgrade
-                    </span>
-                  )}
-                </div>
+                  <span>Private Service Connect (<code className="font-mono text-[11px]">zero VPC peering</code>)</span>
+                </label>
                 <label className="inline-flex items-center gap-2 cursor-pointer text-zinc-700 dark:text-zinc-300">
                   <input
                     type="checkbox"
@@ -2113,522 +2143,490 @@ GROUP BY 1 ORDER BY turns DESC;`;
                     onChange={(e) => setExpressPublicDns(e.target.checked)}
                     className="rounded border-zinc-400"
                   />
-                  <span>Enable Public DNS on Primary Instance for instant laptop / Cloud Run prototyping</span>
+                  <span>Public DNS on Primary Instance</span>
                 </label>
               </div>
-
-              {(() => {
-                const normalizedId = String(expressClusterId || '').trim().toLowerCase();
-                const existingMatch = (overview?.clusters || []).find(
-                  (c) =>
-                    String(c.clusterId || '').toLowerCase() === normalizedId &&
-                    String(c.location || '') === expressRegion
-                );
-                const suggestNextId = () => {
-                  const base = (normalizedId || 'alloydb-express-app').replace(/-\d+$/, '');
-                  const existingSet = new Set(
-                    (overview?.clusters || [])
-                      .filter((c) => String(c.location || '') === expressRegion)
-                      .map((c) => String(c.clusterId || '').toLowerCase())
-                  );
-                  let n = 2;
-                  while (existingSet.has(`${base}-${n}`) && n < 100) n += 1;
-                  return `${base}-${n}`;
-                };
-                const suggestedId = existingMatch ? suggestNextId() : '';
-                return (
-                  <>
-                    {existingMatch && (
-                      <div className="p-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200 text-xs flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-                          <span>
-                            Cluster <code className="font-mono font-bold">{existingMatch.clusterId}</code> already exists in{' '}
-                            <code className="font-mono">{expressRegion}</code> ({existingMatch.state}). Pick a new ID to create another cluster, or click Step 2 to add a Primary Instance.
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setExpressClusterId(suggestedId)}
-                          className="px-2.5 py-1 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold text-[11px] shrink-0 cursor-pointer"
-                        >
-                          Use "{suggestedId}"
-                        </button>
-                      </div>
-                    )}
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        disabled={busyKey === 'CREATE_EXPRESS' || Boolean(existingMatch) || !normalizedId}
-                        onClick={() =>
-                          executeAlloyAction(
-                            {
-                              action: 'CREATE_EXPRESS_CLUSTER',
-                              region: expressRegion,
-                              clusterId: expressClusterId,
-                              databaseVersion: expressDbVersion,
-                              pscEnabled: expressPscEnabled,
-                            },
-                            'CREATE_EXPRESS'
-                          )
-                        }
-                        title={
-                          existingMatch
-                            ? `Cluster "${existingMatch.clusterId}" already exists in ${expressRegion}. Pick a unique Cluster ID first.`
-                            : 'Create a new live AlloyDB Express cluster'
-                        }
-                        className="flex-1 py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <PlusCircle className="w-3.5 h-3.5" />
-                        {busyKey === 'CREATE_EXPRESS'
-                          ? 'Dispatching Express Cluster...'
-                          : existingMatch
-                          ? 'Cluster ID Already Exists — Pick a New ID'
-                          : '1. Create Live AlloyDB Express Cluster'}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busyKey === 'CREATE_EXPRESS_INST'}
-                        onClick={() =>
-                          executeAlloyAction(
-                            {
-                              action: 'CREATE_EXPRESS_PRIMARY_INSTANCE',
-                              region: expressRegion,
-                              clusterId: expressClusterId,
-                              instanceId: `${expressClusterId}-primary`,
-                              publicDnsEnabled: expressPublicDns,
-                            },
-                            'CREATE_EXPRESS_INST'
-                          )
-                        }
-                        className="py-2 px-3 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
-                      >
-                        <Server className="w-3.5 h-3.5" />
-                        2. Add 1-vCPU Primary
-                      </button>
-                    </div>
-                  </>
-                );
-              })()}
-
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10.5px] font-mono font-bold uppercase text-zinc-500 dark:text-zinc-400">
-                    Equivalent gcloud beta CLI (Create + Upgrade)
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    {typeof onRunInShell === 'function' && (
-                      <button
-                        type="button"
-                        onClick={() => onRunInShell(expressGcloudSnippet.split('\n\n')[0])}
-                        className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
-                      >
-                        <Terminal className="w-3 h-3" />
-                        Run in Shell
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => copyText(expressGcloudSnippet, 'express-cli', 'AlloyDB Express CLI')}
-                      className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
-                    >
-                      {copiedKey === 'express-cli' ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
-                      Copy
-                    </button>
-                  </div>
-                </div>
-                <pre className="p-3 rounded-lg bg-zinc-950 text-emerald-300 font-mono text-[10.5px] overflow-x-auto whitespace-pre-wrap">
-                  {expressGcloudSnippet}
-                </pre>
-              </div>
+              {selectedExpressRegionMeta?.c4aReady && (
+                <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  C4A 1-vCPU Upgrade Ready
+                </span>
+              )}
             </div>
 
-            {/* Right: Live Discovered AlloyDB Fleet + In-Place Upgrade */}
-            <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#10141d] space-y-3.5">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Server className="w-4 h-4 text-blue-500" />
-                  <h3 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-                    Live AlloyDB Fleet ({overview?.clusters?.length || 0} Clusters)
-                  </h3>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono text-zinc-500">
-                    locations/-/clusters
-                  </span>
-                  <a
-                    href={`https://console.cloud.google.com/alloydb/clusters?project=${encodeURIComponent(projectId)}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="px-2 py-0.5 rounded border border-blue-500/30 bg-blue-500/10 text-[10.5px] font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-500/20 inline-flex items-center gap-1"
-                  >
-                    <span>GCP Console</span>
-                    <ArrowUpRight className="w-3 h-3" />
-                  </a>
-                </div>
-              </div>
-
-              {(overview?.clusters || []).length === 0 ? (
-                <div className="p-5 rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 text-center space-y-2">
-                  <Database className="w-7 h-7 mx-auto text-zinc-400" />
-                  <div className="text-xs font-bold text-zinc-700 dark:text-zinc-200">
-                    No AlloyDB Clusters Discovered in {projectId}
-                  </div>
-                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 max-w-md mx-auto">
-                    Launch an <strong className="text-zinc-800 dark:text-zinc-200">AlloyDB Express (PG 18)</strong> cluster on the left to start prototyping with 1 vCPU &amp; scale-to-zero, then upgrade in-place to Enterprise when traffic scales.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
-                  {overview.clusters.map((c) => (
-                    <div
-                      key={c.name}
-                      className="p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60 space-y-2"
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="font-mono font-extrabold text-xs text-zinc-900 dark:text-zinc-100 truncate">
-                            {c.clusterId}
-                          </span>
-                          <span
-                            className={`px-1.5 py-0.5 rounded text-[9.5px] font-mono font-bold ${
-                              c.isExpress
-                                ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/35'
-                                : 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/35'
-                            }`}
-                          >
-                            {c.isExpress ? 'EXPRESS' : 'ENTERPRISE'}
-                          </span>
-                          <span className="px-1.5 py-0.5 rounded text-[9.5px] font-mono bg-zinc-200/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
-                            {c.databaseVersion} · {c.location}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                            {c.state}
-                          </span>
-                          <a
-                            href={`https://console.cloud.google.com/alloydb/locations/${encodeURIComponent(c.location)}/clusters/${encodeURIComponent(c.clusterId)}/overview?project=${encodeURIComponent(projectId)}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="px-1.5 py-0.5 rounded border border-blue-500/30 bg-blue-500/10 text-[10px] font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-500/20 inline-flex items-center gap-0.5"
-                          >
-                            <span>Console</span>
-                            <ArrowUpRight className="w-2.5 h-2.5" />
-                          </a>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-1.5 text-[10.5px] font-mono text-zinc-500 dark:text-zinc-400">
-                        <span>Instances: {c.instanceCount}</span>
-                        <span>·</span>
+            {(() => {
+              const normalizedId = String(expressClusterId || "").trim().toLowerCase();
+              const existingMatch = (overview?.clusters || []).find(
+                (c) =>
+                  String(c.clusterId || "").toLowerCase() === normalizedId &&
+                  String(c.location || "") === expressRegion
+              );
+              const suggestNextId = () => {
+                const base = (normalizedId || "alloydb-express-app").replace(/-\d+$/, "");
+                const existingSet = new Set(
+                  (overview?.clusters || [])
+                    .filter((c) => String(c.location || "") === expressRegion)
+                    .map((c) => String(c.clusterId || "").toLowerCase())
+                );
+                let n = 2;
+                while (existingSet.has(`${base}-${n}`) && n < 100) n += 1;
+                return `${base}-${n}`;
+              };
+              const suggestedId = existingMatch ? suggestNextId() : "";
+              return (
+                <>
+                  {existingMatch && (
+                    <div className="p-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200 text-xs flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
                         <span>
-                          Backup: {c.continuousBackupEnabled ? `${c.recoveryWindowDays}d PITR` : 'Express Managed'}
+                          Cluster <code className="font-mono font-bold">{existingMatch.clusterId}</code> already exists in{" "}
+                          <code className="font-mono">{expressRegion}</code> ({existingMatch.state}). Pick a new ID to create another cluster, or add a Primary Instance on the cluster card below.
                         </span>
-                        {c.primaryInstance && (
-                          <>
-                            <span>·</span>
-                            <span>Primary: {c.primaryInstance.cpuCount} vCPU</span>
-                          </>
-                        )}
                       </div>
-
-                      <div className="flex flex-wrap items-center gap-2 pt-1">
-                        {c.isExpress && c.instanceCount === 0 && (
-                          <button
-                            type="button"
-                            disabled={busyKey === `INST_${c.clusterId}`}
-                            onClick={() =>
-                              executeAlloyAction(
-                                {
-                                  action: 'CREATE_EXPRESS_PRIMARY_INSTANCE',
-                                  region: c.location,
-                                  clusterId: c.clusterId,
-                                  instanceId: `${c.clusterId}-primary`,
-                                  publicDnsEnabled: true,
-                                },
-                                `INST_${c.clusterId}`
-                              )
-                            }
-                            className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-bold cursor-pointer"
-                          >
-                            + Add 1-vCPU Primary
-                          </button>
-                        )}
-                        {c.isExpress && (
-                          <button
-                            type="button"
-                            disabled={busyKey === `UPGRADE_${c.clusterId}`}
-                            onClick={() =>
-                              executeAlloyAction(
-                                {
-                                  action: 'UPGRADE_EXPRESS_TO_ENTERPRISE',
-                                  region: c.location,
-                                  clusterId: c.clusterId,
-                                },
-                                `UPGRADE_${c.clusterId}`
-                              )
-                            }
-                            className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[10.5px] font-bold inline-flex items-center gap-1 cursor-pointer"
-                          >
-                            <Rocket className="w-3 h-3" />
-                            {busyKey === `UPGRADE_${c.clusterId}`
-                              ? 'Upgrading...'
-                              : 'Upgrade In-Place → Enterprise'}
-                          </button>
-                        )}
-                        {!c.isExpress && (
-                          <button
-                            type="button"
-                            disabled={busyKey === `RP_${c.clusterId}`}
-                            onClick={() =>
-                              executeAlloyAction(
-                                {
-                                  action: 'CREATE_READ_POOL',
-                                  region: c.location,
-                                  clusterId: c.clusterId,
-                                  nodeCount: 2,
-                                  cpuCount: 2,
-                                },
-                                `RP_${c.clusterId}`
-                              )
-                            }
-                            className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-bold cursor-pointer"
-                          >
-                            + 2-Node Read Pool
-                          </button>
-                        )}
-                        {c.primaryInstance && (
-                          <>
-                            <button
-                              type="button"
-                              disabled={busyKey === `SCALE_${c.clusterId}`}
-                              onClick={() =>
-                                executeAlloyAction(
-                                  {
-                                    action: 'SCALE_INSTANCE_CPU',
-                                    region: c.location,
-                                    clusterId: c.clusterId,
-                                    instanceId: c.primaryInstance.instanceId,
-                                    cpuCount: c.primaryInstance.cpuCount < 2 ? 2 : c.primaryInstance.cpuCount * 2,
-                                  },
-                                  `SCALE_${c.clusterId}`
-                                )
-                              }
-                              className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-bold cursor-pointer"
-                            >
-                              Scale → {c.primaryInstance.cpuCount < 2 ? 2 : c.primaryInstance.cpuCount * 2} vCPU
-                            </button>
-                            <button
-                              type="button"
-                              disabled={busyKey === `FLAGS10X_${c.clusterId}`}
-                              onClick={() =>
-                                executeAlloyAction(
-                                  {
-                                    action: 'APPLY_INSTANCE_FLAGS',
-                                    region: c.location,
-                                    clusterId: c.clusterId,
-                                    instanceId: c.primaryInstance.instanceId,
-                                    flagPreset: 'FULL_ALLOYDB_10X',
-                                  },
-                                  `FLAGS10X_${c.clusterId}`
-                                )
-                              }
-                              className="px-2 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 text-[10.5px] font-bold cursor-pointer"
-                            >
-                              Enable 10X Flags (pglogical+SCaNN+Columnar)
-                            </button>
-                          </>
-                        )}
-                        <button
-                          type="button"
-                          disabled={busyKey === `BK_${c.clusterId}`}
-                          onClick={() =>
-                            executeAlloyAction(
-                              {
-                                action: 'TRIGGER_ON_DEMAND_BACKUP',
-                                region: c.location,
-                                clusterId: c.clusterId,
-                              },
-                              `BK_${c.clusterId}`
-                            )
-                          }
-                          className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-bold inline-flex items-center gap-1 cursor-pointer"
-                        >
-                          <HardDrive className="w-3 h-3" />
-                          Snapshot Backup
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setIamUserCluster(iamUserCluster === c.clusterId ? '' : c.clusterId)}
-                          className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[10.5px] font-bold inline-flex items-center gap-1 cursor-pointer"
-                        >
-                          <UserPlus className="w-3 h-3" />
-                          + IAM User
-                        </button>
-                        <button
-                          type="button"
-                          disabled={busyKey === `DEL_${c.clusterId}`}
-                          onClick={() =>
-                            executeAlloyAction(
-                              {
-                                action: 'DELETE_CLUSTER',
-                                region: c.location,
-                                clusterId: c.clusterId,
-                              },
-                              `DEL_${c.clusterId}`
-                            )
-                          }
-                          className="px-2 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-[10.5px] font-bold inline-flex items-center gap-1 cursor-pointer ml-auto"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          Delete
-                        </button>
-                      </div>
-                      {iamUserCluster === c.clusterId && (
-                        <div className="pt-2 mt-1 border-t border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center gap-2">
-                          <input
-                            type="text"
-                            value={iamUserEmail}
-                            onChange={(e) => setIamUserEmail(e.target.value)}
-                            placeholder="service-account@project.iam.gserviceaccount.com or user@domain.com"
-                            className="flex-1 min-w-[200px] px-2.5 py-1 rounded bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono text-zinc-900 dark:text-zinc-100"
-                          />
-                          <button
-                            type="button"
-                            disabled={!iamUserEmail.trim() || busyKey === `IAMU_${c.clusterId}`}
-                            onClick={() =>
-                              executeAlloyAction(
-                                {
-                                  action: 'CREATE_ALLOYDB_USER',
-                                  region: c.location,
-                                  clusterId: c.clusterId,
-                                  userId: iamUserEmail.trim(),
-                                  userType: 'ALLOYDB_IAM_USER',
-                                },
-                                `IAMU_${c.clusterId}`
-                              )
-                            }
-                            className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
-                          >
-                            Grant Zero-Password IAM User
-                          </button>
-                        </div>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => setExpressClusterId(suggestedId)}
+                        className="px-2.5 py-1 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold text-[11px] shrink-0 cursor-pointer"
+                      >
+                        Use &quot;{suggestedId}&quot;
+                      </button>
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Live Recent AlloyDB Operations (locations/-/operations) — Surfaces Async Provisioning & Errors */}
-              {Array.isArray(overview?.operations) && overview.operations.length > 0 && (
-                <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
-                      Recent AlloyDB Operations ({overview.operations.length})
-                    </span>
-                    <span className="text-[10px] font-mono text-zinc-500">
-                      locations/-/operations
-                    </span>
+                  )}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={busyKey === "CREATE_EXPRESS" || Boolean(existingMatch) || !normalizedId}
+                      onClick={() =>
+                        executeAlloyAction(
+                          {
+                            action: "CREATE_EXPRESS_CLUSTER",
+                            region: expressRegion,
+                            clusterId: expressClusterId,
+                            databaseVersion: expressDbVersion,
+                            pscEnabled: expressPscEnabled,
+                          },
+                          "CREATE_EXPRESS"
+                        )
+                      }
+                      className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <PlusCircle className="w-3.5 h-3.5" />
+                      {busyKey === "CREATE_EXPRESS"
+                        ? "Dispatching Express Cluster…"
+                        : existingMatch
+                        ? "Cluster ID Already Exists — Pick a New ID"
+                        : "Create Live AlloyDB Express Cluster"}
+                    </button>
                   </div>
-                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                    {overview.operations.slice(0, 6).map((op) => (
-                      <div
-                        key={op.name}
-                        className={`p-2.5 rounded-lg border text-[11px] space-y-1 ${
-                          op.status === 'FAILED'
-                            ? 'border-red-500/35 bg-red-500/[0.06]'
-                            : op.status === 'RUNNING'
-                            ? 'border-blue-500/35 bg-blue-500/[0.06]'
-                            : 'border-emerald-500/30 bg-emerald-500/[0.04]'
-                        }`}
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <span
-                              className={`px-1.5 py-0.5 rounded font-mono text-[9.5px] font-bold ${
-                                op.status === 'FAILED'
-                                  ? 'bg-red-500/20 text-red-700 dark:text-red-300'
-                                  : op.status === 'RUNNING'
-                                  ? 'bg-blue-500/20 text-blue-700 dark:text-blue-300'
-                                  : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
-                              }`}
-                            >
-                              {op.status}
-                            </span>
-                            <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                              {op.verb} {op.targetName}
-                            </span>
-                            <span className="text-[10px] font-mono text-zinc-500">
-                              ({op.location})
-                            </span>
-                          </div>
-                          <span className="text-[10px] font-mono text-zinc-500">
-                            {op.createTime ? new Date(op.createTime).toLocaleTimeString() : '—'}
-                          </span>
-                        </div>
-                        {op.errorMessage && (
-                          <div className="text-[11px] text-red-700 dark:text-red-300 font-medium">
-                            Code {op.errorCode ?? 'ERROR'}: {op.errorMessage}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                </>
+              );
+            })()}
+          </div>
+        )}
 
-              {/* Hackathon-to-Production Starter Kit Generator */}
-              <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800 space-y-2.5">
+        {/* Full-Width Live Clusters List */}
+        {(overview?.clusters || []).length === 0 ? (
+          <div className="p-6 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 text-center space-y-2.5">
+            <Database className="w-7 h-7 mx-auto text-zinc-400" />
+            <div className="text-xs font-bold text-zinc-700 dark:text-zinc-200">
+              No AlloyDB Clusters Discovered in {projectId}
+            </div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-md mx-auto">
+              Click <strong>+ Create AlloyDB Express Cluster</strong> above to spin up a PostgreSQL 18 cluster in seconds.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+            {overview.clusters.map((c) => (
+              <div
+                key={c.name}
+                className="p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/60 space-y-2.5"
+              >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
-                    Hackathon → Production Starter Kit (Zero Cluster Ops)
-                  </span>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {typeof onNavigateTab === 'function' && (
-                      <button
-                        type="button"
-                        onClick={() => onNavigateTab('CLOUD_RUN')}
-                        className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
-                      >
-                        Cloud Run Fleet
-                        <ArrowUpRight className="w-3 h-3" />
-                      </button>
-                    )}
-                    {[
-                      { id: 'NEXTJS_CLOUDRUN', label: 'Next.js + Cloud Run' },
-                      { id: 'NODE_PG', label: 'Node.js pg' },
-                      { id: 'PYTHON_FASTAPI', label: 'Python FastAPI' },
-                    ].map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        onClick={() => setStarterStack(s.id)}
-                        className={`px-2 py-1 rounded text-[10px] font-mono font-bold border cursor-pointer ${
-                          starterStack === s.id
-                            ? 'border-amber-500 bg-amber-500/15 text-amber-800 dark:text-amber-200'
-                            : 'border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400'
-                        }`}
-                      >
-                        {s.label}
-                      </button>
-                    ))}
+                  <div className="flex flex-wrap items-center gap-2 min-w-0">
+                    <span className="font-mono font-extrabold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                      {c.clusterId}
+                    </span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+                        c.isExpress
+                          ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/35"
+                          : "bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/35"
+                      }`}
+                    >
+                      {c.isExpress ? "EXPRESS" : "ENTERPRISE"}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-zinc-200/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                      {c.databaseVersion} · {c.location}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[10px] font-mono font-bold">
+                      {c.state}
+                    </span>
+                    <a
+                      href={`https://console.cloud.google.com/alloydb/locations/${encodeURIComponent(c.location)}/clusters/${encodeURIComponent(c.clusterId)}/overview?project=${encodeURIComponent(projectId)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2 py-0.5 rounded border border-blue-500/30 bg-blue-500/10 text-[10.5px] font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-500/20 inline-flex items-center gap-0.5"
+                    >
+                      <span>Console</span>
+                      <ArrowUpRight className="w-3 h-3" />
+                    </a>
                   </div>
                 </div>
-                <div className="relative">
+
+                {/* Clear 2-Step Cluster -> Primary Instance Readiness Indicator */}
+                {c.instanceCount === 0 ? (
+                  <div className="p-2.5 rounded-lg border border-amber-500/35 bg-amber-500/10 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span className="text-amber-800 dark:text-amber-200 font-medium">
+                      <strong>0 instances attached</strong> — Cluster is ready; add a 1-vCPU Primary Instance to connect via SQL.
+                    </span>
+                    <button
+                      type="button"
+                      disabled={busyKey === `INST_${c.clusterId}`}
+                      onClick={() =>
+                        executeAlloyAction(
+                          {
+                            action: "CREATE_EXPRESS_PRIMARY_INSTANCE",
+                            region: c.location,
+                            clusterId: c.clusterId,
+                            instanceId: `${c.clusterId}-primary`,
+                            publicDnsEnabled: expressPublicDns,
+                          },
+                          `INST_${c.clusterId}`
+                        )
+                      }
+                      className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                    >
+                      <PlusCircle className="w-3.5 h-3.5" />
+                      {busyKey === `INST_${c.clusterId}` ? "Creating Primary…" : "+ Add 1-vCPU Primary"}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold">
+                      Primary Ready ({c.primaryInstance?.cpuCount || 1} vCPU)
+                    </span>
+                    <span>Instances: {c.instanceCount}</span>
+                    <span>·</span>
+                    <span>Backup: {c.continuousBackupEnabled ? `${c.recoveryWindowDays}d PITR` : "Express Managed"}</span>
+                    {(c.primaryInstance?.publicDnsName || c.primaryInstance?.ipAddress || c.primaryInstance?.pscDnsName) && (
+                      <>
+                        <span>·</span>
+                        <span className="text-zinc-800 dark:text-zinc-100">
+                          {c.primaryInstance.publicDnsName || c.primaryInstance.ipAddress || c.primaryInstance.pscDnsName}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  {c.isExpress && (
+                    <button
+                      type="button"
+                      disabled={busyKey === `UPGRADE_${c.clusterId}`}
+                      onClick={() =>
+                        executeAlloyAction(
+                          {
+                            action: "UPGRADE_EXPRESS_TO_ENTERPRISE",
+                            region: c.location,
+                            clusterId: c.clusterId,
+                          },
+                          `UPGRADE_${c.clusterId}`
+                        )
+                      }
+                      className="px-2.5 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-800 dark:text-amber-200 text-[11px] font-bold cursor-pointer"
+                    >
+                      Upgrade → Enterprise
+                    </button>
+                  )}
+                  {c.primaryInstance && (
+                    <>
+                      <button
+                        type="button"
+                        disabled={busyKey === `SCALE_${c.clusterId}`}
+                        onClick={() =>
+                          executeAlloyAction(
+                            {
+                              action: "SCALE_INSTANCE_CPU",
+                              region: c.location,
+                              clusterId: c.clusterId,
+                              instanceId: c.primaryInstance.instanceId,
+                              cpuCount: c.primaryInstance.cpuCount < 2 ? 2 : c.primaryInstance.cpuCount * 2,
+                            },
+                            `SCALE_${c.clusterId}`
+                          )
+                        }
+                        className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold cursor-pointer"
+                      >
+                        Scale → {c.primaryInstance.cpuCount < 2 ? 2 : c.primaryInstance.cpuCount * 2} vCPU
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyKey === `FLAGS10X_${c.clusterId}`}
+                        onClick={() =>
+                          executeAlloyAction(
+                            {
+                              action: "APPLY_INSTANCE_FLAGS",
+                              region: c.location,
+                              clusterId: c.clusterId,
+                              instanceId: c.primaryInstance.instanceId,
+                              flagPreset: "FULL_ALLOYDB_10X",
+                            },
+                            `FLAGS10X_${c.clusterId}`
+                          )
+                        }
+                        className="px-2.5 py-1 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold cursor-pointer"
+                      >
+                        Enable 10X Flags
+                      </button>
+                    </>
+                  )}
                   <button
                     type="button"
-                    onClick={() => copyText(starterKitCode, 'starter-code', `${starterStack} Starter`)}
-                    className="absolute top-2 right-2 px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+                    disabled={busyKey === `BK_${c.clusterId}`}
+                    onClick={() =>
+                      executeAlloyAction(
+                        {
+                          action: "TRIGGER_ON_DEMAND_BACKUP",
+                          region: c.location,
+                          clusterId: c.clusterId,
+                        },
+                        `BK_${c.clusterId}`
+                      )
+                    }
+                    className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer"
                   >
-                    {copiedKey === 'starter-code' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    <HardDrive className="w-3 h-3" />
+                    Snapshot Backup
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIamUserCluster(iamUserCluster === c.clusterId ? "" : c.clusterId)}
+                    className="px-2.5 py-1 rounded bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <UserPlus className="w-3 h-3" />
+                    + IAM User
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busyKey === `DEL_${c.clusterId}`}
+                    onClick={() =>
+                      executeAlloyAction(
+                        {
+                          action: "DELETE_CLUSTER",
+                          region: c.location,
+                          clusterId: c.clusterId,
+                        },
+                        `DEL_${c.clusterId}`
+                      )
+                    }
+                    className="px-2.5 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer ml-auto"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Delete
+                  </button>
+                </div>
+
+                {iamUserCluster === c.clusterId && (
+                  <div className="pt-2 mt-1 border-t border-zinc-200 dark:border-zinc-800 flex flex-wrap items-center gap-2">
+                    <input
+                      type="text"
+                      value={iamUserEmail}
+                      onChange={(e) => setIamUserEmail(e.target.value)}
+                      placeholder="service-account@project.iam.gserviceaccount.com or user@domain.com"
+                      className="flex-1 min-w-[200px] px-2.5 py-1 rounded bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 text-[11px] font-mono text-zinc-900 dark:text-zinc-100"
+                    />
+                    <button
+                      type="button"
+                      disabled={!iamUserEmail.trim() || busyKey === `IAMU_${c.clusterId}`}
+                      onClick={() =>
+                        executeAlloyAction(
+                          {
+                            action: "CREATE_ALLOYDB_USER",
+                            region: c.location,
+                            clusterId: c.clusterId,
+                            userId: iamUserEmail.trim(),
+                            userType: "ALLOYDB_IAM_USER",
+                          },
+                          `IAMU_${c.clusterId}`
+                        )
+                      }
+                      className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50"
+                    >
+                      Grant Zero-Password IAM User
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Collapsible Recent AlloyDB Operations Bar */}
+        {Array.isArray(overview?.operations) && overview.operations.length > 0 && (
+          <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+            <button
+              type="button"
+              onClick={() => setShowAlloyOpsHistory((v) => !v)}
+              className="w-full flex items-center justify-between text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-zinc-100 cursor-pointer"
+            >
+              <span className="inline-flex items-center gap-2">
+                <span>Recent AlloyDB Operations ({overview.operations.length})</span>
+                {overview.operations.some((o) => o.status === "RUNNING") && (
+                  <span className="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 font-mono text-[10px]">
+                    RUNNING
+                  </span>
+                )}
+                {overview.operations[0]?.status === "FAILED" && (
+                  <span className="px-1.5 py-0.5 rounded bg-red-500/15 text-red-600 dark:text-red-300 font-mono text-[10px]">
+                    Latest Failed
+                  </span>
+                )}
+              </span>
+              <span className="text-[11px] font-mono text-zinc-500">
+                {showAlloyOpsHistory ? "Hide Operations ▲" : "Show Operations ▼"}
+              </span>
+            </button>
+            {showAlloyOpsHistory && (
+              <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+                {overview.operations.slice(0, 8).map((op) => (
+                  <div
+                    key={op.name}
+                    className={`p-2.5 rounded-lg border text-[11px] space-y-1 ${
+                      op.status === "FAILED"
+                        ? "border-red-500/35 bg-red-500/[0.06]"
+                        : op.status === "RUNNING"
+                        ? "border-blue-500/35 bg-blue-500/[0.06]"
+                        : "border-emerald-500/30 bg-emerald-500/[0.04]"
+                    }`}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span
+                          className={`px-1.5 py-0.5 rounded font-mono text-[9.5px] font-bold ${
+                            op.status === "FAILED"
+                              ? "bg-red-500/20 text-red-700 dark:text-red-300"
+                              : op.status === "RUNNING"
+                              ? "bg-blue-500/20 text-blue-700 dark:text-blue-300"
+                              : "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
+                          }`}
+                        >
+                          {op.status}
+                        </span>
+                        <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                          {op.verb} {op.targetName}
+                        </span>
+                        <span className="text-[10px] font-mono text-zinc-500">
+                          ({op.location})
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono text-zinc-500">
+                        {op.createTime ? new Date(op.createTime).toLocaleTimeString() : "—"}
+                      </span>
+                    </div>
+                    {op.errorMessage && (
+                      <div className="text-[11px] text-red-700 dark:text-red-300 font-medium">
+                        Code {op.errorCode ?? "ERROR"}: {op.errorMessage}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* =================================================================
+          PILLAR 1: DEVELOPER STARTER KITS & EQUIVALENT GCLOUD CLI (Topics 9 & 10)
+         ================================================================= */}
+      {activePillar === "EXPRESS_QUICKSTART" && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Left: Equivalent gcloud beta CLI */}
+            <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#10141d] space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                  Equivalent gcloud beta CLI (Create + Upgrade)
+                </span>
+                <div className="flex items-center gap-1.5">
+                  {typeof onRunInShell === "function" && (
+                    <button
+                      type="button"
+                      onClick={() => onRunInShell(expressGcloudSnippet.split("\n\n")[0])}
+                      className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      <Terminal className="w-3 h-3" />
+                      Run in Shell
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => copyText(expressGcloudSnippet, "express-cli", "AlloyDB Express CLI")}
+                    className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    {copiedKey === "express-cli" ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
                     Copy
                   </button>
-                  <pre className="p-3 rounded-lg bg-zinc-950 text-sky-300 font-mono text-[10.5px] overflow-x-auto whitespace-pre-wrap">
-                    {starterKitCode}
-                  </pre>
                 </div>
+              </div>
+              <pre className="p-3 rounded-lg bg-zinc-950 text-emerald-300 font-mono text-[10.5px] overflow-x-auto whitespace-pre-wrap">
+                {expressGcloudSnippet}
+              </pre>
+            </div>
+
+            {/* Right: Hackathon-to-Production Starter Kit Generator */}
+            <div className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#10141d] space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                  Hackathon → Production Starter Kit (Zero Cluster Ops)
+                </span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {typeof onNavigateTab === "function" && (
+                    <button
+                      type="button"
+                      onClick={() => onNavigateTab("CLOUD_RUN")}
+                      className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      Cloud Run Fleet
+                      <ArrowUpRight className="w-3 h-3" />
+                    </button>
+                  )}
+                  {[
+                    { id: "NEXTJS_CLOUDRUN", label: "Next.js + Cloud Run" },
+                    { id: "NODE_PG", label: "Node.js pg" },
+                    { id: "PYTHON_FASTAPI", label: "Python FastAPI" },
+                  ].map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setStarterStack(s.id)}
+                      className={`px-2 py-1 rounded text-[10px] font-mono font-bold border cursor-pointer ${
+                        starterStack === s.id
+                          ? "border-amber-500 bg-amber-500/15 text-amber-800 dark:text-amber-200"
+                          : "border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400"
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => copyText(starterKitCode, "starter-code", `${starterStack} Starter`)}
+                  className="absolute top-2 right-2 px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] font-mono font-bold inline-flex items-center gap-1 cursor-pointer"
+                >
+                  {copiedKey === "starter-code" ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                  Copy
+                </button>
+                <pre className="p-3 rounded-lg bg-zinc-950 text-sky-300 font-mono text-[10.5px] overflow-x-auto whitespace-pre-wrap">
+                  {starterKitCode}
+                </pre>
               </div>
             </div>
           </div>
