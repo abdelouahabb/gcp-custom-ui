@@ -4,21 +4,32 @@
 
 @layer base {
   body {
-    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    font-family: 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     -webkit-tap-highlight-color: transparent;
-    background-color: var(--cp-bg-canvas, #f4f6f9);
+    background-color: var(--cp-bg-canvas, #f6f8fb);
     color: #0f172a;
     text-rendering: optimizeLegibility;
   }
 
   .dark body {
-    background-color: var(--cp-bg-canvas, #090b10);
+    background-color: var(--cp-bg-canvas, #080b11);
     color: #e8eaed;
   }
 
-  code, pre, .font-mono {
-    font-family: 'JetBrains Mono', monospace;
+  h1, h2, h3, h4 {
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
   }
+
+  code, pre, kbd, .xterm, .xterm * {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  }
+}
+
+/* Ban harsh monospace from UI labels, buttons, badges, tabs & tables; keep it strictly for code/CLI/terminals */
+.font-mono:not(code):not(pre):not(textarea):not(kbd) {
+  font-family: 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Precision Architectural Scrollbars (7px Low-Profile) */
