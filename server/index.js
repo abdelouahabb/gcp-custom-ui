@@ -12005,7 +12005,7 @@ app.get('/api/project/:projectId/alloydb/overview', async (req, res) => {
         availabilityType: inst.availabilityType || 'ZONAL',
         ipAddress: inst.ipAddress || null,
         publicIpAddress: inst.publicIpAddress || null,
-        publicDnsName: inst.networkConfig?.enablePublicIp || inst.networkConfig?.publicDnsEnabled ? (inst.publicIpAddress || inst.ipAddress || 'Public DNS Enabled') : null,
+        publicDnsName: inst.publicIpAddress || inst.outboundPublicIpAddresses?.[0] || inst.ipAddress || null,
         publicDnsEnabled: Boolean(inst.networkConfig?.publicDnsEnabled || inst.networkConfig?.enablePublicIp),
         pscEnabled: Boolean(inst.pscInstanceConfig?.pscDnsName || inst.pscInstanceConfig?.allowedConsumerProjects?.length),
         pscDnsName: inst.pscInstanceConfig?.pscDnsName || null,
@@ -28857,7 +28857,54 @@ app.post('/api/project/:projectId/shell', async (req, res) => {
   }
   const lower = normalizedCmd.toLowerCase();
 
-  // 1. Strict Accidental-Data-Loss & Shell-Injection Guardrail
+  const guardrailEnabled = req.body?.guardrailEnabled !== false;
+
+  // Unrestricted Shell Mode (when user explicitly toggles Guardrail: OFF in Cloud Shell header)
+  if (!guardrailEnabled) {
+    const cmdToRun = rawCommand.replace(/^\$\s+/, '').trim();
+    try {
+      const { stdout, stderr } = await new Promise((resolve, reject) => {
+        execFile(
+          '/bin/bash',
+          ['-lc', cmdToRun],
+          {
+            timeout: 45000,
+            maxBuffer: 2 * 1024 * 1024,
+            env: {
+              ...process.env,
+              CLOUDSDK_CORE_PROJECT: projectId,
+              PGCONNECT_TIMEOUT: '10',
+            },
+          },
+          (err, out, errOut) => {
+            if (err) return reject({ err, out, errOut });
+            resolve({ stdout: out, stderr: errOut });
+          }
+        );
+      });
+      return res.json({
+        command: cmdToRun,
+        exitCode: 0,
+        durationMs: Date.now() - t0,
+        engine: 'UNRESTRICTED_SHELL (Guardrail OFF)',
+        output: (stdout || stderr || '(Command succeeded with no output)').trim(),
+      });
+    } catch (failure) {
+      const combined = [failure?.out, failure?.errOut, failure?.err?.message]
+        .filter(Boolean)
+        .join('\n')
+        .trim();
+      return res.json({
+        command: cmdToRun,
+        exitCode: Number.isInteger(failure?.err?.code) ? failure.err.code : 1,
+        durationMs: Date.now() - t0,
+        engine: 'UNRESTRICTED_SHELL (Guardrail OFF)',
+        output: combined || 'Command exited with non-zero status.',
+      });
+    }
+  }
+
+  // 1. Strict Accidental-Data-Loss & Shell-Injection Guardrail (when Guardrail: ON)
   // Strip safe long-flags like --drop-unknown-fields before checking destructive verbs
   const lowerWithoutSafeFlags = lower.replace(/--drop-unknown-fields/g, '');
   if (
@@ -28871,13 +28918,13 @@ app.post('/api/project/:projectId/shell', async (req, res) => {
       exitCode: 1,
       durationMs: 6,
       engine: 'GUARDRAIL_INTERCEPTOR',
-      output: `[GUARDRAIL BLOCKED] Destructive mutations or shell-chaining operators are blocked in the read-only Cloud Shell.\nUse the dedicated studio action buttons (protected by the Mandatory Delete & Blast-Radius Gatekeeper) for state-changing operations.`,
+      output: `[GUARDRAIL BLOCKED] Destructive mutations or shell operators are blocked while Guardrail is ON.\nToggle "Guardrail: OFF" in the Cloud Shell header (or click "Disable Guardrail & Re-run" below) to execute unrestricted commands.`,
     });
   }
 
   const parsedTokens = tokenizeSafeCliCommand(normalizedCmd);
   const binary = (parsedTokens[0] || '').toLowerCase();
-  const ALLOWED_BINARIES = new Set(['gcloud', 'bq', 'gsutil', 'kubectl']);
+  const ALLOWED_BINARIES = new Set(['gcloud', 'bq', 'gsutil', 'kubectl', 'psql']);
 
   if (!ALLOWED_BINARIES.has(binary)) {
     return res.json({
@@ -28885,7 +28932,7 @@ app.post('/api/project/:projectId/shell', async (req, res) => {
       exitCode: 1,
       durationMs: 5,
       engine: 'GUARDRAIL_INTERCEPTOR',
-      output: `[UNSUPPORTED BINARY] CloudPulse Shell only executes official Google Cloud SDK binaries: gcloud, bq, gsutil, and kubectl.\nReceived: "${parsedTokens[0] || ''}"`,
+      output: `[UNSUPPORTED BINARY] Guardrail ON only allows: gcloud, bq, gsutil, kubectl, and psql.\nReceived: "${parsedTokens[0] || ''}" — toggle "Guardrail: OFF" in the Cloud Shell header to run any shell binary.`,
     });
   }
 

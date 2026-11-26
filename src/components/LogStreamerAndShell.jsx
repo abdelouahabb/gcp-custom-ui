@@ -117,6 +117,25 @@ export default function LogStreamerAndShell({
     )
   );
   const [shellRunning, setShellRunning] = useState(false);
+  const [shellGuardrailEnabled, setShellGuardrailEnabled] = useState(() => {
+    try {
+      const saved = window.localStorage.getItem('cloudpulse_shell_guardrail');
+      return saved === null ? true : saved !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  const toggleShellGuardrail = () => {
+    setShellGuardrailEnabled((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem('cloudpulse_shell_guardrail', String(next));
+      } catch {
+        // ignore storage quota
+      }
+      return next;
+    });
+  };
   const [shellDockMode, setShellDockMode] = useState('TOP_DOCK'); // 'TOP_DOCK' | 'FLOATING_DRAWER' | 'MINIMIZED'
   const [floatingShellMinimized, setFloatingShellMinimized] = useState(false);
   const [floatingOffset, setFloatingOffset] = useState(() => {
@@ -1431,9 +1450,11 @@ export default function LogStreamerAndShell({
   });
 
   const executeShellCommand = useCallback(
-    async (cmdOverride) => {
+    async (cmdOverride, guardrailOverride = null) => {
       const cmd = sanitizeExecutableCliInput(cmdOverride || shellInput);
       if (!cmd || shellRunning) return;
+      const effectiveGuardrail =
+        typeof guardrailOverride === 'boolean' ? guardrailOverride : shellGuardrailEnabled;
       setShellInput(cmd);
       setShellHistoryCursor(-1);
       setShellDockMode((prev) => (prev === 'MINIMIZED' ? 'TOP_DOCK' : prev));
@@ -1453,7 +1474,7 @@ export default function LogStreamerAndShell({
       try {
         const res = await axios.post(
           `/api/project/${encodeURIComponent(projectId)}/shell`,
-          { command: cmd }
+          { command: cmd, guardrailEnabled: effectiveGuardrail }
         );
         setShellHistory((prev) => [
           {
@@ -1482,7 +1503,7 @@ export default function LogStreamerAndShell({
         setShellRunning(false);
       }
     },
-    [projectId, shellInput, shellRunning]
+    [projectId, shellInput, shellRunning, shellGuardrailEnabled]
   );
 
   const lastExecutedNonceRef = useRef(0);
@@ -1646,7 +1667,7 @@ export default function LogStreamerAndShell({
                 </h3>
                 <span className="inline-flex items-center gap-1 text-[10px] font-mono bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full">
                   <ShieldAlert className="w-3 h-3" />
-                  <span>Safe Guardrails ON</span>
+                  <span>{shellGuardrailEnabled ? 'Safe Guardrails ON' : 'Guardrails OFF (Unrestricted)'}</span>
                 </span>
                 <span className="inline-flex items-center gap-1 text-[10px] font-mono bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full">
                   <span>
@@ -1734,6 +1755,23 @@ export default function LogStreamerAndShell({
                   : 'Minimize'}
               </button>
             </div>
+
+            <button
+              type="button"
+              onClick={toggleShellGuardrail}
+              title={
+                shellGuardrailEnabled
+                  ? 'Guardrail ON (Read-Only Safe Mode): Click to disable and allow unrestricted shell commands (psql, pipes, mutations)'
+                  : 'Guardrail OFF (Unrestricted Bash Mode): Click to re-enable read-only safety guardrail'
+              }
+              className={`px-2.5 py-1 rounded-md text-[11px] font-mono font-bold border inline-flex items-center gap-1.5 cursor-pointer transition-colors ${
+                shellGuardrailEnabled
+                  ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/25'
+                  : 'bg-rose-500/15 border-rose-500/45 text-rose-700 dark:text-rose-300 hover:bg-rose-500/25'
+              }`}
+            >
+              <span>{shellGuardrailEnabled ? 'Guardrail: ON' : 'Guardrail: OFF'}</span>
+            </button>
 
             {shellDockMode !== 'MINIMIZED' && !floatingShellMinimized && (
               <button
@@ -1915,6 +1953,26 @@ export default function LogStreamerAndShell({
                     <pre className="text-[11px] text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap break-words leading-relaxed">
                       {item.output}
                     </pre>
+                    {item.engine === 'GUARDRAIL_INTERCEPTOR' && (
+                      <div className="pt-2 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={shellRunning}
+                          onClick={() => {
+                            setShellGuardrailEnabled(false);
+                            try {
+                              window.localStorage.setItem('cloudpulse_shell_guardrail', 'false');
+                            } catch {
+                              // ignore
+                            }
+                            executeShellCommand(item.command, false);
+                          }}
+                          className="px-2.5 py-1 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-semibold cursor-pointer"
+                        >
+                          Disable Guardrail &amp; Re-run Command
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))
               )}
