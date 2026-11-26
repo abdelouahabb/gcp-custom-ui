@@ -728,23 +728,40 @@ function classifyDestructiveAxiosConfig(config) {
       };
     }
 
-    // Fallback for any other HTTP DELETE endpoint
+    // Fallback for any other HTTP DELETE endpoint (derives human-readable kind & resource name)
+    const fallbackDelTarget =
+      body.name ||
+      body.displayName ||
+      body.id ||
+      decodeURIComponent(rawUrl.split('?')[0].split('/').filter(Boolean).pop() || 'resource');
+    const fallbackDelKind =
+      body.resourceType ||
+      body.type ||
+      rawUrl
+        .replace(`/api/project/${encodeURIComponent(projectId)}/`, '')
+        .replace(`/api/project/${projectId}/`, '')
+        .split('?')[0]
+        .split('/')[0]
+        .replace(/-/g, ' ')
+        .replace(/\b\w/g, (c) => c.toUpperCase()) ||
+      'Google Cloud Resource';
+    const fallbackDelLoc = body.region || body.zone || body.location || 'global';
     return {
-      title: 'Confirm Permanent Resource Deletion',
-      headerBadge: 'CloudPulse 2026 Resource Deletion Gatekeeper',
-      targetLabel: 'Target Google Cloud Resource',
-      resourceKind: body.resourceType || body.type || 'Cloud Resource',
-      targetName: body.name || body.id || rawUrl.split('/').pop() || rawUrl,
-      location: body.region || body.zone || body.location || 'GCP',
+      title: `Permanently Delete ${fallbackDelKind} "${fallbackDelTarget}"?`,
+      headerBadge: `${fallbackDelKind} Teardown Gatekeeper`,
+      targetLabel: `Target ${fallbackDelKind}`,
+      resourceKind: fallbackDelKind,
+      targetName: String(fallbackDelTarget),
+      location: String(fallbackDelLoc),
       projectId,
       method: 'DELETE',
       endpoint: rawUrl,
-      confirmLabel: 'Confirm & Permanently Delete',
-      cancelToast: 'Resource deletion cancelled.',
-      laymanSummary: `In Plain English: Permanently deletes "${body.name || body.id || rawUrl.split('/').pop() || rawUrl}" from Google Cloud project "${projectId}" and stops any ongoing billing for it.`,
-      whatHappensNext: `1. Sends an authenticated HTTP DELETE request to Google Cloud for "${body.name || body.id || rawUrl.split('/').pop() || rawUrl}".\n2. Verifies resource deletion and logs the receipt in the Flight Recorder.`,
-      costWarning: `BILLING STOP ($0.00/HR AFTER DELETION): Deleting this resource halts any active hourly runtime or monthly storage charges.`,
-      impactWarning: `You are about to execute a permanent HTTP DELETE operation on Google Cloud project "${projectId}". Please confirm you want to proceed.`,
+      confirmLabel: `Confirm & Delete "${fallbackDelTarget}"`,
+      cancelToast: `Deletion of ${fallbackDelKind} "${fallbackDelTarget}" cancelled.`,
+      laymanSummary: `In Plain English: Permanently removes ${fallbackDelKind} "${fallbackDelTarget}" (${fallbackDelLoc}) from Google Cloud project "${projectId}" and stops any associated runtime or storage billing.`,
+      whatHappensNext: `1. Calls the Google Cloud REST DELETE endpoint for ${fallbackDelKind} "${fallbackDelTarget}" in "${fallbackDelLoc}".\n2. Verifies teardown completion and logs the receipt in the Flight Recorder.`,
+      costWarning: `BILLING STOP ($0.00/HR AFTER DELETION): Deleting "${fallbackDelTarget}" stops any ongoing compute, storage, or reservation charges tied to this resource.`,
+      impactWarning: `Irreversibly removes "${fallbackDelTarget}" (${fallbackDelKind}) from "${projectId}".`,
     };
   }
 
@@ -3386,7 +3403,60 @@ function classifyDestructiveAxiosConfig(config) {
       };
     }
 
-    // 3G. Compute Engine VM Power / Machine Type / Deletion Protection (/vms/:zone/:name/power)
+    // 3G. Compute Engine VM Power, Resize, Deletion Protection, IP Detach & Guest Agent Cockpit
+    const vmAgentCockpitMatch = rawUrl.match(/\/vms\/([^/]+)\/agent-cockpit/);
+    if (vmAgentCockpitMatch) {
+      const vmName = decodeURIComponent(vmAgentCockpitMatch[1] || 'vm-instance');
+      const zone = String(body.zone || 'us-east1-b');
+      const cockpitAct = String(body.action || 'RESTART_GUEST_AGENTS').toUpperCase();
+      const cockpitSpecs = {
+        RECLAIM_DISK_SPACE: {
+          title: `Reclaim Disk Space on GCE VM "${vmName}" (${zone})?`,
+          badge: 'Compute Engine Guest Cockpit — Zero-SSH Disk Reclaim',
+          layman: `In Plain English: Connects to "${vmName}" (${zone}) to vacuum old systemd journal logs, clear apt/yum package caches, and prune dangling temporary files—freeing boot-disk space without touching your application data.`,
+          next: `1. Runs non-destructive log vacuum (journalctl --vacuum-time=3d) and package cache cleanup (apt-get clean / autoremove) on "${vmName}".\n2. Re-measures live disk usage and updates the VM Cockpit telemetry.`,
+          cost: `ZERO EXTRA COST ($0.00): Freeing disk space avoids forced Persistent Disk expansion charges.`,
+          confirm: `Reclaim Disk Space on "${vmName}"`,
+        },
+        APPLY_SECURITY_PATCHES: {
+          title: `Apply OS Security Patches on GCE VM "${vmName}" (${zone})?`,
+          badge: 'Compute Engine Guest Cockpit — Live Security Patching',
+          layman: `In Plain English: Installs pending Linux security updates on "${vmName}" (${zone}) via OS Config / unattended security upgrade so known CVEs are closed while preserving your installed services.`,
+          next: `1. Runs security package upgrades on "${vmName}" in zone "${zone}".\n2. Refreshes OS Config patch status and CVE counts in the VM Cockpit.`,
+          cost: `ZERO EXTRA COST ($0.00): OS security patching is included with Compute Engine.`,
+          confirm: `Apply Security Patches on "${vmName}"`,
+        },
+        RESTART_GUEST_AGENTS: {
+          title: `Restart Ops Agent & OS Config Services on "${vmName}" (${zone})?`,
+          badge: 'Compute Engine Guest Cockpit — Guest Agent Restart',
+          layman: `In Plain English: Cleanly restarts google-cloud-ops-agent and google-osconfig-agent inside "${vmName}" (${zone}) to recover stalled CPU/RAM/disk telemetry or OS inventory reporting without rebooting the VM.`,
+          next: `1. Restarts systemd units google-cloud-ops-agent and google-osconfig-agent on "${vmName}".\n2. Verifies active (running) status and refreshes live guest metrics.`,
+          cost: `ZERO EXTRA COST ($0.00): Restarting guest telemetry daemons incurs no compute downtime or billing change.`,
+          confirm: `Restart Guest Agents on "${vmName}"`,
+        },
+      };
+      const spec = cockpitSpecs[cockpitAct] || cockpitSpecs.RESTART_GUEST_AGENTS;
+      return {
+        gateType: 'ONE_TAP_CLOUD_ACTION',
+        releaseTrack: 'GA',
+        title: spec.title,
+        laymanSummary: spec.layman,
+        headerBadge: spec.badge,
+        targetLabel: 'Target Compute Engine VM Instance',
+        resourceKind: 'Compute Engine VM Guest Cockpit (compute.googleapis.com/v1)',
+        targetName: vmName,
+        location: zone,
+        projectId,
+        method: cockpitAct.replace(/_/g, ' '),
+        endpoint: rawUrl,
+        confirmLabel: spec.confirm,
+        cancelToast: `Guest cockpit action on "${vmName}" cancelled.`,
+        whatHappensNext: spec.next,
+        costWarning: spec.cost,
+        impactWarning: `Runs inside guest OS on "${vmName}" (${zone}) in project "${projectId}".`,
+      };
+    }
+
     const vmPowerMatch = rawUrl.match(/\/vms\/([^/]+)\/([^/]+)\/power|\/vms\/([^/]+)\/power/);
     if (vmPowerMatch) {
       const act = String(body.action || 'POWER_ACTION').toUpperCase();
@@ -3394,17 +3464,80 @@ function classifyDestructiveAxiosConfig(config) {
         vmPowerMatch[2] || vmPowerMatch[3] || body.name || 'vm-instance'
       );
       const zone = decodeURIComponent(vmPowerMatch[1] || body.zone || 'gcp-zone');
-      const isStart = act === 'START' || act === 'RESUME' || act === 'RESET';
+      const targetMachine = body.machineType || 'new machine type';
+      const delProtEnabled = Boolean(body.deletionProtection);
+
+      const vmPowerSpecs = {
+        START: {
+          title: `Power On Compute Engine VM "${vmName}" (${zone})?`,
+          layman: `In Plain English: Starts Compute Engine VM "${vmName}" in zone "${zone}" (${projectId}), bringing its OS and workloads back online and resuming hourly vCPU/memory billing.`,
+          next: `1. Calls POST compute.googleapis.com/compute/v1/projects/${projectId}/zones/${zone}/instances/${vmName}/start.\n2. Polls the live GCP Zone Operation until the VM reaches RUNNING state.`,
+          cost: `ACTIVE VM BILLING: Starting "${vmName}" immediately resumes hourly vCPU, RAM, and GPU charges until the VM is stopped.`,
+          confirm: `Start VM "${vmName}"`,
+        },
+        RESUME: {
+          title: `Resume Suspended Compute Engine VM "${vmName}" (${zone})?`,
+          layman: `In Plain English: Resumes "${vmName}" in zone "${zone}" from its saved memory snapshot, restoring running processes and resuming hourly compute billing.`,
+          next: `1. Calls POST compute.googleapis.com/compute/v1/projects/${projectId}/zones/${zone}/instances/${vmName}/resume.\n2. Restores RAM state and transitions the VM back to RUNNING.`,
+          cost: `ACTIVE VM BILLING: Resuming "${vmName}" resumes hourly vCPU and RAM billing.`,
+          confirm: `Resume VM "${vmName}"`,
+        },
+        RESET: {
+          title: `Hard Reset Compute Engine VM "${vmName}" (${zone})?`,
+          layman: `In Plain English: Performs an immediate hardware reset (reboot) of "${vmName}" in zone "${zone}". Active SSH sessions and in-memory processes will disconnect briefly while the VM boots back up.`,
+          next: `1. Calls POST compute.googleapis.com/compute/v1/projects/${projectId}/zones/${zone}/instances/${vmName}/reset.\n2. Reboots the VM in place while keeping its IP address and disks intact.`,
+          cost: `NO EXTRA COST ($0.00): Hard-resetting a running VM does not add extra charges beyond its normal hourly rate.`,
+          confirm: `Reset VM "${vmName}"`,
+        },
+        STOP: {
+          title: `Stop Compute Engine VM "${vmName}" (${zone})?`,
+          layman: `In Plain English: Gracefully shuts down "${vmName}" in zone "${zone}" so hourly vCPU and RAM charges drop to $0.00/hr while keeping your boot disk files intact.`,
+          next: `1. Calls POST compute.googleapis.com/compute/v1/projects/${projectId}/zones/${zone}/instances/${vmName}/stop.\n2. Waits for the guest OS to shut down cleanly and transitions to TERMINATED.`,
+          cost: `RESIDUAL DISK & STATIC IP NOTICE: vCPU/RAM billing stops ($0/hr), while the attached Boot Disk ($0.04–$0.17/GB-mo) and any reserved Static External IP ($7.30/mo) continue billing.`,
+          confirm: `Stop VM "${vmName}"`,
+        },
+        SUSPEND: {
+          title: `Suspend Compute Engine VM "${vmName}" (${zone})?`,
+          layman: `In Plain English: Freezes "${vmName}" in zone "${zone}" by saving its live RAM state to storage and pausing vCPU billing so you can resume instantly later.`,
+          next: `1. Calls POST compute.googleapis.com/compute/v1/projects/${projectId}/zones/${zone}/instances/${vmName}/suspend.\n2. Persists guest memory to a suspend snapshot and halts vCPU billing.`,
+          cost: `SAVES vCPU BILLING: vCPU billing stops while suspended; boot disk and memory snapshot storage continue at standard storage rates.`,
+          confirm: `Suspend VM "${vmName}"`,
+        },
+        SET_MACHINE_TYPE: {
+          title: `Resize GCE VM "${vmName}" to "${targetMachine}" (${zone})?`,
+          layman: `In Plain English: Changes the CPU/RAM machine shape of stopped VM "${vmName}" in zone "${zone}" to "${targetMachine}" without touching your boot disk or installed apps.`,
+          next: `1. Calls POST compute.googleapis.com/compute/v1/projects/${projectId}/zones/${zone}/instances/${vmName}/setMachineType with machineType=${targetMachine}.\n2. Updates the VM's hardware profile ready for next boot.`,
+          cost: `UPDATED HOURLY RATE: Future runtime billing for "${vmName}" will reflect the "${targetMachine}" vCPU/RAM tier once started.`,
+          confirm: `Resize "${vmName}" to ${targetMachine}`,
+        },
+        SET_DELETION_PROTECTION: {
+          title: `${delProtEnabled ? 'Enable' : 'Disable'} Deletion Protection on VM "${vmName}" (${zone})?`,
+          layman: `In Plain English: ${delProtEnabled ? `Locks "${vmName}" against accidental deletion across Console, gcloud, and APIs.` : `Unlocks "${vmName}" so it can be deleted when you are ready to decommission it.`}`,
+          next: `1. Calls POST compute.googleapis.com/compute/v1/projects/${projectId}/zones/${zone}/instances/${vmName}/setDeletionProtection?deletionProtection=${delProtEnabled}.\n2. Updates the live termination lock on "${vmName}".`,
+          cost: `ZERO COST ($0.00): Toggling VM deletion protection is completely free.`,
+          confirm: `${delProtEnabled ? 'Enable' : 'Disable'} Deletion Protection`,
+        },
+        DETACH_PUBLIC_IP: {
+          title: `Detach Public External IP from VM "${vmName}" (${zone})?`,
+          layman: `In Plain English: Removes the public internet IP (NAT access config) from "${vmName}" in zone "${zone}" so the VM becomes private-only (reachable via Cloud IAP SSH), eliminating public attack surface and external IP charges.`,
+          next: `1. Calls POST compute.googleapis.com/compute/v1/projects/${projectId}/zones/${zone}/instances/${vmName}/deleteAccessConfig.\n2. Strips the public external IP while preserving private VPC networking and IAP access.`,
+          cost: `SAVES EXTERNAL IP COST: Eliminates ephemeral/static public IP charges on "${vmName}".`,
+          confirm: `Detach Public IP from "${vmName}"`,
+        },
+      };
+      const spec = vmPowerSpecs[act] || {
+        title: `Update Compute Engine VM "${vmName}" (${act.replace(/_/g, ' ')})?`,
+        layman: `In Plain English: Updates Compute Engine VM "${vmName}" in zone "${zone}" (${projectId}) with operation "${act.replace(/_/g, ' ')}".`,
+        next: `1. Calls compute.googleapis.com/compute/v1/projects/${projectId}/zones/${zone}/instances/${vmName}.\n2. Polls the live Zone Operation until completed.`,
+        cost: `Applies the requested Compute Engine state update to "${vmName}" in "${zone}".`,
+        confirm: `Apply ${act.replace(/_/g, ' ')} on "${vmName}"`,
+      };
       return {
         gateType: 'ONE_TAP_CLOUD_ACTION',
         releaseTrack: 'GA',
-        title: `Confirm 1-Tap VM Action: ${act} on "${vmName}"?`,
-        laymanSummary: isStart
-          ? `In Plain English: Powers on or restarts Compute Engine virtual machine "${vmName}" in zone "${zone}" (${projectId}), resuming hourly vCPU and memory billing.`
-          : act === 'STOP' || act === 'SUSPEND'
-          ? `In Plain English: Gracefully shuts down Compute Engine virtual machine "${vmName}" in zone "${zone}" so hourly vCPU and RAM charges drop to $0.00/hr while preserving your boot disk files.`
-          : `In Plain English: Applies Compute Engine configuration change "${act}" on virtual machine "${vmName}" in zone "${zone}" (${projectId}).`,
-        headerBadge: 'CloudPulse 2026 Compute Engine & Cost Gatekeeper',
+        title: spec.title,
+        laymanSummary: spec.layman,
+        headerBadge: 'Compute Engine VM Lifecycle & Cost Gatekeeper',
         targetLabel: 'Target Compute Engine VM Instance',
         resourceKind: 'Compute Engine VM (compute.googleapis.com/v1)',
         targetName: `${vmName} (${act})`,
@@ -3412,15 +3545,11 @@ function classifyDestructiveAxiosConfig(config) {
         projectId,
         method: `VM ${act}`,
         endpoint: rawUrl,
-        confirmLabel: `Confirm & ${act} VM "${vmName}"`,
+        confirmLabel: spec.confirm,
         cancelToast: `VM action ${act} on "${vmName}" cancelled.`,
-        whatHappensNext: `1. Calls compute.googleapis.com/v1/projects/${projectId}/zones/${zone}/instances/${vmName}/${act.toLowerCase()}.\n2. Polls the live GCP Zone Operation until the VM state transitions.`,
-        costWarning: isStart
-          ? `ACTIVE VM BILLING WARNING: Starting or resuming "${vmName}" immediately begins continuous hourly vCPU, Memory, and GPU billing ($/hr) until the instance is stopped.`
-          : act === 'STOP' || act === 'SUSPEND'
-          ? `RESIDUAL DISK & STATIC IP BILLING WARNING: Stopping "${vmName}" halts vCPU/RAM charges ($0/hr compute), but its attached Boot Persistent Disk ($0.04–$0.17/GB-mo) and any reserved Static External IP ($7.30/mo) CONTINUE billing while stopped!`
-          : `Changing machine type or deletion protection updates the VM's hardware billing rate or termination lock in "${zone}".`,
-        impactWarning: `This mutates the live state of Compute Engine VM "${vmName}" in "${zone}".`,
+        whatHappensNext: spec.next,
+        costWarning: spec.cost,
+        impactWarning: `Mutates live Compute Engine VM "${vmName}" in zone "${zone}" (${projectId}).`,
       };
     }
 
@@ -8340,7 +8469,7 @@ function classifyDestructiveAxiosConfig(config) {
       }
     }
 
-    // 3H. Smart Plain-English Fallback for Any Remaining Cloud Action
+    // 3H. Smart Context-Aware Fallback for Any Remaining Cloud Action (zero generic boilerplate)
     const actName = String(
       body.action ||
         body.actionType ||
@@ -8356,6 +8485,10 @@ function classifyDestructiveAxiosConfig(config) {
       .replace(`/api/project/${encodeURIComponent(projectId)}/`, '')
       .replace(`/api/project/${projectId}/`, '')
       .split('?')[0];
+    const domainLabel = cleanRouteSegment
+      .split('/')[0]
+      .replace(/-/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase()) || 'Google Cloud';
     const targetResource =
       body.name ||
       body.displayName ||
@@ -8375,10 +8508,10 @@ function classifyDestructiveAxiosConfig(config) {
       body.checkName ||
       body.serviceAccountEmail ||
       body.slug ||
-      cleanRouteSegment ||
-      'Google Cloud Resource';
+      cleanRouteSegment.split('/').filter(Boolean).pop() ||
+      domainLabel;
     const targetLoc =
-      body.region || body.zone || body.location || 'Global / Regional';
+      body.region || body.zone || body.location || 'global';
     const payloadSummaryKeys = Object.keys(body || {})
       .filter((k) => !['action', 'actionType', 'confirmed'].includes(k))
       .slice(0, 4)
@@ -8392,21 +8525,21 @@ function classifyDestructiveAxiosConfig(config) {
         : rawUrl.includes('beta')
         ? 'BETA'
         : 'GA',
-      title: `Run "${humanActName}" on "${targetResource}"?`,
-      laymanSummary: `In Plain English: You requested to run "${humanActName}" on "${targetResource}" (${targetLoc}) in your Google Cloud project "${projectId}". Nothing happens until you click Confirm below — and you can press Esc or Cancel right now to leave everything untouched.`,
-      headerBadge: 'CloudPulse 2026 Plain-English Cloud Safety Gatekeeper',
-      targetLabel: 'Target Google Cloud Resource & Operation',
-      resourceKind: `${cleanRouteSegment} · ${humanActName}`,
+      title: `${humanActName} — ${domainLabel} "${targetResource}" (${targetLoc})?`,
+      laymanSummary: `In Plain English: Executes ${domainLabel} operation "${humanActName}" against "${targetResource}" (${targetLoc}) in project "${projectId}" using your active Google Cloud OAuth2 credentials.`,
+      headerBadge: `${domainLabel} Live API Gatekeeper`,
+      targetLabel: `Target ${domainLabel} Asset`,
+      resourceKind: `${domainLabel} (${cleanRouteSegment})`,
       targetName: String(targetResource),
       location: String(targetLoc),
       projectId,
       method: `${String(actName).slice(0, 24).toUpperCase()}`,
       endpoint: rawUrl,
-      confirmLabel: `Confirm & Run "${humanActName}"`,
-      cancelToast: `Operation "${humanActName}" cancelled — no changes made to "${projectId}".`,
-      whatHappensNext: `1. Connects using your active Google Cloud credentials for project "${projectId}".\n2. Runs "${humanActName}" on "${targetResource}" in "${targetLoc}"${payloadSummaryKeys ? ` with settings (${payloadSummaryKeys})` : ''}.\n3. Verifies the live response from Google Cloud and logs a receipt in the Flight Recorder.`,
-      costWarning: `CLOUD BILLING & COST SUMMARY: Security rules, IAM permissions, tags, and policy updates are 100% free ($0.00/mo). If this action creates a new running server, database, or storage volume in "${projectId}", standard Google Cloud pricing and Always-Free Tier allowances apply.`,
-      impactWarning: `Applies "${humanActName}" to live resource "${targetResource}" (${targetLoc}) in project "${projectId}".`,
+      confirmLabel: `Confirm ${humanActName}`,
+      cancelToast: `${domainLabel} action "${humanActName}" cancelled.`,
+      whatHappensNext: `1. Calls live Google Cloud endpoint "${cleanRouteSegment}" for "${targetResource}" (${targetLoc})${payloadSummaryKeys ? ` with parameters (${payloadSummaryKeys})` : ''}.\n2. Verifies the response and logs the audit receipt in the Flight Recorder.`,
+      costWarning: `BILLING NOTICE: Metadata, IAM, policy, and firewall updates are $0.00/mo; newly created compute, database, or storage assets follow standard Google Cloud pricing in "${projectId}".`,
+      impactWarning: `Modifies live ${domainLabel} asset "${targetResource}" (${targetLoc}) in "${projectId}".`,
     };
   }
 
