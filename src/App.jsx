@@ -130,6 +130,8 @@ import BigQueryDataLineagePanel from './components/BigQueryDataLineagePanel';
 import IamPamGovernancePanel from './components/IamPamGovernancePanel';
 import SreSliSloCockpitPanel from './components/SreSliSloCockpitPanel';
 import StudioWorkspaceTabs from './components/StudioWorkspaceTabs';
+import SpatialOverviewHero from './components/SpatialOverviewHero';
+import FloatingSpatialDock from './components/FloatingSpatialDock';
 import GitOpsReleaseFactoryPipelineBar from './components/GitOpsReleaseFactoryPipelineBar';
 import MultiCloudGlobalParityPipelineBar from './components/MultiCloudGlobalParityPipelineBar';
 import EngineerWishlistWave2 from './components/EngineerWishlistWave2';
@@ -9922,6 +9924,7 @@ function CloudPulseCockpit() {
     };
   }, [triggerCrossUiSpotlight, handleNavigateStudioTab, resolveActiveSubTabLabel]);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [zenMode, setZenMode] = useState(false);
   const [keynoteAutopilotOpen, setKeynoteAutopilotOpen] = useState(false);
 
   useEffect(() => {
@@ -9952,6 +9955,11 @@ function CloudPulseCockpit() {
   // Global Cmd+K / Ctrl+K shortcut + '[' Rail Toggle + '/' Studio Rail Filter
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
+      if (e.altKey && !e.metaKey && !e.ctrlKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        setZenMode((prev) => !prev);
+        return;
+      }
       if (
         ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') ||
         (e.altKey && !e.metaKey && !e.ctrlKey && e.key.toLowerCase() === 'p')
@@ -11200,7 +11208,8 @@ function CloudPulseCockpit() {
           </div>
         )}
 
-        {/* Slim 3-Zone Cloud Command Header */}
+        {/* Slim 3-Zone Cloud Command Header (hidden in Full-Bleed Zen Canvas Alt+Z) */}
+        {!zenMode && (
         <header className="sticky top-0 z-40 border-b border-zinc-200/80 dark:border-[#1a2130] bg-white/95 dark:bg-[#0c0f16]/95 backdrop-blur-md px-4 sm:px-5 py-2">
           {/* Primary Command Row: [Left: Rail + Brand + Project Context] · [Center: Omnibox Search] · [Right: Telemetry + Actions] */}
           <div className="relative z-50 flex items-center justify-between gap-2.5 flex-wrap sm:flex-nowrap">
@@ -11862,11 +11871,12 @@ function CloudPulseCockpit() {
           </div>
 
         </header>
+        )}
 
         {/* Architectural Control Plane Shell: Left Domain Rail + Main Workspace */}
         <div className="flex items-start min-h-[calc(100vh-3.25rem)]">
           {/* Smart Left Architectural Navigation Rail (Pantheon / Linear / Cloudflare Zero-Trust Style) */}
-          {!mobilePreview && (
+          {!mobilePreview && !zenMode && (
             <aside
               aria-label="Google Cloud Architectural Studios Navigation"
               className={`hidden md:flex flex-col shrink-0 sticky top-[52px] h-[calc(100vh-76px)] overflow-y-auto border-r border-zinc-200/80 dark:border-[#1a2130] bg-white dark:bg-[#0b0f17] select-none transition-all duration-150 ${
@@ -12163,7 +12173,9 @@ function CloudPulseCockpit() {
           {/* Main Content Body */}
           <main
             id="cloudpulse-main-workspace"
-            className="min-w-0 flex-1 overflow-x-hidden px-5 sm:px-8 lg:px-10 py-6 sm:py-8 space-y-7"
+            className={`min-w-0 flex-1 overflow-x-hidden px-5 sm:px-8 lg:px-10 py-6 sm:py-8 space-y-7 ${
+              zenMode ? 'max-w-[1600px] mx-auto pb-28' : ''
+            }`}
           >
             {/* Architectural Workspace Context, Studio History & Telemetry Header */}
             {(() => {
@@ -12535,18 +12547,17 @@ function CloudPulseCockpit() {
                       label: 'Resources & KPIs',
                       icon: LayoutDashboard,
                       render: () => (
-                        <div className="space-y-5">
-                          <SortableKpiRow
-                            summary={overview?.summary}
-                            fetchLatencyMs={overview?.fetchLatencyMs}
-                            isSyncing={loadingOverview}
-                            onRefreshOverview={() =>
-                              fetchProjectOverview(selectedProjectId, {
-                                force: true,
-                              })
-                            }
+                        <div className="space-y-10">
+                          <SpatialOverviewHero
+                            projectId={selectedProjectId}
+                            overview={overview}
+                            liveBurn={liveBurn}
                             onNavigateTab={handleNavigateStudioTab}
-                            onScrollToApis={handleScrollToApisWithSpotlight}
+                            onOpenProvision={handleOpenProvision}
+                            onOpenCommandPalette={() =>
+                              setCommandPaletteOpen(true)
+                            }
+                            onToggleZenMode={() => setZenMode((v) => !v)}
                           />
                           <ResourceControlCenter
                             resources={overview?.resources || []}
@@ -14739,6 +14750,18 @@ function CloudPulseCockpit() {
           </footer>
         )}
       </div>
+
+      {zenMode && (
+        <FloatingSpatialDock
+          activeTab={activeTab}
+          zenMode={zenMode}
+          onSelectTab={(tabId) =>
+            handleNavigateStudioTab(tabId, null, null, { skipConfirm: true })
+          }
+          onOpenCommandPalette={() => setCommandPaletteOpen(true)}
+          onToggleZenMode={() => setZenMode((v) => !v)}
+        />
+      )}
 
       <KeynoteAutopilotModal
         isOpen={keynoteAutopilotOpen}
