@@ -3245,6 +3245,73 @@ export default function VmFleetAndSsh({
                       );
                     })()}
 
+                    {/* Same-Spot 100% Completion Card + Parsed APT Summary (replaces progress bar in-place!) */}
+                    {receipt?.output && !cvePatchBusyVm.startsWith(`${cveVm.name}:`) && (() => {
+                      const aptMatch = String(receipt.output || '').match(
+                        /(\d+)\s+upgraded,\s+(\d+)\s+newly installed,\s+(\d+)\s+to remove\s+and\s+(\d+)\s+not upgraded/i
+                      );
+                      const upgradedCnt = aptMatch ? Number(aptMatch[1]) : null;
+                      const newlyCnt = aptMatch ? Number(aptMatch[2]) : null;
+                      const notUpgradedCnt = aptMatch ? Number(aptMatch[4]) : null;
+                      return (
+                        <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/[0.06] p-4 space-y-3 cp-studio-enter">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                              <CheckCircle2 className="w-4 h-4 shrink-0" />
+                              <span>
+                                Live Patch Completed on <strong>{cveVm.name}</strong> ({Math.max(1, Math.round((receipt.durationMs || 1000) / 1000))}s) — 100%
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {upgradedCnt !== null && (
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold">
+                                  {upgradedCnt} upgraded · {newlyCnt} new · {notUpgradedCnt} held
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard?.writeText(receipt.output || '');
+                                  onShowToast?.('Copied APT patch transcript.');
+                                }}
+                                className="px-2 py-1 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-[11px] font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                              >
+                                Copy Output
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setCvePatchReceiptByVm((prev) => {
+                                    const next = { ...prev };
+                                    delete next[cveVm.name];
+                                    return next;
+                                  })
+                                }
+                                className="px-2 py-1 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-[11px] font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 cursor-pointer"
+                              >
+                                Dismiss
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* 100% Completed Progress Bar */}
+                          <div className="h-2 w-full rounded-full bg-emerald-500/20 overflow-hidden">
+                            <div className="h-full w-full rounded-full bg-emerald-500" />
+                          </div>
+
+                          {upgradedCnt === 0 && (
+                            <div className="text-xs text-zinc-600 dark:text-zinc-300">
+                              All targeted packages are already at the latest version available in this VM&apos;s configured <code className="font-mono">apt</code> repositories (0 new updates available).
+                            </div>
+                          )}
+
+                          <pre className="p-3.5 rounded-lg bg-zinc-950 text-emerald-300 font-mono text-xs max-h-48 overflow-auto whitespace-pre-wrap">
+                            <code>{receipt.output}</code>
+                          </pre>
+                        </div>
+                      );
+                    })()}
+
                     {/* Interactive Severity Filter KPI Strip */}
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                       {[
@@ -3371,20 +3438,6 @@ export default function VmFleetAndSsh({
                       </div>
                     )}
 
-                    {receipt?.output && !cvePatchBusyVm.startsWith(`${cveVm.name}:`) && (
-                      <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/[0.06] p-3.5 space-y-2.5 cp-studio-enter">
-                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                          <span className="inline-flex items-center gap-1.5">
-                            <CheckCircle2 className="w-4 h-4" />
-                            Live Patch Completed on {cveVm.name} ({Math.max(1, Math.round((receipt.durationMs || 1000) / 1000))}s) — 100%
-                          </span>
-                          <span className="text-[11px] font-mono">APT Transcript</span>
-                        </div>
-                        <pre className="p-3.5 rounded-lg bg-zinc-950 text-emerald-300 font-mono text-xs max-h-56 overflow-auto whitespace-pre-wrap">
-                          <code>{receipt.output}</code>
-                        </pre>
-                      </div>
-                    )}
                   </div>
                 ) : null}
               </section>
