@@ -924,16 +924,77 @@ ${activeDemoTrack.beats
         `/api/project/${encodeURIComponent(projectId)}/alloydb/action`,
         payload
       );
+      const opName = data.operation?.name || null;
       setLastReceipt({
         ok: true,
         action: payload.action,
-        message: data.message,
-        operation: data.operation?.name || null,
+        message: opName
+          ? `${data.message || `Dispatched ${payload.action}`} — Polling live Google Cloud operation…`
+          : data.message,
+        operation: opName,
         ts: new Date().toLocaleTimeString(),
       });
       notify(data.message || `Executed ${payload.action}`);
       await fetchOverview();
       if (typeof onRefreshOverview === 'function') onRefreshOverview();
+
+      // Actively poll real AlloyDB LRO so async GCP failures (e.g. code 10 tenant project creation) surface immediately
+      if (opName && opName.includes('/operations/')) {
+        const m = opName.match(/\/locations\/([^/]+)\/operations\/([^/]+)$/);
+        if (m) {
+          const [, opLoc, opId] = m;
+          const pollStarted = Date.now();
+          const pollOnce = async () => {
+            try {
+              const pollRes = await axios.get(
+                `/api/project/${encodeURIComponent(projectId)}/alloydb/operations/${encodeURIComponent(opLoc)}/${encodeURIComponent(opId)}`
+              );
+              const op = pollRes.data || {};
+              if (op.done) {
+                if (op.errorMessage) {
+                  const hint = /tenant project/i.test(op.errorMessage)
+                    ? ' (Hint: AlloyDB Express preview may not be enabled in this region/project yet — try another region like us-west1/europe-west1 or verify Service Networking + AlloyDB service agent.)'
+                    : '';
+                  const fullErr = `AlloyDB ${op.verb} failed (code ${op.errorCode ?? 'ERROR'}): ${op.errorMessage}${hint}`;
+                  setLastReceipt({
+                    ok: false,
+                    action: payload.action,
+                    message: fullErr,
+                    operation: opName,
+                    ts: new Date().toLocaleTimeString(),
+                  });
+                  reportError(fullErr);
+                } else {
+                  const okMsg = `AlloyDB ${op.verb} SUCCEEDED for "${op.targetName || payload.clusterId || 'resource'}" in ${opLoc}!`;
+                  setLastReceipt({
+                    ok: true,
+                    action: payload.action,
+                    message: okMsg,
+                    operation: opName,
+                    ts: new Date().toLocaleTimeString(),
+                  });
+                  notify(okMsg);
+                }
+                await fetchOverview();
+                if (typeof onRefreshOverview === 'function') onRefreshOverview();
+                return true;
+              }
+            } catch {
+              return true;
+            }
+            return Date.now() - pollStarted > 300000;
+          };
+          setTimeout(async () => {
+            const finished = await pollOnce();
+            if (!finished) {
+              const timer = setInterval(async () => {
+                const doneNow = await pollOnce();
+                if (doneNow) clearInterval(timer);
+              }, 3500);
+            }
+          }, 1500);
+        }
+      }
     } catch (err) {
       if (err?.isCancelledByUser) return;
       const msg = err?.response?.data?.error || err.message || 'AlloyDB action failed.';
@@ -2372,6 +2433,64 @@ GROUP BY 1 ORDER BY turns DESC;`;
                       )}
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Live Recent AlloyDB Operations (locations/-/operations) — Surfaces Async Provisioning & Errors */}
+              {Array.isArray(overview?.operations) && overview.operations.length > 0 && (
+                <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                      Recent AlloyDB Operations ({overview.operations.length})
+                    </span>
+                    <span className="text-[10px] font-mono text-zinc-500">
+                      locations/-/operations
+                    </span>
+                  </div>
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                    {overview.operations.slice(0, 6).map((op) => (
+                      <div
+                        key={op.name}
+                        className={`p-2.5 rounded-lg border text-[11px] space-y-1 ${
+                          op.status === 'FAILED'
+                            ? 'border-red-500/35 bg-red-500/[0.06]'
+                            : op.status === 'RUNNING'
+                            ? 'border-blue-500/35 bg-blue-500/[0.06]'
+                            : 'border-emerald-500/30 bg-emerald-500/[0.04]'
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span
+                              className={`px-1.5 py-0.5 rounded font-mono text-[9.5px] font-bold ${
+                                op.status === 'FAILED'
+                                  ? 'bg-red-500/20 text-red-700 dark:text-red-300'
+                                  : op.status === 'RUNNING'
+                                  ? 'bg-blue-500/20 text-blue-700 dark:text-blue-300'
+                                  : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                              }`}
+                            >
+                              {op.status}
+                            </span>
+                            <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                              {op.verb} {op.targetName}
+                            </span>
+                            <span className="text-[10px] font-mono text-zinc-500">
+                              ({op.location})
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-mono text-zinc-500">
+                            {op.createTime ? new Date(op.createTime).toLocaleTimeString() : '—'}
+                          </span>
+                        </div>
+                        {op.errorMessage && (
+                          <div className="text-[11px] text-red-700 dark:text-red-300 font-medium">
+                            Code {op.errorCode ?? 'ERROR'}: {op.errorMessage}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 

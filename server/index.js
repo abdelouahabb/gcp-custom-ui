@@ -11950,7 +11950,7 @@ app.get('/api/project/:projectId/alloydb/overview', async (req, res) => {
     }
 
     const encProj = encodeURIComponent(projectId);
-    const [apiRes, clustersRes, instancesRes, backupsRes] = await Promise.all([
+    const [apiRes, clustersRes, instancesRes, backupsRes, opsRes] = await Promise.all([
       gcpFetch(
         `https://serviceusage.googleapis.com/v1/projects/${encProj}/services/alloydb.googleapis.com`,
         token,
@@ -11975,6 +11975,12 @@ app.get('/api/project/:projectId/alloydb/overview', async (req, res) => {
         projectId,
         { timeout: 8000 }
       ).catch(() => ({ backups: [] })),
+      gcpFetch(
+        `https://alloydb.googleapis.com/v1beta/projects/${encProj}/locations/-/operations?pageSize=12`,
+        token,
+        projectId,
+        { timeout: 8000 }
+      ).catch(() => ({ operations: [] })),
     ]);
 
     const apiEnabled = apiRes?.state === 'ENABLED';
@@ -12060,6 +12066,32 @@ app.get('/api/project/:projectId/alloydb/overview', async (req, res) => {
       };
     });
 
+    const operations = (Array.isArray(opsRes?.operations) ? opsRes.operations : []).map((op) => {
+      const parts = String(op.name || '').split('/');
+      const locIdx = parts.indexOf('locations');
+      const location = locIdx >= 0 ? parts[locIdx + 1] : '';
+      const operationId = parts[parts.length - 1] || op.name;
+      const meta = op.metadata || {};
+      const target = String(meta.target || '');
+      const targetName = target.split('/').pop() || target || operationId;
+      const errMsg = op.error?.message || null;
+      const done = Boolean(op.done);
+      return {
+        name: op.name,
+        operationId,
+        location,
+        verb: String(meta.verb || 'operation').toUpperCase(),
+        target,
+        targetName,
+        done,
+        status: !done ? 'RUNNING' : errMsg ? 'FAILED' : 'SUCCEEDED',
+        errorCode: op.error?.code ?? null,
+        errorMessage: errMsg,
+        createTime: meta.createTime || null,
+        endTime: meta.endTime || null,
+      };
+    });
+
     const expressCount = clusters.filter((c) => c.isExpress).length;
     const enterpriseCount = clusters.length - expressCount;
 
@@ -12081,6 +12113,7 @@ app.get('/api/project/:projectId/alloydb/overview', async (req, res) => {
       clusters,
       instances,
       backups,
+      operations,
       fetchedAt: new Date().toISOString(),
     });
   } catch (err) {
@@ -12090,6 +12123,48 @@ app.get('/api/project/:projectId/alloydb/overview', async (req, res) => {
         err.message ||
         'Failed to inspect AlloyDB fleet.',
     });
+  }
+});
+
+// 9a-alloydb-operation. GET /api/project/:projectId/alloydb/operations/:location/:operationId
+app.get('/api/project/:projectId/alloydb/operations/:location/:operationId', async (req, res) => {
+  const { projectId, location, operationId } = req.params;
+  if (
+    !/^[a-z0-9][-a-z0-9._]*$/i.test(projectId) ||
+    !/^[a-z0-9-]+$/i.test(location) ||
+    !/^[a-zA-Z0-9._-]{4,120}$/.test(operationId)
+  ) {
+    return res.status(400).json({ error: 'Invalid AlloyDB operation parameters.' });
+  }
+  try {
+    const { token } = await resolveRequestAuth(req);
+    if (!token) return res.status(401).json({ error: 'Not authenticated.' });
+    const op = await gcpFetch(
+      `https://alloydb.googleapis.com/v1beta/projects/${encodeURIComponent(projectId)}/locations/${encodeURIComponent(location)}/operations/${encodeURIComponent(operationId)}`,
+      token,
+      projectId,
+      { timeout: 10000 }
+    );
+    const meta = op?.metadata || {};
+    const done = Boolean(op?.done);
+    const errorMessage = op?.error?.message || null;
+    return res.json({
+      ok: true,
+      name: op?.name,
+      operationId,
+      location,
+      verb: String(meta.verb || 'operation').toUpperCase(),
+      target: meta.target || '',
+      targetName: String(meta.target || '').split('/').pop() || '',
+      done,
+      status: !done ? 'RUNNING' : errorMessage ? 'FAILED' : 'SUCCEEDED',
+      errorCode: op?.error?.code ?? null,
+      errorMessage,
+      createTime: meta.createTime || null,
+      endTime: meta.endTime || null,
+    });
+  } catch (err) {
+    return res.status(err?.status || 500).json({ error: err?.message || 'Failed to poll AlloyDB operation.' });
   }
 });
 
