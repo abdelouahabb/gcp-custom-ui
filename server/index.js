@@ -12358,18 +12358,25 @@ app.post('/api/project/:projectId/alloydb/action', async (req, res) => {
         ? prevNets
         : [...prevNets, { cidrRange: myCidr }];
 
+      const isExpressInst =
+        existingInst?.labels?.tier === 'alloydb_express' ||
+        existingInst?.networkConfig?.publicDnsEnabled !== undefined;
+      const updateMask = isExpressInst
+        ? 'networkConfig.publicDnsEnabled,networkConfig.authorizedExternalNetworks'
+        : 'networkConfig.enablePublicIp,networkConfig.authorizedExternalNetworks';
+      const patchNetworkBody = isExpressInst
+        ? { publicDnsEnabled: true, authorizedExternalNetworks: mergedNets }
+        : { enablePublicIp: true, authorizedExternalNetworks: mergedNets };
+
       const op = await gcpFetch(
-        `${instUrl}?updateMask=networkConfig.enablePublicIp,networkConfig.authorizedExternalNetworks`,
+        `${instUrl}?updateMask=${updateMask}`,
         token,
         projectId,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: {
-            networkConfig: {
-              enablePublicIp: true,
-              authorizedExternalNetworks: mergedNets,
-            },
+            networkConfig: patchNetworkBody,
           },
           timeout: 12000,
         }

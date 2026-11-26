@@ -2817,6 +2817,26 @@ GROUP BY 1 ORDER BY turns DESC;`;
                   >
                     Deep Introspect (Extensions + Flags)
                   </button>
+                  {targetCluster?.primaryInstance && (
+                    <button
+                      type="button"
+                      disabled={busyKey === `PUBIP_${targetCluster.clusterId}`}
+                      onClick={() =>
+                        executeAlloyAction(
+                          {
+                            action: "ENABLE_PUBLIC_IP_FOR_MY_IP",
+                            region: targetCluster.location,
+                            clusterId: targetCluster.clusterId,
+                            instanceId: targetCluster.primaryInstance.instanceId,
+                          },
+                          `PUBIP_${targetCluster.clusterId}`
+                        )
+                      }
+                      className="px-3 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 disabled:opacity-50 text-xs font-semibold text-amber-800 dark:text-amber-200 cursor-pointer"
+                    >
+                      {busyKey === `PUBIP_${targetCluster.clusterId}` ? "Authorizing My IP…" : "Authorize My /32 IP"}
+                    </button>
+                  )}
                 </div>
                 {cloudSqlResult?.durationMs && (
                   <span className="text-[11px] font-mono text-zinc-500 tabular-nums">
