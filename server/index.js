@@ -13185,6 +13185,11 @@ app.post('/api/project/:projectId/alloydb/execute-sql', async (req, res) => {
 
   let effectivePassword = String(password || '');
   let effectiveUser = String(user || 'postgres').trim() || 'postgres';
+  if (useStructured && authMode === 'PASSWORD' && !effectivePassword.trim()) {
+    return res.status(400).json({
+      error: 'Enter the PostgreSQL password (or switch to Zero-Password IAM mode) before running SQL.',
+    });
+  }
   if (useStructured && authMode === 'IAM_TOKEN') {
     try {
       const auth = await resolveRequestAuth(req);
@@ -13274,8 +13279,8 @@ SELECT slot_name, plugin, active FROM pg_replication_slots;`;
       ? queryToRun
       : `SET statement_timeout = '12000';\n${queryToRun}`;
     const psqlArgs = useStructured
-      ? ['-v', 'ON_ERROR_STOP=1', '-P', 'pager=off', ...(isSingleTabularQuery ? ['--csv'] : []), '-c', wrappedSql]
-      : [cleanDsn, '-v', 'ON_ERROR_STOP=1', '-P', 'pager=off', ...(isSingleTabularQuery ? ['--csv'] : []), '-c', wrappedSql];
+      ? ['-w', '-v', 'ON_ERROR_STOP=1', '-P', 'pager=off', ...(isSingleTabularQuery ? ['--csv'] : []), '-c', wrappedSql]
+      : [cleanDsn, '-w', '-v', 'ON_ERROR_STOP=1', '-P', 'pager=off', ...(isSingleTabularQuery ? ['--csv'] : []), '-c', wrappedSql];
 
     const psqlEnv = {
       ...process.env,

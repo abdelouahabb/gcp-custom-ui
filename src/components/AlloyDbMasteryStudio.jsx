@@ -2782,6 +2782,13 @@ GROUP BY 1 ORDER BY turns DESC;`;
         {/* Inline Live Cloud AlloyDB SQL Console ("SSH" Equivalent for AlloyDB Clusters) */}
         {sqlConsoleClusterId && (() => {
           const targetCluster = (overview?.clusters || []).find((c) => c.clusterId === sqlConsoleClusterId);
+          const step1Connected = Boolean(
+            authProxyState.running || (cloudSqlHost.trim() && cloudSqlHost.trim() !== "127.0.0.1")
+          );
+          const step2Authed = Boolean(
+            cloudSqlAuthMode === "IAM_TOKEN" || cloudSqlPassword.trim().length > 0
+          );
+          const sqlActionsUnlocked = step1Connected && step2Authed;
           return (
             <div className="p-4 rounded-xl border border-blue-500/40 bg-blue-500/[0.04] space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -2796,13 +2803,44 @@ GROUP BY 1 ORDER BY turns DESC;`;
                     </span>
                   )}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setSqlConsoleClusterId("")}
-                  className="px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
-                >
-                  Close Console
-                </button>
+                <div className="flex flex-wrap items-center gap-1.5 text-[10.5px] font-mono">
+                  <span
+                    className={`px-2 py-0.5 rounded-full font-bold ${
+                      step1Connected
+                        ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                        : "bg-amber-500/15 text-amber-800 dark:text-amber-300"
+                    }`}
+                  >
+                    1. Connect {step1Connected ? "✓" : "…"}
+                  </span>
+                  <span className="text-zinc-400">→</span>
+                  <span
+                    className={`px-2 py-0.5 rounded-full font-bold ${
+                      step2Authed
+                        ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                        : "bg-amber-500/15 text-amber-800 dark:text-amber-300"
+                    }`}
+                  >
+                    2. Auth {step2Authed ? "✓" : "…"}
+                  </span>
+                  <span className="text-zinc-400">→</span>
+                  <span
+                    className={`px-2 py-0.5 rounded-full font-bold ${
+                      sqlActionsUnlocked
+                        ? "bg-blue-500/15 text-blue-700 dark:text-blue-300"
+                        : "bg-zinc-200/80 dark:bg-zinc-800 text-zinc-500"
+                    }`}
+                  >
+                    3. Run SQL {sqlActionsUnlocked ? "Ready" : "Locked"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSqlConsoleClusterId("")}
+                    className="ml-2 px-2 py-0.5 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-[11px] font-sans font-semibold text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-2.5">
@@ -2938,9 +2976,10 @@ GROUP BY 1 ORDER BY turns DESC;`;
                   </div>
                   <button
                     type="button"
-                    disabled={cloudSqlBusy || !cloudSqlHost.trim()}
+                    disabled={cloudSqlBusy || !sqlActionsUnlocked}
                     onClick={() => runCloudClusterSql("LIST_TABLES")}
-                    className="px-2.5 py-1 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-blue-500 text-[11px] font-semibold text-zinc-800 dark:text-zinc-200 inline-flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                    title={sqlActionsUnlocked ? "Load tables from this AlloyDB database" : "Complete Step 1 (Connect) and Step 2 (Password or IAM) first"}
+                    className="px-2.5 py-1 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-blue-500 text-[11px] font-semibold text-zinc-800 dark:text-zinc-200 inline-flex items-center gap-1 cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
                   >
                     <Database className="w-3 h-3 text-blue-500" />
                     <span>Load Tables Explorer</span>
@@ -3061,9 +3100,10 @@ GROUP BY 1 ORDER BY turns DESC;`;
                   <button
                     key={chip.label}
                     type="button"
-                    disabled={cloudSqlBusy}
+                    disabled={cloudSqlBusy || !sqlActionsUnlocked}
+                    title={sqlActionsUnlocked ? `Run: ${chip.label}` : "Complete Step 1 (Connect) and Step 2 (Password or IAM) to unlock"}
                     onClick={() => runCloudClusterSql("RUN_CUSTOM_SQL", chip.sql)}
-                    className="px-2.5 py-1 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-amber-500 text-[11px] font-semibold text-zinc-800 dark:text-zinc-200 cursor-pointer"
+                    className="px-2.5 py-1 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-amber-500 disabled:opacity-45 disabled:cursor-not-allowed text-[11px] font-semibold text-zinc-800 dark:text-zinc-200 cursor-pointer"
                   >
                     {chip.label}
                   </button>
@@ -3081,40 +3121,29 @@ GROUP BY 1 ORDER BY turns DESC;`;
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    disabled={cloudSqlBusy || !cloudSqlHost.trim() || !cloudSqlQuery.trim()}
+                    disabled={cloudSqlBusy || !sqlActionsUnlocked || !cloudSqlQuery.trim()}
+                    title={sqlActionsUnlocked ? "Execute SQL query live against AlloyDB" : "Complete Step 1 (Connect) and Step 2 (Password or IAM) to unlock"}
                     onClick={() => runCloudClusterSql("RUN_CUSTOM_SQL")}
-                    className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                    className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-45 disabled:cursor-not-allowed text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
                   >
                     {cloudSqlBusy ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Terminal className="w-3.5 h-3.5" />}
                     <span>{cloudSqlBusy ? "Running SQL…" : "Run Live SQL"}</span>
                   </button>
                   <button
                     type="button"
-                    disabled={cloudSqlBusy || !cloudSqlHost.trim()}
+                    disabled={cloudSqlBusy || !sqlActionsUnlocked}
+                    title={sqlActionsUnlocked ? "Inspect AlloyDB extensions, flags, and replication slots" : "Complete Step 1 (Connect) and Step 2 (Password or IAM) to unlock"}
                     onClick={() => runCloudClusterSql("INTROSPECT_ALLOYDB")}
-                    className="px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50 text-xs font-semibold text-zinc-800 dark:text-zinc-200 cursor-pointer"
+                    className="px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-45 disabled:cursor-not-allowed text-xs font-semibold text-zinc-800 dark:text-zinc-200 cursor-pointer"
                   >
                     Deep Introspect (Extensions + Flags)
                   </button>
-                  {targetCluster?.primaryInstance && (
-                    <button
-                      type="button"
-                      disabled={busyKey === `PUBIP_${targetCluster.clusterId}`}
-                      onClick={() =>
-                        executeAlloyAction(
-                          {
-                            action: "ENABLE_PUBLIC_IP_FOR_MY_IP",
-                            region: targetCluster.location,
-                            clusterId: targetCluster.clusterId,
-                            instanceId: targetCluster.primaryInstance.instanceId,
-                          },
-                          `PUBIP_${targetCluster.clusterId}`
-                        )
-                      }
-                      className="px-3 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 disabled:opacity-50 text-xs font-semibold text-amber-800 dark:text-amber-200 cursor-pointer"
-                    >
-                      {busyKey === `PUBIP_${targetCluster.clusterId}` ? "Authorizing My IP…" : "Authorize My /32 IP"}
-                    </button>
+                  {!sqlActionsUnlocked && (
+                    <span className="text-[11px] text-amber-700 dark:text-amber-300 font-medium">
+                      {!step1Connected
+                        ? "Step 1: Start Auth Proxy Tunnel or pick Public DNS to unlock."
+                        : "Step 2: Enter your postgres password (or switch to Zero-Password IAM) to unlock SQL."}
+                    </span>
                   )}
                 </div>
                 {cloudSqlResult?.durationMs && (
