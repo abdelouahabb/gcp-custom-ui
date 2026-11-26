@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { SlidersHorizontal, ChevronDown, ChevronUp } from 'lucide-react';
 
 /**
@@ -13,14 +13,22 @@ export default function StudioWorkspaceTabs({
   tabs = [],
   defaultTabId,
   activeTabId: controlledTabId,
+  externalTabId,
+  externalTabNonce = 0,
   onTabChange,
   secondaryTools = null,
   secondaryToolsLabel = 'Studio Tools & Playbooks',
 }) {
   const [internalTabId, setInternalTabId] = useState(
-    defaultTabId || tabs[0]?.id || ''
+    externalTabId || defaultTabId || tabs[0]?.id || ''
   );
   const [toolsOpen, setToolsOpen] = useState(false);
+
+  useEffect(() => {
+    if (externalTabId && tabs.some((t) => t.id === externalTabId)) {
+      setInternalTabId(externalTabId);
+    }
+  }, [externalTabId, externalTabNonce]);
 
   const currentTabId = controlledTabId || internalTabId;
   const activeTab = tabs.find((t) => t.id === currentTabId) || tabs[0] || null;

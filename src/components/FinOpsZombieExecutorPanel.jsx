@@ -212,13 +212,17 @@ export default function FinOpsZombieExecutorPanel({
                             </button>
                           ) : (
                             onNavigateTab &&
-                            z.resourceType === 'STOPPED_VM_STORAGE' && (
+                            (z.resourceType === 'STOPPED_VM_STORAGE' || z.resourceType === 'ALWAYS_ON_SQL') && (
                               <button
                                 type="button"
-                                onClick={() => onNavigateTab('VM_SSH')}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-zinc-200 dark:border-[#1e2433] text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-[#161e2e] text-[11px] font-medium"
+                                onClick={() =>
+                                  onNavigateTab(
+                                    z.resourceType === 'ALWAYS_ON_SQL' ? 'CLOUD_SQL_STUDIO' : 'VM_SSH'
+                                  )
+                                }
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-zinc-200 dark:border-[#1e2433] text-zinc-700 dark:text-zinc-200 hover:border-amber-500 text-[11px] font-medium cursor-pointer"
                               >
-                                Open VM Studio
+                                {z.resourceType === 'ALWAYS_ON_SQL' ? 'Open Cloud SQL →' : 'Open VM Studio →'}
                               </button>
                             )
                           )}

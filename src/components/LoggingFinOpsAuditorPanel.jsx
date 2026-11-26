@@ -18,6 +18,7 @@ import {
 export default function LoggingFinOpsAuditorPanel({
   projectId,
   onRunInShell,
+  onNavigateTab,
   onShowToast,
   onShowError,
 }) {
@@ -383,6 +384,16 @@ export default function LoggingFinOpsAuditorPanel({
                                 <Copy className="w-3.5 h-3.5" />
                               )}
                             </button>
+                            {onNavigateTab && (
+                              <button
+                                type="button"
+                                onClick={() => onNavigateTab('SRE_WAR_ROOM', 'SLI_SLO_ATTAINMENT')}
+                                className="px-2 py-1 rounded-md border border-zinc-200 dark:border-[#1e2433] text-zinc-600 dark:text-zinc-300 hover:border-amber-500 text-[11px] font-medium cursor-pointer"
+                                title="Check SLI/SLO impact in SRE War-Room"
+                              >
+                                SLI/SLO →
+                              </button>
+                            )}
                             {onRunInShell && (
                               <button
                                 type="button"

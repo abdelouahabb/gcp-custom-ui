@@ -299,13 +299,22 @@ export default function IamPamGovernancePanel({
                   Quick 30m JIT grants for existing entitlements — create or approve new PAM entitlements in Sovereign IAM Studio.
                 </span>
                 {onNavigateTab && (
-                  <button
-                    type="button"
-                    onClick={() => onNavigateTab('SOVEREIGN_STUDIO')}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-zinc-200 dark:border-[#242c3f] text-zinc-700 dark:text-zinc-200 hover:border-amber-500 text-[11px] font-medium cursor-pointer shrink-0"
-                  >
-                    Open Full PAM Builder →
-                  </button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => onNavigateTab('SRE_WAR_ROOM', 'SCC_VULNS')}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-zinc-200 dark:border-[#242c3f] text-zinc-700 dark:text-zinc-200 hover:border-amber-500 text-[11px] font-medium cursor-pointer"
+                    >
+                      Check SCC v2 →
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onNavigateTab('SOVEREIGN_STUDIO')}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-zinc-200 dark:border-[#242c3f] text-zinc-700 dark:text-zinc-200 hover:border-amber-500 text-[11px] font-medium cursor-pointer"
+                    >
+                      Open Full PAM Builder →
+                    </button>
+                  </div>
                 )}
               </div>
               {data.entitlements.length === 0 ? (

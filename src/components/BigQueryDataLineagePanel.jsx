@@ -16,6 +16,7 @@ import MermaidArchitectureDiagram from './MermaidArchitectureDiagram';
 
 export default function BigQueryDataLineagePanel({
   projectId,
+  onOpenBigQuerySql,
   onShowToast,
   onShowError,
 }) {
@@ -159,11 +160,25 @@ export default function BigQueryDataLineagePanel({
             type="button"
             disabled={tracing || !selectedFqn}
             onClick={() => runTrace(selectedFqn)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-medium shadow-sm transition"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-medium shadow-sm transition cursor-pointer"
           >
             {tracing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
             {tracing ? 'Tracing...' : 'Trace Blast Radius'}
           </button>
+          {onOpenBigQuerySql && selectedFqn && (
+            <button
+              type="button"
+              onClick={() =>
+                onOpenBigQuerySql(
+                  `SELECT * FROM \`${selectedFqn}\` LIMIT 100;`
+                )
+              }
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-[#1e2433] text-zinc-700 dark:text-zinc-200 hover:border-amber-500 text-xs font-medium transition cursor-pointer"
+              title="Open this table directly in BigQuery SQL Workbench"
+            >
+              Query in SQL Workbench →
+            </button>
+          )}
         </div>
       )}
 

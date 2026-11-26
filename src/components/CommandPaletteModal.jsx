@@ -147,6 +147,20 @@ export default function CommandPaletteModal({
 
     const baseActions = [
       {
+        id: 'wave27-sre-sli-slo',
+        category: 'Wave 27 · Governance, Lineage & FinOps',
+        title: 'Open SRE Live SLI / SLO Attainment & Error-Budget Cockpit',
+        subtitle: 'Track live SLI %, Allowed Downtime (SLO), Error Budget fuel gauge, multi-window burn rates & Gemini 4 Ship vs. Stabilize verdict',
+        keywords: 'sre sli slo error budget burn rate attainment uptime promise ship stabilize cockpit',
+        badge: 'SLI / SLO COCKPIT',
+        badgeColor: 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border-emerald-500/30',
+        icon: ShieldCheck,
+        run: () => {
+          onSelectTab('SRE_WAR_ROOM', 'SLI_SLO_ATTAINMENT');
+          onClose();
+        },
+      },
+      {
         id: 'wave27-logging-finops',
         category: 'Wave 27 · Governance, Lineage & FinOps',
         title: 'Open Cloud Logging FinOps Auditor & Log-Sink Exclusion Studio',
@@ -156,7 +170,7 @@ export default function CommandPaletteModal({
         badgeColor: 'text-blue-700 dark:text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: DollarSign,
         run: () => {
-          onSelectTab('FINOPS');
+          onSelectTab('FINOPS', 'LOGGING_FINOPS');
           onClose();
         },
       },
@@ -170,7 +184,7 @@ export default function CommandPaletteModal({
         badgeColor: 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border-emerald-500/30',
         icon: PowerOff,
         run: () => {
-          onSelectTab('FINOPS');
+          onSelectTab('FINOPS', 'ZOMBIE_EXECUTOR');
           onClose();
         },
       },
@@ -184,7 +198,7 @@ export default function CommandPaletteModal({
         badgeColor: 'text-blue-700 dark:text-blue-300 bg-blue-500/15 border-blue-500/30',
         icon: Database,
         run: () => {
-          onSelectTab('BIGQUERY_STUDIO');
+          onSelectTab('BIGQUERY_STUDIO', 'DATA_LINEAGE');
           onClose();
         },
       },
@@ -198,7 +212,7 @@ export default function CommandPaletteModal({
         badgeColor: 'text-amber-700 dark:text-amber-300 bg-amber-500/15 border-amber-500/30',
         icon: ShieldCheck,
         run: () => {
-          onSelectTab('SRE_WAR_ROOM');
+          onSelectTab('SRE_WAR_ROOM', 'IAM_PAM_JIT');
           onClose();
         },
       },

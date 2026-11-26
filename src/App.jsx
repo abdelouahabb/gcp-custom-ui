@@ -386,6 +386,7 @@ function CloudPulseCockpit() {
   const [recycleBinCategory, setRecycleBinCategory] = useState('ALL');
   const [bigQuerySubTab, setBigQuerySubTab] = useState('TABLES_SQL');
   const [sreSubTab, setSreSubTab] = useState('SLO_BURN_AND_RCA');
+  const [finopsSubTab, setFinopsSubTab] = useState('BILLING_CREDITS');
   const [gkeSubTab, setGkeSubTab] = useState('FLEET_DEPLOY');
   const [functionsSubTab, setFunctionsSubTab] = useState('TRIGGER_WIZARD');
   const [studioSubTabNonce, setStudioSubTabNonce] = useState(0);
@@ -1288,6 +1289,8 @@ function CloudPulseCockpit() {
       setVpcSubTab(resolvedSubTab || '');
     } else if (resolvedSubTab && normalizedTab === 'SRE_WAR_ROOM') {
       setSreSubTab(resolvedSubTab);
+    } else if (resolvedSubTab && normalizedTab === 'FINOPS') {
+      setFinopsSubTab(resolvedSubTab);
     } else if (resolvedSubTab && normalizedTab === 'WAVE9_STUDIO') {
       setWave9SubTab(resolvedSubTab);
       setTimeout(() => {
@@ -4664,6 +4667,12 @@ function CloudPulseCockpit() {
                   studioTitle="BigQuery Analytics & Lineage Studio"
                   studioSubtitle="Run Dry-Run cost-guarded SQL, inspect Dremel jobs, and trace live Data Lineage blast radius."
                   defaultTabId="SQL_WORKBENCH"
+                  externalTabId={
+                    bigQuerySubTab === 'DATA_LINEAGE' || bigQuerySubTab === 'SQL_WORKBENCH'
+                      ? bigQuerySubTab
+                      : undefined
+                  }
+                  externalTabNonce={studioSubTabNonce}
                   tabs={[
                     {
                       id: 'SQL_WORKBENCH',
@@ -4710,6 +4719,11 @@ function CloudPulseCockpit() {
                       render: () => (
                         <BigQueryDataLineagePanel
                           projectId={selectedProjectId}
+                          onOpenBigQuerySql={(sql) => {
+                            setBigQuerySubTab('SQL_WORKBENCH');
+                            setStudioSubTabNonce((n) => n + 1);
+                            handleOpenBigQuerySql(sql);
+                          }}
                           onShowToast={showToast}
                           onShowError={setErrorBanner}
                         />
@@ -5208,6 +5222,12 @@ function CloudPulseCockpit() {
                   studioTitle="SRE War-Room & Security Mission Control"
                   studioSubtitle="Track live SLI/SLO attainment & error budgets, SLO incident response, SCC v2 vulnerabilities, and IAM/PAM JIT."
                   defaultTabId="SLI_SLO_ATTAINMENT"
+                  externalTabId={
+                    ['SLI_SLO_ATTAINMENT', 'WAR_ROOM_SLOS', 'SCC_VULNS', 'IAM_PAM_JIT', 'AGENTIC_COMMANDER'].includes(sreSubTab)
+                      ? sreSubTab
+                      : undefined
+                  }
+                  externalTabNonce={studioSubTabNonce}
                   tabs={[
                     {
                       id: 'SLI_SLO_ATTAINMENT',
@@ -5742,6 +5762,12 @@ function CloudPulseCockpit() {
                   studioTitle="FinOps & Cost Control Center"
                   studioSubtitle="One focused workspace at a time — billing & credits, autonomous cost autopilot, logging spend, and idle-zombie cleanup."
                   defaultTabId="BILLING_CREDITS"
+                  externalTabId={
+                    ['BILLING_CREDITS', 'FINOPS_AUTOPILOT', 'LOGGING_FINOPS', 'ZOMBIE_EXECUTOR'].includes(finopsSubTab)
+                      ? finopsSubTab
+                      : undefined
+                  }
+                  externalTabNonce={studioSubTabNonce}
                   tabs={[
                     {
                       id: 'BILLING_CREDITS',
@@ -5812,6 +5838,7 @@ function CloudPulseCockpit() {
                         <LoggingFinOpsAuditorPanel
                           projectId={selectedProjectId}
                           onRunInShell={handleRunInShell}
+                          onNavigateTab={handleNavigateStudioTab}
                           onShowToast={showToast}
                           onShowError={setErrorBanner}
                         />
