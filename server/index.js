@@ -12291,31 +12291,10 @@ app.post('/api/project/:projectId/alloydb/action', async (req, res) => {
         .replace(/^-+|-+$/g, '')
         .slice(0, 50);
 
-      let detectedPublicIp = '';
-      if (publicDnsEnabled) {
-        try {
-          const ipRes = await axios.get('https://api.ipify.org?format=json', { timeout: 3000 });
-          if (/^\d{1,3}(\.\d{1,3}){3}$/.test(String(ipRes?.data?.ip || ''))) {
-            detectedPublicIp = String(ipRes.data.ip);
-          }
-        } catch {
-          // proceed with publicDnsEnabled without auto-CIDR
-        }
-      }
-
       const body = {
         instanceType: 'PRIMARY',
         machineConfig: { cpuCount: 1 },
-        ...(publicDnsEnabled
-          ? {
-              networkConfig: {
-                publicDnsEnabled: true,
-                ...(detectedPublicIp
-                  ? { authorizedExternalNetworks: [{ cidrRange: `${detectedPublicIp}/32` }] }
-                  : {}),
-              },
-            }
-          : {}),
+        ...(publicDnsEnabled ? { networkConfig: { publicDnsEnabled: true } } : {}),
         labels: {
           managed_by: 'cloudpulse_2026',
           tier: 'alloydb_express',
@@ -13003,6 +12982,178 @@ app.post('/api/project/:projectId/alloydb/readiness-xray', async (req, res) => {
     });
   } catch (err) {
     res.status(400).json({ error: err?.response?.data?.error?.message || err.message || 'Readiness X-Ray failed.' });
+  }
+});
+
+// 9a-alloydb-auth-proxy. POST /api/project/:projectId/alloydb/auth-proxy
+// Managed local Google Cloud AlloyDB Auth Proxy (zero authorizedExternalNetworks firewall rules, mTLS + IAM tunnel)
+const activeAlloyAuthProxies = new Map();
+
+app.post('/api/project/:projectId/alloydb/auth-proxy', async (req, res) => {
+  const { projectId } = req.params;
+  const {
+    action = 'STATUS', // 'START' | 'STOP' | 'STATUS'
+    region = 'us-west1',
+    clusterId = '',
+    instanceId = '',
+    preferredPort = 5434,
+  } = req.body || {};
+
+  const proxyKey = `${projectId}/${region}/${clusterId}/${instanceId}`;
+
+  if (action === 'STATUS') {
+    const existing = activeAlloyAuthProxies.get(proxyKey);
+    return res.json({
+      ok: true,
+      running: Boolean(existing && existing.proc && !existing.proc.killed),
+      host: '127.0.0.1',
+      port: existing?.port || null,
+      instanceUri: existing?.instanceUri || null,
+      logTail: existing?.logs?.slice(-8).join('\n') || '',
+    });
+  }
+
+  if (action === 'STOP') {
+    const existing = activeAlloyAuthProxies.get(proxyKey);
+    if (existing?.proc && !existing.proc.killed) {
+      try {
+        existing.proc.kill('SIGTERM');
+      } catch {
+        // ignore
+      }
+    }
+    activeAlloyAuthProxies.delete(proxyKey);
+    return res.json({ ok: true, running: false, message: 'Stopped local AlloyDB Auth Proxy tunnel.' });
+  }
+
+  if (!clusterId || !instanceId) {
+    return res.status(400).json({ error: 'clusterId and instanceId are required to start AlloyDB Auth Proxy.' });
+  }
+
+  const existing = activeAlloyAuthProxies.get(proxyKey);
+  if (existing && existing.proc && !existing.proc.killed) {
+    return res.json({
+      ok: true,
+      running: true,
+      host: '127.0.0.1',
+      port: existing.port,
+      instanceUri: existing.instanceUri,
+      message: `AlloyDB Auth Proxy already running on 127.0.0.1:${existing.port}.`,
+      logTail: existing.logs.slice(-8).join('\n'),
+    });
+  }
+
+  try {
+    // Locate or auto-install official Google Cloud alloydb-auth-proxy binary into ~/.local/bin
+    const localBinDir = path.join(os.homedir(), '.local', 'bin');
+    const localProxyPath = path.join(localBinDir, 'alloydb-auth-proxy');
+    let proxyBin = '';
+    for (const candidate of ['/usr/local/bin/alloydb-auth-proxy', '/usr/bin/alloydb-auth-proxy', localProxyPath]) {
+      if (fs.existsSync(candidate)) {
+        proxyBin = candidate;
+        break;
+      }
+    }
+    if (!proxyBin) {
+      fs.mkdirSync(localBinDir, { recursive: true });
+      const arch = process.arch === 'arm64' ? 'arm64' : 'amd64';
+      const downloadUrl = `https://storage.googleapis.com/alloydb-auth-proxy/v1.13.3/alloydb-auth-proxy.linux.${arch}`;
+      const dlRes = await axios.get(downloadUrl, { responseType: 'arraybuffer', timeout: 60000 });
+      fs.writeFileSync(localProxyPath, Buffer.from(dlRes.data), { mode: 0o755 });
+      fs.chmodSync(localProxyPath, 0o755);
+      proxyBin = localProxyPath;
+    }
+
+    // Pick first free local port starting at preferredPort
+    const isPortFree = (p) =>
+      new Promise((resolve) => {
+        const srv = net.createServer();
+        srv.once('error', () => resolve(false));
+        srv.once('listening', () => srv.close(() => resolve(true)));
+        srv.listen(p, '127.0.0.1');
+      });
+    let chosenPort = Math.max(5433, Math.min(60000, Number(preferredPort) || 5434));
+    for (let i = 0; i < 20; i += 1) {
+      if (await isPortFree(chosenPort)) break;
+      chosenPort += 1;
+    }
+
+    const instanceUri = `projects/${projectId}/locations/${region}/clusters/${clusterId}/instances/${instanceId}`;
+    const logs = [];
+    const proc = spawn(
+      proxyBin,
+      [instanceUri, '--public-ip', '--address', '127.0.0.1', '--port', String(chosenPort)],
+      {
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: { ...process.env },
+      }
+    );
+
+    const pushLog = (chunk) => {
+      const lines = String(chunk || '').split(/\r?\n/).filter(Boolean);
+      for (const l of lines) {
+        logs.push(l);
+        if (logs.length > 40) logs.shift();
+      }
+    };
+    proc.stdout?.on('data', pushLog);
+    proc.stderr?.on('data', pushLog);
+    proc.on('exit', () => {
+      const cur = activeAlloyAuthProxies.get(proxyKey);
+      if (cur && cur.proc === proc) activeAlloyAuthProxies.delete(proxyKey);
+    });
+
+    // Wait up to 12s for local TCP listener to come ready (or detect early exit)
+    const ready = await new Promise((resolve) => {
+      let settled = false;
+      const done = (val) => {
+        if (!settled) {
+          settled = true;
+          clearInterval(checkTimer);
+          clearTimeout(timeoutTimer);
+          resolve(val);
+        }
+      };
+      proc.once('exit', () => done(false));
+      const checkTimer = setInterval(() => {
+        const sock = net.connect({ host: '127.0.0.1', port: chosenPort });
+        sock.once('connect', () => {
+          sock.destroy();
+          done(true);
+        });
+        sock.once('error', () => {
+          sock.destroy();
+        });
+      }, 400);
+      const timeoutTimer = setTimeout(() => done(false), 12000);
+    });
+
+    if (!ready) {
+      try {
+        proc.kill('SIGTERM');
+      } catch {
+        // ignore
+      }
+      return res.status(400).json({
+        ok: false,
+        error: logs.slice(-4).join(' | ') || 'AlloyDB Auth Proxy failed to bind local port within 12s.',
+        logTail: logs.join('\n'),
+      });
+    }
+
+    activeAlloyAuthProxies.set(proxyKey, { proc, port: chosenPort, instanceUri, logs });
+    return res.json({
+      ok: true,
+      running: true,
+      host: '127.0.0.1',
+      port: chosenPort,
+      instanceUri,
+      binary: proxyBin,
+      message: `AlloyDB Auth Proxy mTLS tunnel active on 127.0.0.1:${chosenPort} (zero firewall rules required).`,
+      logTail: logs.slice(-6).join('\n'),
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err?.message || 'Failed to start AlloyDB Auth Proxy.' });
   }
 });
 

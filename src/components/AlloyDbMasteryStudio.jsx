@@ -443,6 +443,7 @@ export default function AlloyDbMasteryStudio({
   const [cloudSqlResult, setCloudSqlResult] = useState(null);
   const [cloudSqlTables, setCloudSqlTables] = useState([]);
   const [cloudSqlShowRaw, setCloudSqlShowRaw] = useState(false);
+  const [authProxyState, setAuthProxyState] = useState({ running: false, port: null, busy: false, error: '', logTail: '' });
   const [pendingLroByCluster, setPendingLroByCluster] = useState({});
   const [lroClockMs, setLroClockMs] = useState(Date.now());
   const [starterStack, setStarterStack] = useState('NEXTJS_CLOUDRUN'); // NODE_PG | PYTHON_FASTAPI | NEXTJS_CLOUDRUN
@@ -473,6 +474,41 @@ export default function AlloyDbMasteryStudio({
     setCloudSqlTables([]);
     setCloudSqlShowRaw(false);
     setSqlConsoleClusterId(c.clusterId);
+  };
+
+  const manageAlloyAuthProxy = async (c, action) => {
+    if (!projectId || !c?.primaryInstance) return;
+    setAuthProxyState((prev) => ({ ...prev, busy: true, error: '' }));
+    try {
+      const { data } = await axios.post(
+        `/api/project/${encodeURIComponent(projectId)}/alloydb/auth-proxy`,
+        {
+          action,
+          region: c.location,
+          clusterId: c.clusterId,
+          instanceId: c.primaryInstance.instanceId,
+          preferredPort: 5434,
+        }
+      );
+      if (action === 'START' && data?.running) {
+        setCloudSqlHost('127.0.0.1');
+        setCloudSqlPort(String(data.port || 5434));
+        setAuthProxyState({ running: true, port: data.port, busy: false, error: '', logTail: data.logTail || '' });
+        notify(data.message || `AlloyDB Auth Proxy running on 127.0.0.1:${data.port}`);
+      } else {
+        const directHost = resolveClusterHost(c);
+        if (directHost) {
+          setCloudSqlHost(directHost);
+          setCloudSqlPort('5432');
+        }
+        setAuthProxyState({ running: false, port: null, busy: false, error: '', logTail: '' });
+        if (action === 'STOP') notify('Stopped local AlloyDB Auth Proxy tunnel.');
+      }
+    } catch (err) {
+      const msg = err?.response?.data?.error || err.message || 'Failed to start AlloyDB Auth Proxy.';
+      setAuthProxyState((prev) => ({ ...prev, busy: false, error: msg }));
+      reportError(msg);
+    }
   };
 
   const runCloudClusterSql = async (mode = 'RUN_CUSTOM_SQL', overrideSql = null) => {
@@ -2769,35 +2805,111 @@ GROUP BY 1 ORDER BY turns DESC;`;
                 </button>
               </div>
 
-              <div className="space-y-1">
-                {targetCluster?.primaryInstance && !targetCluster.primaryInstance.publicDnsName && !targetCluster.primaryInstance.publicIpAddress && (
-                  <div className="mb-2 p-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200 text-xs flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-                      <span>
-                        <strong>Private PSC-only endpoint</strong> (<code className="font-mono">*.alloydb-psc.goog</code> is only resolvable inside a GCP VPC). Enable Public IP + authorize your current <code className="font-mono">/32</code> IP to connect directly via <code className="font-mono">psql</code> from this machine.
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={busyKey === `PUBIP_${targetCluster.clusterId}`}
-                      onClick={() =>
-                        executeAlloyAction(
-                          {
-                            action: "ENABLE_PUBLIC_IP_FOR_MY_IP",
-                            region: targetCluster.location,
-                            clusterId: targetCluster.clusterId,
-                            instanceId: targetCluster.primaryInstance.instanceId,
-                          },
-                          `PUBIP_${targetCluster.clusterId}`
-                        )
-                      }
-                      className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-[11px] font-bold shrink-0 cursor-pointer"
+              <div className="space-y-2.5">
+                {/* Transparent 2-Choice Connectivity Flow: Auth Proxy (Zero Firewall) vs Direct Public DNS + /32 IP */}
+                {targetCluster?.primaryInstance && (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+                    <div
+                      className={`p-3 rounded-lg border text-xs space-y-2 ${
+                        authProxyState.running
+                          ? "border-emerald-500/50 bg-emerald-500/10"
+                          : "border-blue-500/35 bg-white dark:bg-zinc-950"
+                      }`}
                     >
-                      {busyKey === `PUBIP_${targetCluster.clusterId}` ? "Enabling Public IP…" : "Enable Public IP & Authorize My IP"}
-                    </button>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                          Option A: AlloyDB Auth Proxy (Recommended · Zero Firewall)
+                        </span>
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-mono text-[10px] font-bold">
+                          mTLS + IAM
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                        Opens a local encrypted tunnel on <code className="font-mono">127.0.0.1</code> via Google&apos;s official <code className="font-mono">alloydb-auth-proxy</code>. <strong>Zero</strong> <code className="font-mono">/32</code> IP firewall rules; works from any Wi-Fi/VPN.
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {authProxyState.running ? (
+                          <>
+                            <span className="text-[11px] font-mono font-bold text-emerald-700 dark:text-emerald-300">
+                              ● Active on 127.0.0.1:{authProxyState.port}
+                            </span>
+                            <button
+                              type="button"
+                              disabled={authProxyState.busy}
+                              onClick={() => manageAlloyAuthProxy(targetCluster, "STOP")}
+                              className="px-2.5 py-1 rounded-md border border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-300 text-[11px] font-bold cursor-pointer"
+                            >
+                              Stop Tunnel
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={authProxyState.busy}
+                            onClick={() => manageAlloyAuthProxy(targetCluster, "START")}
+                            className="px-3 py-1.5 rounded-md bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-[11px] font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                          >
+                            {authProxyState.busy && <RefreshCw className="w-3 h-3 animate-spin" />}
+                            <span>{authProxyState.busy ? "Installing & Starting Proxy…" : "Start Auth Proxy Tunnel"}</span>
+                          </button>
+                        )}
+                      </div>
+                      {authProxyState.error && (
+                        <div className="text-[11px] text-red-600 dark:text-red-400 font-medium">
+                          {authProxyState.error}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-xs space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                          Option B: Direct Public DNS + /32 IP (No Local Proxy)
+                        </span>
+                        <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 font-mono text-[10px] font-bold">
+                          TLS + /32 IP
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-600 dark:text-zinc-400">
+                        Connects directly to <code className="font-mono">*.alloydb.s.cloud.goog:5432</code> over TLS. Requires authorizing your current <code className="font-mono">/32</code> IPv4 (must re-authorize if your IP changes).
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const h = resolveClusterHost(targetCluster);
+                            if (h) {
+                              setCloudSqlHost(h);
+                              setCloudSqlPort("5432");
+                            }
+                          }}
+                          className="px-2.5 py-1 rounded-md border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-[11px] font-semibold cursor-pointer"
+                        >
+                          Use Public DNS
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busyKey === `PUBIP_${targetCluster.clusterId}`}
+                          onClick={() =>
+                            executeAlloyAction(
+                              {
+                                action: "ENABLE_PUBLIC_IP_FOR_MY_IP",
+                                region: targetCluster.location,
+                                clusterId: targetCluster.clusterId,
+                                instanceId: targetCluster.primaryInstance.instanceId,
+                              },
+                              `PUBIP_${targetCluster.clusterId}`
+                            )
+                          }
+                          className="px-2.5 py-1 rounded-md border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 disabled:opacity-50 text-amber-800 dark:text-amber-200 text-[11px] font-bold cursor-pointer"
+                        >
+                          {busyKey === `PUBIP_${targetCluster.clusterId}` ? "Authorizing My IP…" : "Authorize My /32 IP"}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
+
                 {/* Structured Connection Fields (Env-Var PGPASSWORD / Zero-Password IAM Auth — Never Password-in-URL) */}
                 <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
                   <div className="inline-flex rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-0.5 text-[11px]">

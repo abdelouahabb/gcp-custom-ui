@@ -2149,7 +2149,8 @@ export function classifyDestructiveAxiosConfig(config) {
       (rawUrl.includes('/wave27/sre-slo') && String(body.action || 'HEALTH').toUpperCase() === 'HEALTH') ||
       (rawUrl.includes('/api/local-audit-log/config') && String(body.action || 'UPDATE').toUpperCase() !== 'CLEAR') ||
       (rawUrl.includes('/alloydb/execute-sql') &&
-        String(body.mode || '').toUpperCase() === 'INTROSPECT_ALLOYDB') ||
+        ['INTROSPECT_ALLOYDB', 'LIST_TABLES'].includes(String(body.mode || '').toUpperCase())) ||
+      rawUrl.includes('/alloydb/auth-proxy') ||
       (rawUrl.includes('/cloudrun-bridge/action') &&
         String(body.action || '').toUpperCase() === 'PROBE_FROM_VM') ||
       (rawUrl.includes('/vms/') &&
