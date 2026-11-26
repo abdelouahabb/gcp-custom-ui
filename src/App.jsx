@@ -12163,7 +12163,7 @@ function CloudPulseCockpit() {
           {/* Main Content Body */}
           <main
             id="cloudpulse-main-workspace"
-            className="min-w-0 flex-1 px-4 sm:px-6 lg:px-7 py-3.5 space-y-4"
+            className="min-w-0 flex-1 overflow-x-hidden px-5 sm:px-8 lg:px-10 py-6 sm:py-8 space-y-7"
           >
             {/* Architectural Workspace Context, Studio History & Telemetry Header */}
             {(() => {

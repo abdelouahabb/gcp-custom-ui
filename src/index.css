@@ -867,3 +867,54 @@ button.bg-blue-600:not([role="tab"]):not(.cp-nav-rail-item):hover:not(:disabled)
   background-color: rgba(255, 255, 255, 0.025);
 }
 
+/* ============================================================================
+ * 2026 Spatial Breathing System — Vertical Scroll Friendly, Zero Side-Scroll
+ * Gives every studio generous vertical rhythm, airy grid gaps, and readable tables
+ * ============================================================================ */
+html,
+body {
+  overflow-x: hidden;
+}
+
+#cloudpulse-main-workspace .space-y-3 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1.15rem;
+}
+
+#cloudpulse-main-workspace .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1.5rem;
+}
+
+#cloudpulse-main-workspace .space-y-5 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1.85rem;
+}
+
+#cloudpulse-main-workspace .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 2.25rem;
+}
+
+#cloudpulse-main-workspace .grid.gap-2 {
+  gap: 0.9rem;
+}
+
+#cloudpulse-main-workspace .grid.gap-3 {
+  gap: 1.2rem;
+}
+
+#cloudpulse-main-workspace .grid.gap-4 {
+  gap: 1.5rem;
+}
+
+#cloudpulse-main-workspace table th,
+#cloudpulse-main-workspace table td {
+  padding-top: 0.72rem;
+  padding-bottom: 0.72rem;
+}
+
+@media (min-width: 768px) {
+  #cloudpulse-main-workspace section.rounded-xl,
+  #cloudpulse-main-workspace section.rounded-2xl {
+    padding: 1.5rem;
+  }
+}
+
+

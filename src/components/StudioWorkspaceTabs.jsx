@@ -31,9 +31,9 @@ export default function StudioWorkspaceTabs({
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-7">
       {/* Calm Studio Header + Single-Row Focus Tabs */}
-      <div className="rounded-xl border border-zinc-200/80 dark:border-[#1e2433] bg-white dark:bg-[#0d111a] px-4 pt-3.5 pb-3 shadow-2xs space-y-3">
+      <div className="rounded-xl border border-zinc-200/80 dark:border-[#1e2433] bg-white dark:bg-[#0d111a] px-5 sm:px-6 pt-5 pb-4 shadow-2xs space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             {studioTitle && (
