@@ -69,7 +69,7 @@ export default function StudioWorkspaceTabs({
           )}
         </div>
 
-        {tabs.length > 0 && (
+        {tabs.length > 1 && (
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1 border-t border-zinc-100 dark:border-[#181f2e]">
             {tabs.map((tab) => {
               const Icon = tab.icon;

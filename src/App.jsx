@@ -12497,202 +12497,224 @@ function CloudPulseCockpit() {
 
               <div key={activeTab} className="cp-studio-enter">
               {activeTab === 'OVERVIEW' && (
-                <div className="space-y-5">
-                  <SortableKpiRow
-                    summary={overview?.summary}
-                    fetchLatencyMs={overview?.fetchLatencyMs}
-                    isSyncing={loadingOverview}
-                    onRefreshOverview={() =>
-                      fetchProjectOverview(selectedProjectId, { force: true })
-                    }
-                    onNavigateTab={handleNavigateStudioTab}
-                    onScrollToApis={handleScrollToApisWithSpotlight}
-                  />
-
-                  <CollapsibleArchitecturePipelineBar
-                    label="Enterprise Cloud Architecture & Stack Pipeline"
-                    chainSummary="IAM & VPC → Compute / GKE / Cloud Run → Storage / Databases / BigQuery → Cloud SOC & SRE"
-                  >
-                    <EnterpriseStackPipelineBar
-                      projectId={selectedProjectId}
-                      activeTab={activeTab}
-                      overview={overview}
-                      onOpenProvision={handleOpenProvision}
-                      onSelectTab={handleNavigateStudioTab}
-                      onRunInShell={handleRunInShell}
-                    />
-                  </CollapsibleArchitecturePipelineBar>
-
-                  <ResourceControlCenter
-                    resources={overview?.resources || []}
-                    projectId={selectedProjectId}
-                    onTriggerAction={handleTriggerAction}
-                    onDeleteResource={handleDeleteResource}
-                    actionLoading={actionLoading}
-                    onRunInShell={handleRunInShell}
-                    onAskCopilot={handleOpenCopilotWithPrompt}
-                    onSelectTab={handleNavigateStudioTab}
-                  />
-
-                  {/* 5-Domain Organized Studio Directory (Collapsed by default since Left Rail is always visible) */}
-                  <CollapsibleArchitecturePipelineBar
-                    label="CloudPulse 2026 Architectural Domain Directory (5 Domains · 26 Studios)"
-                    chainSummary="Full directory of all 26 engineering studios & live resource counts"
-                  >
-                  <div className="bg-white dark:bg-[#10141d] border border-zinc-200 dark:border-[#1e2433] rounded-xl p-5 shadow-sm space-y-4">
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 dark:border-[#1e2433] pb-3">
-                      <div>
-                        <h3 className="text-sm sm:text-base font-extrabold text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-                          <Layers className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                          <span>
-                            CloudPulse 2026 Architectural Domain Navigator
-                          </span>
-                        </h3>
-                        <p className="text-xs text-zinc-500 dark:text-[#8b95a5]">
-                          Every Google Cloud technology is organized into 5 dedicated engineering domains — click any studio below to open its full control plane.
-                        </p>
-                      </div>
-                      <span className="px-2.5 py-1 rounded text-[10px] font-mono font-bold bg-zinc-100 dark:bg-[#151a25] text-zinc-700 dark:text-zinc-300 border border-zinc-300 dark:border-[#262e42]">
-                        5 DOMAINS · 26 DEDICATED STUDIOS
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
-                      {[
-                        {
-                          domain: 'I. Innovation, Startups & Global Edge',
-                          color: 'border-zinc-200 dark:border-[#1e2433] bg-zinc-50/50 dark:bg-[#151a25]/60',
-                          items: [
-                            { id: 'STARTUP_10X', label: 'Startup 10X', meta: 'Google for Startups Scale & Credit Radar' },
-                            { id: 'INNOVATION_LAB', label: '2026 Innovation', meta: '24 Specialized Beyond-Console Studios' },
-                            { id: 'MCP_HUB', label: 'MCP Servers', meta: '48 Official *.googleapis.com/mcp · 505 Tools' },
-                            { id: 'LOCAL_EMULATORS', label: 'Local Cloud Emulators', meta: '5 Official 127.0.0.1 Emulators · $0/hr Dev' },
-                            { id: 'CLOUD_NEXUS', label: 'Terraform & Vertex Eval', meta: 'Terraform 1.9 Drift Compiler & Vertex Multi-Model Arena' },
-                            { id: 'GLOBAL_MAP', label: 'Global Map', meta: '40 Regions, Subsea Cables & Carbon' },
-                          ],
-                        },
-                        {
-                          domain: 'II. Compute (GCE), VPC, Containers & Storage',
-                          color: 'border-zinc-200 dark:border-[#1e2433] bg-zinc-50/50 dark:bg-[#151a25]/60',
-                          items: [
-                            { id: 'VM_SSH', label: 'VM (GCE)', meta: `${overview?.summary?.liveVmsCount ?? overview?.summary?.totalVms ?? 0} VMs · 1GB–32TB RAM · SSH` },
-                            { id: 'VPC_NETWORKS', label: 'VPC', meta: `${overview?.vpcs?.length || 0} VPCs · ${overview?.firewalls?.length || 0} Firewall Rules` },
-                            { id: 'CLOUD_RUN', label: 'Cloud Run', meta: `${overview?.cloudRunServices?.length || 0} Services · L4 GPUs` },
-                            { id: 'GKE_STUDIO', label: 'GKE', meta: 'Autopilot, Spot GPUs & K8s YAML' },
-                            { id: 'FUNCTIONS_STUDIO', label: 'Functions', meta: 'v1/v2 + 90+ Eventarc Triggers' },
-                            { id: 'WAVE9_STUDIO', label: 'Cloud Build', meta: 'GitHub CI/CD & SLSA-3 SBOM' },
-                            { id: 'CLOUD_STORAGE', label: 'Cloud Storage', meta: `${overview?.summary?.liveBucketsCount ?? overview?.summary?.storageBuckets ?? 0} Buckets · WORM` },
-                          ],
-                        },
-                        {
-                          domain: 'III. Databases, Data & Lakehouse',
-                          color: 'border-zinc-200 dark:border-[#1e2433] bg-zinc-50/50 dark:bg-[#151a25]/60',
-                          items: [
-                            { id: 'CLOUD_SQL_STUDIO', label: 'Cloud SQL', meta: 'PG 17, MySQL 8.4 & AlloyDB Vectors' },
-                            { id: 'ALLOYDB_STUDIO', label: 'AlloyDB', meta: 'PG 18 Express, SCaNN, pglogical & Agents' },
-                            { id: 'DATA_ENGINEER_STUDIO', label: 'Data Engineer', meta: 'Medallion, Dataform & Serverless Spark' },
-                            { id: 'MANAGED_SPARK_STUDIO', label: 'Managed Spark', meta: 'Serverless Spark 3.5, Connect & Lightning' },
-                            { id: 'BIGQUERY_STUDIO', label: 'BigQuery', meta: 'Capacitor, SQL X-Ray & 7d Time-Machine' },
-                            { id: 'BIGLAKE_STUDIO', label: 'BigLake', meta: 'Iceberg REST Catalogs, Compaction & Omni' },
-                            { id: 'WAVE10_FRONTIER', label: 'Spanner', meta: '100-PU Sizer, ISO GQL Graph & ScaNN RAG' },
-                          ],
-                        },
-                        {
-                          domain: 'IV. Zero-Trust IAM & Incident SRE',
-                          color: 'border-zinc-200 dark:border-[#1e2433] bg-zinc-50/50 dark:bg-[#151a25]/60',
-                          items: [
-                            { id: 'SOVEREIGN_STUDIO', label: 'IAM & Time-Machine', meta: 'SA Key Kill-Switch, JIT & SHA-256 Drift' },
-                            { id: 'CLOUD_SOC', label: 'Cloud SOC (20-Pillar)', meta: 'Kill-Chains, Canary, Model-Armor & SOAR' },
-                            { id: 'SRE_WAR_ROOM', label: 'SRE War-Room (12-Pillar)', meta: '14.4x SLO Burn, Prober & VPC-SC Perimeter' },
-                            { id: 'AWS_AZURE_PARITY', label: 'AWS & Azure Parity', meta: '20-in-1 AWS & Azure Bridge' },
-                            { id: 'ALIBABA_HUAWEI_PARITY', label: 'Alibaba & Huawei Parity', meta: '8-in-1 Hyperscale Parity Suite' },
-                          ],
-                        },
-                        {
-                          domain: 'V. FinOps, Logs & Architecture Docs',
-                          color: 'border-zinc-200 dark:border-[#1e2433] bg-zinc-50/50 dark:bg-[#151a25]/60',
-                          items: [
-                            { id: 'FINOPS', label: 'Finops', meta: `$${liveBurn.monthly.toFixed(2)}/mo Run-Rate` },
-                            { id: 'LOGS_SHELL', label: 'Logs', meta: 'Neural Chrono-Logs, Trace Waterfall & Shell' },
-                            { id: 'RECYCLE_BIN', label: 'Recycle Bin (30d)', meta: 'Deleted Resources & Disabled APIs + Restore' },
-                            { id: 'DOCS_GUIDE', label: 'Architecture & Docs', meta: 'Interactive Architecture & API Guide' },
-                          ],
-                        },
-                      ].map((group) => (
-                        <div
-                          key={group.domain}
-                          className={`p-3.5 rounded-xl border ${group.color} space-y-2`}
-                        >
-                          <div className="text-[11px] font-mono font-extrabold uppercase tracking-wider text-zinc-800 dark:text-zinc-200">
-                            {group.domain}
-                          </div>
-                          <div className="space-y-1.5">
-                            {group.items.map((item) => (
-                              <button
-                                key={item.id}
-                                type="button"
-                                data-feature-id={item.id}
-                                onClick={() => handleNavigateStudioTab(item.id)}
-                                className="w-full text-left p-2 rounded-md bg-white/90 dark:bg-[#0c0f16]/90 hover:bg-zinc-100 dark:hover:bg-[#1a2130] border border-zinc-200/80 dark:border-[#262e42] transition-all flex items-center justify-between gap-2 cursor-pointer group"
+                <StudioWorkspaceTabs
+                  studioTitle="Project Overview & Control Center"
+                  studioSubtitle="Live KPIs, active GCP resources, enabled APIs, and quick studio navigation."
+                  defaultTabId="RESOURCES_KPIS"
+                  tabs={[
+                    {
+                      id: 'RESOURCES_KPIS',
+                      label: 'Resources & KPIs',
+                      icon: LayoutDashboard,
+                      render: () => (
+                        <div className="space-y-5">
+                          <SortableKpiRow
+                            summary={overview?.summary}
+                            fetchLatencyMs={overview?.fetchLatencyMs}
+                            isSyncing={loadingOverview}
+                            onRefreshOverview={() =>
+                              fetchProjectOverview(selectedProjectId, {
+                                force: true,
+                              })
+                            }
+                            onNavigateTab={handleNavigateStudioTab}
+                            onScrollToApis={handleScrollToApisWithSpotlight}
+                          />
+                          <ResourceControlCenter
+                            resources={overview?.resources || []}
+                            projectId={selectedProjectId}
+                            onTriggerAction={handleTriggerAction}
+                            onDeleteResource={handleDeleteResource}
+                            actionLoading={actionLoading}
+                            onRunInShell={handleRunInShell}
+                            onAskCopilot={handleOpenCopilotWithPrompt}
+                            onSelectTab={handleNavigateStudioTab}
+                          />
+                        </div>
+                      ),
+                    },
+                    {
+                      id: 'APIS_KILLSWITCH',
+                      label: 'Enabled APIs & Kill-Switch',
+                      badge: String(overview?.enabledApis?.length || 0),
+                      icon: ShieldAlert,
+                      render: () => (
+                        <div id="emergency-api-killswitch-section">
+                          <EmergencyApiKillSwitch
+                            projectId={selectedProjectId}
+                            enabledApis={overview?.enabledApis || []}
+                            onRefresh={() =>
+                              fetchProjectOverview(selectedProjectId)
+                            }
+                            onOpenFinOps={() =>
+                              handleNavigateStudioTab('FINOPS')
+                            }
+                            onNavigateTab={handleNavigateStudioTab}
+                            onRunInShell={handleRunInShell}
+                            onShowToast={showToast}
+                            onShowError={setErrorBanner}
+                          />
+                        </div>
+                      ),
+                    },
+                    {
+                      id: 'STUDIO_DIRECTORY',
+                      label: 'All 26 Studios',
+                      icon: Layers,
+                      render: () => (
+                        <div className="bg-white dark:bg-[#10141d] border border-zinc-200 dark:border-[#1e2433] rounded-xl p-5 shadow-sm space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+                            {[
+                              {
+                                domain: 'I. Innovation & Global Edge',
+                                color:
+                                  'border-zinc-200 dark:border-[#1e2433] bg-zinc-50/50 dark:bg-[#151a25]/60',
+                                items: [
+                                  { id: 'STARTUP_10X', label: 'Startup 10X', meta: 'Scale & Credit Radar' },
+                                  { id: 'INNOVATION_LAB', label: '2026 Innovation', meta: 'Beyond-Console Studios' },
+                                  { id: 'MCP_HUB', label: 'MCP Servers', meta: 'Official MCP Hub' },
+                                  { id: 'LOCAL_EMULATORS', label: 'Local Emulators', meta: '5 Local $0/hr Emulators' },
+                                  { id: 'CLOUD_NEXUS', label: 'Terraform & Vertex', meta: 'Drift & Multi-Model Arena' },
+                                  { id: 'GLOBAL_MAP', label: 'Global Map', meta: '40 Regions & Carbon' },
+                                ],
+                              },
+                              {
+                                domain: 'II. Compute, VPC & Storage',
+                                color:
+                                  'border-zinc-200 dark:border-[#1e2433] bg-zinc-50/50 dark:bg-[#151a25]/60',
+                                items: [
+                                  { id: 'VM_SSH', label: 'VM (GCE)', meta: `${overview?.summary?.liveVmsCount ?? overview?.summary?.totalVms ?? 0} VMs · SSH & CVEs` },
+                                  { id: 'VPC_NETWORKS', label: 'VPC', meta: `${overview?.vpcs?.length || 0} VPCs · ${overview?.firewalls?.length || 0} Rules` },
+                                  { id: 'CLOUD_RUN', label: 'Cloud Run', meta: `${overview?.cloudRunServices?.length || 0} Services` },
+                                  { id: 'GKE_STUDIO', label: 'GKE', meta: 'Autopilot & Spot GPUs' },
+                                  { id: 'FUNCTIONS_STUDIO', label: 'Functions', meta: 'Gen2 + Eventarc' },
+                                  { id: 'WAVE9_STUDIO', label: 'Cloud Build', meta: 'CI/CD & SLSA-3' },
+                                  { id: 'CLOUD_STORAGE', label: 'Cloud Storage', meta: `${overview?.summary?.liveBucketsCount ?? overview?.summary?.storageBuckets ?? 0} Buckets` },
+                                ],
+                              },
+                              {
+                                domain: 'III. Databases, Data & AI',
+                                color:
+                                  'border-zinc-200 dark:border-[#1e2433] bg-zinc-50/50 dark:bg-[#151a25]/60',
+                                items: [
+                                  { id: 'CLOUD_SQL_STUDIO', label: 'Cloud SQL', meta: 'PG 17 & MySQL 8.4' },
+                                  { id: 'ALLOYDB_STUDIO', label: 'AlloyDB', meta: 'PG 18 Express & SCaNN' },
+                                  { id: 'DATA_ENGINEER_STUDIO', label: 'Data Engineer', meta: 'Data Fabric & GQL' },
+                                  { id: 'MANAGED_SPARK_STUDIO', label: 'Managed Spark', meta: 'Serverless Spark 3.5' },
+                                  { id: 'BIGQUERY_STUDIO', label: 'BigQuery', meta: 'SQL, FinOps & Lineage' },
+                                  { id: 'BIGLAKE_STUDIO', label: 'BigLake', meta: 'Iceberg REST Catalogs' },
+                                  { id: 'WAVE10_FRONTIER', label: 'Spanner', meta: 'Graph & ScaNN RAG' },
+                                ],
+                              },
+                              {
+                                domain: 'IV. Zero-Trust IAM & SRE',
+                                color:
+                                  'border-zinc-200 dark:border-[#1e2433] bg-zinc-50/50 dark:bg-[#151a25]/60',
+                                items: [
+                                  { id: 'SOVEREIGN_STUDIO', label: 'IAM & Compliance', meta: 'Time-Machine & DORA' },
+                                  { id: 'CLOUD_SOC', label: 'Cloud SOC', meta: 'Kill-Chains & SOAR' },
+                                  { id: 'SRE_WAR_ROOM', label: 'SRE War-Room', meta: 'SLOs, SCC v2 & PAM' },
+                                  { id: 'AWS_AZURE_PARITY', label: 'AWS & Azure Parity', meta: 'Multi-Cloud Bridge' },
+                                  { id: 'ALIBABA_HUAWEI_PARITY', label: 'Alibaba & Huawei', meta: 'Hyperscale Parity' },
+                                ],
+                              },
+                              {
+                                domain: 'V. FinOps, Logs & Docs',
+                                color:
+                                  'border-zinc-200 dark:border-[#1e2433] bg-zinc-50/50 dark:bg-[#151a25]/60',
+                                items: [
+                                  { id: 'FINOPS', label: 'FinOps', meta: `$${liveBurn.monthly.toFixed(2)}/mo Run-Rate` },
+                                  { id: 'LOGS_SHELL', label: 'Logs & Shell', meta: 'Chrono-Logs & Xterm' },
+                                  { id: 'RECYCLE_BIN', label: 'Recycle Bin', meta: '30-Day Restore' },
+                                  { id: 'DOCS_GUIDE', label: 'Architecture Docs', meta: 'Interactive Guide' },
+                                ],
+                              },
+                            ].map((group) => (
+                              <div
+                                key={group.domain}
+                                className={`p-3.5 rounded-xl border ${group.color} space-y-2`}
                               >
-                                <div className="min-w-0">
-                                  <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                                    {item.label}
-                                  </div>
-                                  <div className="text-[10px] font-mono text-zinc-500 dark:text-[#7c879c] truncate">
-                                    {item.meta}
-                                  </div>
+                                <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
+                                  {group.domain}
                                 </div>
-                                <ArrowRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-amber-500 group-hover:translate-x-0.5 transition-all shrink-0" />
-                              </button>
+                                <div className="space-y-1.5">
+                                  {group.items.map((item) => (
+                                    <button
+                                      key={item.id}
+                                      type="button"
+                                      data-feature-id={item.id}
+                                      onClick={() => handleNavigateStudioTab(item.id)}
+                                      className="w-full text-left p-2 rounded-md bg-white/90 dark:bg-[#0c0f16]/90 hover:bg-zinc-100 dark:hover:bg-[#1a2130] border border-zinc-200/80 dark:border-[#262e42] transition-all flex items-center justify-between gap-2 cursor-pointer group"
+                                    >
+                                      <div className="min-w-0">
+                                        <div className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                                          {item.label}
+                                        </div>
+                                        <div className="text-[10px] font-mono text-zinc-500 dark:text-[#7c879c] truncate">
+                                          {item.meta}
+                                        </div>
+                                      </div>
+                                      <ArrowRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-amber-500 shrink-0" />
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
                             ))}
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                  </CollapsibleArchitecturePipelineBar>
-
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                    <PersonaContextualHelper
-                      persona="ARCHITECT"
-                      projectId={selectedProjectId}
-                      studioContextLabel="Overview · SPOF Blast-Radius & FinOps"
-                      defaultExpanded={false}
-                      onOpenFullBoard={(p) =>
-                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                      }
-                      onRunInShell={handleRunInShell}
-                      onShowToast={showToast}
-                      onShowError={setErrorBanner}
-                    />
-                    <PersonaContextualHelper
-                      persona="CLOUD_ENG"
-                      projectId={selectedProjectId}
-                      studioContextLabel="Resource Table · .tf Exporter & 5-Gate Pre-Flight"
-                      defaultExpanded={false}
-                      onOpenFullBoard={(p) =>
-                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                      }
-                      onRunInShell={handleRunInShell}
-                      onShowToast={showToast}
-                      onShowError={setErrorBanner}
-                    />
-                  </div>
-
-                  <div id="emergency-api-killswitch-section">
-                    <EmergencyApiKillSwitch
-                      projectId={selectedProjectId}
-                      enabledApis={overview?.enabledApis || []}
-                      onRefresh={() => fetchProjectOverview(selectedProjectId)}
-                      onOpenFinOps={() => handleNavigateStudioTab('FINOPS')}
-                      onNavigateTab={handleNavigateStudioTab}
-                      onRunInShell={handleRunInShell}
-                      onShowToast={showToast}
-                      onShowError={setErrorBanner}
-                    />
-                  </div>
-                </div>
+                      ),
+                    },
+                  ]}
+                  secondaryTools={
+                    <>
+                      <CollapsibleArchitecturePipelineBar
+                        label="Enterprise Cloud Architecture & Stack Pipeline"
+                        chainSummary="IAM & VPC → Compute / GKE / Cloud Run → Storage / Databases / BigQuery → Cloud SOC & SRE"
+                      >
+                        <EnterpriseStackPipelineBar
+                          projectId={selectedProjectId}
+                          activeTab={activeTab}
+                          overview={overview}
+                          onOpenProvision={handleOpenProvision}
+                          onSelectTab={handleNavigateStudioTab}
+                          onRunInShell={handleRunInShell}
+                        />
+                      </CollapsibleArchitecturePipelineBar>
+                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                        <PersonaContextualHelper
+                          persona="ARCHITECT"
+                          projectId={selectedProjectId}
+                          studioContextLabel="Overview · SPOF Blast-Radius & FinOps"
+                          defaultExpanded={false}
+                          onOpenFullBoard={(p) =>
+                            handleNavigateStudioTab(
+                              'INNOVATION_LAB',
+                              `FIVE_PERSONA_${p}`
+                            )
+                          }
+                          onRunInShell={handleRunInShell}
+                          onShowToast={showToast}
+                          onShowError={setErrorBanner}
+                        />
+                        <PersonaContextualHelper
+                          persona="CLOUD_ENG"
+                          projectId={selectedProjectId}
+                          studioContextLabel="Resource Table · .tf Exporter & 5-Gate Pre-Flight"
+                          defaultExpanded={false}
+                          onOpenFullBoard={(p) =>
+                            handleNavigateStudioTab(
+                              'INNOVATION_LAB',
+                              `FIVE_PERSONA_${p}`
+                            )
+                          }
+                          onRunInShell={handleRunInShell}
+                          onShowToast={showToast}
+                          onShowError={setErrorBanner}
+                        />
+                      </div>
+                    </>
+                  }
+                />
               )}
 
               {activeTab === 'GLOBAL_MAP' && (
@@ -13646,72 +13668,94 @@ function CloudPulseCockpit() {
               )}
 
               {activeTab === 'CLOUD_RUN' && (
-                <div className="space-y-4">
-                  <CollapsibleArchitecturePipelineBar
-                    label="GitOps, Cloud Build & Serverless Release Factory Chain"
-                    chainSummary="GitHub OIDC → Cloud Build → Artifact Registry → Cloud Run Revisions"
-                  >
-                    <GitOpsReleaseFactoryPipelineBar
-                      projectId={selectedProjectId}
-                      activeTab={activeTab}
-                      onSelectTab={handleNavigateStudioTab}
-                      onRunInShell={handleRunInShell}
-                    />
-                  </CollapsibleArchitecturePipelineBar>
-                  <CloudRunFleetManager
-                    projectId={selectedProjectId}
-                    initialServices={overview?.cloudRunServices || []}
-                    onOpenProvisionCloudRun={() =>
-                      handleOpenProvision('CLOUD_RUN')
-                    }
-                    onOpenSecretManagerStudio={() =>
-                      handleNavigateStudioTab('SECRETS_KMS')
-                    }
-                    onSelectTab={handleNavigateStudioTab}
-                    onRefreshOverview={() =>
-                      fetchProjectOverview(selectedProjectId)
-                    }
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                  <StudioGcpAdvantageBar
-                    projectId={selectedProjectId}
-                    studioDomain="CLOUD_RUN"
-                    onRunInShell={handleRunInShell}
-                    onRefreshParent={() =>
-                      fetchProjectOverview(selectedProjectId)
-                    }
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                    <PersonaContextualHelper
-                      persona="CLOUD_ENG"
-                      projectId={selectedProjectId}
-                      studioContextLabel="Cloud Run Fleet · Pre-Flight Validator & .tf Export"
-                      defaultExpanded={false}
-                      onOpenFullBoard={(p) =>
-                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                      }
-                      onRunInShell={handleRunInShell}
-                      onShowToast={showToast}
-                      onShowError={setErrorBanner}
-                    />
-                    <PersonaContextualHelper
-                      persona="DEVSECOPS"
-                      projectId={selectedProjectId}
-                      studioContextLabel="Cloud Run Revisions · Binary Authz @sha256 Digest Gate"
-                      defaultExpanded={false}
-                      onOpenFullBoard={(p) =>
-                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                      }
-                      onRunInShell={handleRunInShell}
-                      onShowToast={showToast}
-                      onShowError={setErrorBanner}
-                    />
-                  </div>
-                </div>
+                <StudioWorkspaceTabs
+                  studioTitle="Cloud Run Serverless Fleet"
+                  studioSubtitle="Manage revisions, direct IAP, L4 GPUs, and scale-to-zero services."
+                  defaultTabId="FLEET"
+                  tabs={[
+                    {
+                      id: 'FLEET',
+                      label: 'Services & Revisions',
+                      icon: Cloud,
+                      render: () => (
+                        <CloudRunFleetManager
+                          projectId={selectedProjectId}
+                          initialServices={overview?.cloudRunServices || []}
+                          onOpenProvisionCloudRun={() =>
+                            handleOpenProvision('CLOUD_RUN')
+                          }
+                          onOpenSecretManagerStudio={() =>
+                            handleNavigateStudioTab('SECRETS_KMS')
+                          }
+                          onSelectTab={handleNavigateStudioTab}
+                          onRefreshOverview={() =>
+                            fetchProjectOverview(selectedProjectId)
+                          }
+                          onRunInShell={handleRunInShell}
+                          onShowToast={showToast}
+                          onShowError={setErrorBanner}
+                        />
+                      ),
+                    },
+                  ]}
+                  secondaryTools={
+                    <>
+                      <CollapsibleArchitecturePipelineBar
+                        label="GitOps, Cloud Build & Serverless Release Factory Chain"
+                        chainSummary="GitHub OIDC → Cloud Build → Artifact Registry → Cloud Run Revisions"
+                      >
+                        <GitOpsReleaseFactoryPipelineBar
+                          projectId={selectedProjectId}
+                          activeTab={activeTab}
+                          onSelectTab={handleNavigateStudioTab}
+                          onRunInShell={handleRunInShell}
+                        />
+                      </CollapsibleArchitecturePipelineBar>
+                      <StudioGcpAdvantageBar
+                        projectId={selectedProjectId}
+                        studioDomain="CLOUD_RUN"
+                        onRunInShell={handleRunInShell}
+                        onRefreshParent={() =>
+                          fetchProjectOverview(selectedProjectId)
+                        }
+                        onShowToast={showToast}
+                        onShowError={setErrorBanner}
+                      />
+                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                        <PersonaContextualHelper
+                          persona="CLOUD_ENG"
+                          projectId={selectedProjectId}
+                          studioContextLabel="Cloud Run Fleet · Pre-Flight Validator & .tf Export"
+                          defaultExpanded={false}
+                          onOpenFullBoard={(p) =>
+                            handleNavigateStudioTab(
+                              'INNOVATION_LAB',
+                              `FIVE_PERSONA_${p}`
+                            )
+                          }
+                          onRunInShell={handleRunInShell}
+                          onShowToast={showToast}
+                          onShowError={setErrorBanner}
+                        />
+                        <PersonaContextualHelper
+                          persona="DEVSECOPS"
+                          projectId={selectedProjectId}
+                          studioContextLabel="Cloud Run Revisions · Binary Authz @sha256 Digest Gate"
+                          defaultExpanded={false}
+                          onOpenFullBoard={(p) =>
+                            handleNavigateStudioTab(
+                              'INNOVATION_LAB',
+                              `FIVE_PERSONA_${p}`
+                            )
+                          }
+                          onRunInShell={handleRunInShell}
+                          onShowToast={showToast}
+                          onShowError={setErrorBanner}
+                        />
+                      </div>
+                    </>
+                  }
+                />
               )}
 
               {activeTab === 'FUNCTIONS_STUDIO' && (
@@ -13750,212 +13794,280 @@ function CloudPulseCockpit() {
               )}
 
               {activeTab === 'GKE_STUDIO' && (
-                <div className="space-y-4">
-                  <CollapsibleArchitecturePipelineBar
-                    label="Kubernetes (GKE), Artifact Registry & GitOps Chain"
-                    chainSummary="Cloud Build → Artifact Registry → GKE Autopilot / Standard → Mesh"
-                  >
-                    <GitOpsReleaseFactoryPipelineBar
-                      projectId={selectedProjectId}
-                      activeTab={activeTab}
-                      onSelectTab={handleNavigateStudioTab}
-                      onRunInShell={handleRunInShell}
-                    />
-                  </CollapsibleArchitecturePipelineBar>
-                  <GkeFleetStudio
-                    projectId={selectedProjectId}
-                    initialSubTab={gkeSubTab}
-                    onSelectTab={handleNavigateStudioTab}
-                    onOpenProvisionGke={() => handleOpenProvision('GKE_CLUSTER')}
-                    onRunInShell={handleRunInShell}
-                    onRefreshOverview={() =>
-                      fetchProjectOverview(selectedProjectId)
-                    }
-                    onShowToast={showToast}
-                  />
-                  <StudioGcpAdvantageBar
-                    projectId={selectedProjectId}
-                    studioDomain="GKE_FINOPS"
-                    onRunInShell={handleRunInShell}
-                    onRefreshParent={() =>
-                      fetchProjectOverview(selectedProjectId)
-                    }
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                    <PersonaContextualHelper
-                      persona="PLATFORM_K8S"
-                      projectId={selectedProjectId}
-                      studioContextLabel="GKE Fleet · Pod OOM/CPU Right-Sizer, Scale-Down Blocker & STRICT mTLS"
-                      defaultExpanded={false}
-                      onOpenFullBoard={(p) =>
-                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                      }
-                      onRunInShell={handleRunInShell}
-                      onShowToast={showToast}
-                      onShowError={setErrorBanner}
-                    />
-                    <PersonaContextualHelper
-                      persona="CLOUD_ENG"
-                      projectId={selectedProjectId}
-                      studioContextLabel="GKE Kubernetes Fleet · Pre-Flight Quota & .tf Export"
-                      defaultExpanded={false}
-                      onOpenFullBoard={(p) =>
-                        handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                      }
-                      onRunInShell={handleRunInShell}
-                      onShowToast={showToast}
-                      onShowError={setErrorBanner}
-                    />
-                  </div>
-                </div>
+                <StudioWorkspaceTabs
+                  studioTitle="Google Kubernetes Engine (GKE) Fleet"
+                  studioSubtitle="Autopilot & Standard clusters, Spot GPUs, and live workload inspection."
+                  defaultTabId="CLUSTERS"
+                  tabs={[
+                    {
+                      id: 'CLUSTERS',
+                      label: 'Clusters & Workloads',
+                      icon: Cpu,
+                      render: () => (
+                        <GkeFleetStudio
+                          projectId={selectedProjectId}
+                          initialSubTab={gkeSubTab}
+                          onSelectTab={handleNavigateStudioTab}
+                          onOpenProvisionGke={() =>
+                            handleOpenProvision('GKE_CLUSTER')
+                          }
+                          onRunInShell={handleRunInShell}
+                          onRefreshOverview={() =>
+                            fetchProjectOverview(selectedProjectId)
+                          }
+                          onShowToast={showToast}
+                        />
+                      ),
+                    },
+                  ]}
+                  secondaryTools={
+                    <>
+                      <CollapsibleArchitecturePipelineBar
+                        label="Kubernetes (GKE), Artifact Registry & GitOps Chain"
+                        chainSummary="Cloud Build → Artifact Registry → GKE Autopilot / Standard → Mesh"
+                      >
+                        <GitOpsReleaseFactoryPipelineBar
+                          projectId={selectedProjectId}
+                          activeTab={activeTab}
+                          onSelectTab={handleNavigateStudioTab}
+                          onRunInShell={handleRunInShell}
+                        />
+                      </CollapsibleArchitecturePipelineBar>
+                      <StudioGcpAdvantageBar
+                        projectId={selectedProjectId}
+                        studioDomain="GKE_FINOPS"
+                        onRunInShell={handleRunInShell}
+                        onRefreshParent={() =>
+                          fetchProjectOverview(selectedProjectId)
+                        }
+                        onShowToast={showToast}
+                        onShowError={setErrorBanner}
+                      />
+                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                        <PersonaContextualHelper
+                          persona="PLATFORM_K8S"
+                          projectId={selectedProjectId}
+                          studioContextLabel="GKE Fleet · Pod OOM/CPU Right-Sizer, Scale-Down Blocker & STRICT mTLS"
+                          defaultExpanded={false}
+                          onOpenFullBoard={(p) =>
+                            handleNavigateStudioTab(
+                              'INNOVATION_LAB',
+                              `FIVE_PERSONA_${p}`
+                            )
+                          }
+                          onRunInShell={handleRunInShell}
+                          onShowToast={showToast}
+                          onShowError={setErrorBanner}
+                        />
+                        <PersonaContextualHelper
+                          persona="CLOUD_ENG"
+                          projectId={selectedProjectId}
+                          studioContextLabel="GKE Kubernetes Fleet · Pre-Flight Quota & .tf Export"
+                          defaultExpanded={false}
+                          onOpenFullBoard={(p) =>
+                            handleNavigateStudioTab(
+                              'INNOVATION_LAB',
+                              `FIVE_PERSONA_${p}`
+                            )
+                          }
+                          onRunInShell={handleRunInShell}
+                          onShowToast={showToast}
+                          onShowError={setErrorBanner}
+                        />
+                      </div>
+                    </>
+                  }
+                />
               )}
 
               {activeTab === 'VM_SSH' && (
-                <div className="space-y-4">
-                  <CollapsibleArchitecturePipelineBar
-                    label="Enterprise Compute, VPC, Storage & Recovery Chain"
-                    chainSummary="VPC & Firewalls → Compute Engine VMs → Cloud Storage → 30-Day Recycle Bin"
-                  >
-                    <EnterpriseStackPipelineBar
-                      projectId={selectedProjectId}
-                      activeTab={activeTab}
-                      overview={overview}
-                      onOpenProvision={handleOpenProvision}
-                      onSelectTab={handleNavigateStudioTab}
-                      onRunInShell={handleRunInShell}
-                    />
-                  </CollapsibleArchitecturePipelineBar>
-                  <VmFleetAndSsh
-                    projectId={selectedProjectId}
-                    account={contextData.account}
-                    onOpenProvisionVm={() => handleOpenProvision('COMPUTE_VM')}
-                    refreshTrigger={vmRefreshTrigger}
-                    onVmDeleted={() =>
-                      fetchProjectOverview(selectedProjectId, {
-                        force: true,
-                        silent: true,
-                      })
-                    }
-                    onSyncLiveVms={handleSyncLiveVms}
-                    onSelectProject={(pid) => {
-                      if (!pid) return;
-                      sessionStorage.setItem('cloudpulse_project', pid);
-                      sessionStorage.setItem(
-                        'cloudpulse_project_explicit',
-                        'true'
-                      );
-                      sessionStorage.setItem(
-                        'cloudpulse_user_selected_project_v2',
-                        pid
-                      );
-                      try {
-                        localStorage.setItem('cloudpulse_project', pid);
-                        localStorage.setItem(
-                          'cloudpulse_project_explicit',
-                          'true'
-                        );
-                        localStorage.setItem(
-                          'cloudpulse_user_selected_project_v2',
-                          pid
-                        );
-                      } catch {
-                        // ignore
-                      }
-                      setSelectedProjectId(pid);
-                      showToast(`Switched active GCP project to ${pid}`);
-                    }}
-                    onRunInShell={handleRunInShell}
-                    onSelectTab={handleNavigateStudioTab}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                  <StudioGcpAdvantageBar
-                    projectId={selectedProjectId}
-                    studioDomain="VM"
-                    onRunInShell={handleRunInShell}
-                    onRefreshParent={() => {
-                      fetchProjectOverview(selectedProjectId);
-                      setVmRefreshTrigger((c) => c + 1);
-                    }}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                  <PersonaContextualHelper
-                    persona="CLOUD_ENG"
-                    projectId={selectedProjectId}
-                    studioContextLabel="Compute Engine VM Fleet · Pre-Flight, .tf Export & Undo Saga"
-                    defaultExpanded={false}
-                    onOpenFullBoard={(p) =>
-                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                    }
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                </div>
+                <StudioWorkspaceTabs
+                  studioTitle="Compute Engine VM Fleet & SSH"
+                  studioSubtitle="Live VM lifecycle, IAP SSH terminal, OS Config CVE scanner & patcher, and snapshots."
+                  defaultTabId="VM_FLEET"
+                  tabs={[
+                    {
+                      id: 'VM_FLEET',
+                      label: 'VM Fleet & SSH',
+                      icon: Server,
+                      render: () => (
+                        <VmFleetAndSsh
+                          projectId={selectedProjectId}
+                          account={contextData.account}
+                          onOpenProvisionVm={() =>
+                            handleOpenProvision('COMPUTE_VM')
+                          }
+                          refreshTrigger={vmRefreshTrigger}
+                          onVmDeleted={() =>
+                            fetchProjectOverview(selectedProjectId, {
+                              force: true,
+                              silent: true,
+                            })
+                          }
+                          onSyncLiveVms={handleSyncLiveVms}
+                          onSelectProject={(pid) => {
+                            if (!pid) return;
+                            sessionStorage.setItem('cloudpulse_project', pid);
+                            sessionStorage.setItem(
+                              'cloudpulse_project_explicit',
+                              'true'
+                            );
+                            sessionStorage.setItem(
+                              'cloudpulse_user_selected_project_v2',
+                              pid
+                            );
+                            try {
+                              localStorage.setItem('cloudpulse_project', pid);
+                              localStorage.setItem(
+                                'cloudpulse_project_explicit',
+                                'true'
+                              );
+                              localStorage.setItem(
+                                'cloudpulse_user_selected_project_v2',
+                                pid
+                              );
+                            } catch {
+                              // ignore
+                            }
+                            setSelectedProjectId(pid);
+                            showToast(`Switched active GCP project to ${pid}`);
+                          }}
+                          onRunInShell={handleRunInShell}
+                          onSelectTab={handleNavigateStudioTab}
+                          onShowToast={showToast}
+                          onShowError={setErrorBanner}
+                        />
+                      ),
+                    },
+                  ]}
+                  secondaryTools={
+                    <>
+                      <CollapsibleArchitecturePipelineBar
+                        label="Enterprise Compute, VPC, Storage & Recovery Chain"
+                        chainSummary="VPC & Firewalls → Compute Engine VMs → Cloud Storage → 30-Day Recycle Bin"
+                      >
+                        <EnterpriseStackPipelineBar
+                          projectId={selectedProjectId}
+                          activeTab={activeTab}
+                          overview={overview}
+                          onOpenProvision={handleOpenProvision}
+                          onSelectTab={handleNavigateStudioTab}
+                          onRunInShell={handleRunInShell}
+                        />
+                      </CollapsibleArchitecturePipelineBar>
+                      <StudioGcpAdvantageBar
+                        projectId={selectedProjectId}
+                        studioDomain="VM"
+                        onRunInShell={handleRunInShell}
+                        onRefreshParent={() => {
+                          fetchProjectOverview(selectedProjectId);
+                          setVmRefreshTrigger((c) => c + 1);
+                        }}
+                        onShowToast={showToast}
+                        onShowError={setErrorBanner}
+                      />
+                      <PersonaContextualHelper
+                        persona="CLOUD_ENG"
+                        projectId={selectedProjectId}
+                        studioContextLabel="Compute Engine VM Fleet · Pre-Flight, .tf Export & Undo Saga"
+                        defaultExpanded={false}
+                        onOpenFullBoard={(p) =>
+                          handleNavigateStudioTab(
+                            'INNOVATION_LAB',
+                            `FIVE_PERSONA_${p}`
+                          )
+                        }
+                        onRunInShell={handleRunInShell}
+                        onShowToast={showToast}
+                        onShowError={setErrorBanner}
+                      />
+                    </>
+                  }
+                />
               )}
 
               {activeTab === 'VPC_NETWORKS' && (
-                <div className="space-y-4">
-                  <CollapsibleArchitecturePipelineBar
-                    label="Enterprise VPC, Firewall, Compute & Recovery Chain"
-                    chainSummary="VPC Subnets → Firewall Rules → Compute Fleet → Cloud SOC → Recycle Bin"
-                  >
-                    <EnterpriseStackPipelineBar
-                      projectId={selectedProjectId}
-                      activeTab={activeTab}
-                      overview={overview}
-                      onOpenProvision={handleOpenProvision}
-                      onSelectTab={handleNavigateStudioTab}
-                      onRunInShell={handleRunInShell}
-                    />
-                  </CollapsibleArchitecturePipelineBar>
-                  <VpcNetworksAndFirewalls
-                    projectId={selectedProjectId}
-                    vpcs={overview?.vpcs || []}
-                    firewalls={overview?.firewalls || []}
-                    initialRuleSeed={vpcStudioRuleSeed}
-                    initialSubTab={vpcSubTab}
-                    subTabNonce={studioSubTabNonce}
-                    onOpenProvisionVpc={() => handleOpenProvision('VPC_NETWORK')}
-                    onOpenProvisionFirewall={() =>
-                      handleOpenProvision('VPC_FIREWALL')
-                    }
-                    onTestOnGlobalMap={handleTestRuleOnGlobalMap}
-                    onOpenLogsExplorer={handleOpenInLogsExplorer}
-                    onOpenCloudSoc={handleOpenInCloudSoc}
-                    onDeleteResource={handleDeleteResource}
-                    onRefresh={() => fetchProjectOverview(selectedProjectId)}
-                    loading={loadingOverview}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                    onSelectTab={handleNavigateStudioTab}
-                  />
-                  <StudioGcpAdvantageBar
-                    projectId={selectedProjectId}
-                    studioDomain="VPC"
-                    onRunInShell={handleRunInShell}
-                    onRefreshParent={() =>
-                      fetchProjectOverview(selectedProjectId)
-                    }
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                  <PersonaContextualHelper
-                    persona="NETOPS"
-                    projectId={selectedProjectId}
-                    studioContextLabel="VPC & Firewall Studio · 4-Hop Packet Tracer & IPAM CIDR Guard"
-                    defaultExpanded={false}
-                    onOpenFullBoard={(p) =>
-                      handleNavigateStudioTab('INNOVATION_LAB', `FIVE_PERSONA_${p}`)
-                    }
-                    onRunInShell={handleRunInShell}
-                    onShowToast={showToast}
-                    onShowError={setErrorBanner}
-                  />
-                </div>
+                <StudioWorkspaceTabs
+                  studioTitle="VPC Networks & Firewall Rules"
+                  studioSubtitle="Global VPC subnets, firewall posture, and live packet reachability."
+                  defaultTabId="VPC_RULES"
+                  tabs={[
+                    {
+                      id: 'VPC_RULES',
+                      label: 'VPCs & Firewalls',
+                      icon: Network,
+                      render: () => (
+                        <VpcNetworksAndFirewalls
+                          projectId={selectedProjectId}
+                          vpcs={overview?.vpcs || []}
+                          firewalls={overview?.firewalls || []}
+                          initialRuleSeed={vpcStudioRuleSeed}
+                          initialSubTab={vpcSubTab}
+                          subTabNonce={studioSubTabNonce}
+                          onOpenProvisionVpc={() =>
+                            handleOpenProvision('VPC_NETWORK')
+                          }
+                          onOpenProvisionFirewall={() =>
+                            handleOpenProvision('VPC_FIREWALL')
+                          }
+                          onTestOnGlobalMap={handleTestRuleOnGlobalMap}
+                          onOpenLogsExplorer={handleOpenInLogsExplorer}
+                          onOpenCloudSoc={handleOpenInCloudSoc}
+                          onDeleteResource={handleDeleteResource}
+                          onRefresh={() =>
+                            fetchProjectOverview(selectedProjectId)
+                          }
+                          loading={loadingOverview}
+                          onShowToast={showToast}
+                          onShowError={setErrorBanner}
+                          onSelectTab={handleNavigateStudioTab}
+                        />
+                      ),
+                    },
+                  ]}
+                  secondaryTools={
+                    <>
+                      <CollapsibleArchitecturePipelineBar
+                        label="Enterprise VPC, Firewall, Compute & Recovery Chain"
+                        chainSummary="VPC Subnets → Firewall Rules → Compute Fleet → Cloud SOC → Recycle Bin"
+                      >
+                        <EnterpriseStackPipelineBar
+                          projectId={selectedProjectId}
+                          activeTab={activeTab}
+                          overview={overview}
+                          onOpenProvision={handleOpenProvision}
+                          onSelectTab={handleNavigateStudioTab}
+                          onRunInShell={handleRunInShell}
+                        />
+                      </CollapsibleArchitecturePipelineBar>
+                      <StudioGcpAdvantageBar
+                        projectId={selectedProjectId}
+                        studioDomain="VPC"
+                        onRunInShell={handleRunInShell}
+                        onRefreshParent={() =>
+                          fetchProjectOverview(selectedProjectId)
+                        }
+                        onShowToast={showToast}
+                        onShowError={setErrorBanner}
+                      />
+                      <PersonaContextualHelper
+                        persona="NETOPS"
+                        projectId={selectedProjectId}
+                        studioContextLabel="VPC & Firewall Studio · 4-Hop Packet Tracer & IPAM CIDR Guard"
+                        defaultExpanded={false}
+                        onOpenFullBoard={(p) =>
+                          handleNavigateStudioTab(
+                            'INNOVATION_LAB',
+                            `FIVE_PERSONA_${p}`
+                          )
+                        }
+                        onRunInShell={handleRunInShell}
+                        onShowToast={showToast}
+                        onShowError={setErrorBanner}
+                      />
+                    </>
+                  }
+                />
               )}
 
               {activeTab === 'FINOPS' && (
