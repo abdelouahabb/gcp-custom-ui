@@ -6912,13 +6912,13 @@ app.post('/api/project/:projectId/vms/:vmName/cve-patch', async (req, res) => {
       });
     }
 
-    // Mode: APT_UPGRADE_SSH (Non-interactive apt-get upgrade with dpkg confold + NEEDRESTART_MODE=a to prevent TUI hangs)
+    // Mode: APT_UPGRADE_SSH (Non-interactive apt-get upgrade with dpkg lock-wait + confold + NEEDRESTART_MODE=a)
     const aptEnvFlags = 'DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a';
-    const dpkgOpts = '-o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"';
+    const dpkgOpts = '-o DPkg::Lock::Timeout=60 -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"';
     const upgradeCmd =
       safePackages.length > 0
-        ? `sudo ${aptEnvFlags} apt-get update -y </dev/null && sudo ${aptEnvFlags} apt-get install --only-upgrade -y ${dpkgOpts} ${safePackages.join(' ')} </dev/null`
-        : `sudo ${aptEnvFlags} apt-get update -y </dev/null && sudo ${aptEnvFlags} apt-get upgrade -y ${dpkgOpts} </dev/null`;
+        ? `sudo ${aptEnvFlags} apt-get update -y -o DPkg::Lock::Timeout=60 </dev/null && sudo ${aptEnvFlags} apt-get install --only-upgrade -y ${dpkgOpts} ${safePackages.join(' ')} </dev/null`
+        : `sudo ${aptEnvFlags} apt-get update -y -o DPkg::Lock::Timeout=60 </dev/null && sudo ${aptEnvFlags} apt-get upgrade -y ${dpkgOpts} </dev/null`;
 
     const runSshPatch = (useIap) =>
       new Promise((resolve, reject) => {
