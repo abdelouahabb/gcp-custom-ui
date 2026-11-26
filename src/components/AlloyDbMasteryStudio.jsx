@@ -2117,50 +2117,100 @@ GROUP BY 1 ORDER BY turns DESC;`;
                 </label>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  disabled={busyKey === 'CREATE_EXPRESS'}
-                  onClick={() =>
-                    executeAlloyAction(
-                      {
-                        action: 'CREATE_EXPRESS_CLUSTER',
-                        region: expressRegion,
-                        clusterId: expressClusterId,
-                        databaseVersion: expressDbVersion,
-                        pscEnabled: expressPscEnabled,
-                      },
-                      'CREATE_EXPRESS'
-                    )
-                  }
-                  className="flex-1 py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60"
-                >
-                  <PlusCircle className="w-3.5 h-3.5" />
-                  {busyKey === 'CREATE_EXPRESS'
-                    ? 'Dispatching Express Cluster...'
-                    : '1. Create Live AlloyDB Express Cluster'}
-                </button>
-                <button
-                  type="button"
-                  disabled={busyKey === 'CREATE_EXPRESS_INST'}
-                  onClick={() =>
-                    executeAlloyAction(
-                      {
-                        action: 'CREATE_EXPRESS_PRIMARY_INSTANCE',
-                        region: expressRegion,
-                        clusterId: expressClusterId,
-                        instanceId: `${expressClusterId}-primary`,
-                        publicDnsEnabled: expressPublicDns,
-                      },
-                      'CREATE_EXPRESS_INST'
-                    )
-                  }
-                  className="py-2 px-3 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
-                >
-                  <Server className="w-3.5 h-3.5" />
-                  2. Add 1-vCPU Primary
-                </button>
-              </div>
+              {(() => {
+                const normalizedId = String(expressClusterId || '').trim().toLowerCase();
+                const existingMatch = (overview?.clusters || []).find(
+                  (c) =>
+                    String(c.clusterId || '').toLowerCase() === normalizedId &&
+                    String(c.location || '') === expressRegion
+                );
+                const suggestNextId = () => {
+                  const base = (normalizedId || 'alloydb-express-app').replace(/-\d+$/, '');
+                  const existingSet = new Set(
+                    (overview?.clusters || [])
+                      .filter((c) => String(c.location || '') === expressRegion)
+                      .map((c) => String(c.clusterId || '').toLowerCase())
+                  );
+                  let n = 2;
+                  while (existingSet.has(`${base}-${n}`) && n < 100) n += 1;
+                  return `${base}-${n}`;
+                };
+                const suggestedId = existingMatch ? suggestNextId() : '';
+                return (
+                  <>
+                    {existingMatch && (
+                      <div className="p-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200 text-xs flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                          <span>
+                            Cluster <code className="font-mono font-bold">{existingMatch.clusterId}</code> already exists in{' '}
+                            <code className="font-mono">{expressRegion}</code> ({existingMatch.state}). Pick a new ID to create another cluster, or click Step 2 to add a Primary Instance.
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setExpressClusterId(suggestedId)}
+                          className="px-2.5 py-1 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold text-[11px] shrink-0 cursor-pointer"
+                        >
+                          Use "{suggestedId}"
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={busyKey === 'CREATE_EXPRESS' || Boolean(existingMatch) || !normalizedId}
+                        onClick={() =>
+                          executeAlloyAction(
+                            {
+                              action: 'CREATE_EXPRESS_CLUSTER',
+                              region: expressRegion,
+                              clusterId: expressClusterId,
+                              databaseVersion: expressDbVersion,
+                              pscEnabled: expressPscEnabled,
+                            },
+                            'CREATE_EXPRESS'
+                          )
+                        }
+                        title={
+                          existingMatch
+                            ? `Cluster "${existingMatch.clusterId}" already exists in ${expressRegion}. Pick a unique Cluster ID first.`
+                            : 'Create a new live AlloyDB Express cluster'
+                        }
+                        className="flex-1 py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <PlusCircle className="w-3.5 h-3.5" />
+                        {busyKey === 'CREATE_EXPRESS'
+                          ? 'Dispatching Express Cluster...'
+                          : existingMatch
+                          ? 'Cluster ID Already Exists — Pick a New ID'
+                          : '1. Create Live AlloyDB Express Cluster'}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyKey === 'CREATE_EXPRESS_INST'}
+                        onClick={() =>
+                          executeAlloyAction(
+                            {
+                              action: 'CREATE_EXPRESS_PRIMARY_INSTANCE',
+                              region: expressRegion,
+                              clusterId: expressClusterId,
+                              instanceId: `${expressClusterId}-primary`,
+                              publicDnsEnabled: expressPublicDns,
+                            },
+                            'CREATE_EXPRESS_INST'
+                          )
+                        }
+                        className="py-2 px-3 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+                      >
+                        <Server className="w-3.5 h-3.5" />
+                        2. Add 1-vCPU Primary
+                      </button>
+                    </div>
+                  </>
+                );
+              })()}
 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
